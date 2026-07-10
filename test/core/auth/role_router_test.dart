@@ -29,7 +29,9 @@ void main() {
       child: const MaterialApp(home: RoleRouter()),
     ));
     await tester.pump();
-    expect(find.text('Parent'), findsOneWidget);
+    // Shells now render tab content ("Schedule — coming soon") instead of
+    // the plain-text placeholder from before Task 7.
+    expect(find.text('Schedule — coming soon'), findsOneWidget);
   });
 
   testWidgets('routes teacher to TeacherShell', (tester) async {
@@ -40,7 +42,7 @@ void main() {
       child: const MaterialApp(home: RoleRouter()),
     ));
     await tester.pump();
-    expect(find.text('Teacher'), findsOneWidget);
+    expect(find.text('Schedule — coming soon'), findsOneWidget);
   });
 
   testWidgets('routes director to DirectorShell', (tester) async {
@@ -51,6 +53,6 @@ void main() {
       child: const MaterialApp(home: RoleRouter()),
     ));
     await tester.pump();
-    expect(find.text('Director'), findsOneWidget);
+    expect(find.text('Teachers — coming soon'), findsOneWidget);
   });
 }
