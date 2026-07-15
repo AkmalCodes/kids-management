@@ -274,7 +274,7 @@ ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION current_role_name()
 RETURNS TEXT AS $$
   SELECT role FROM profiles WHERE id = auth.uid();
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;  
 
 -- profiles: read own row, or read all if director
 CREATE POLICY "profiles_select" ON profiles FOR SELECT
