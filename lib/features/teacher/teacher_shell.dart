@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/widgets/logout_button.dart';
 
 class TeacherShell extends StatefulWidget {
   const TeacherShell({super.key});
@@ -20,7 +21,10 @@ class _TeacherShellState extends State<TeacherShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Childcare Manager')),
+      appBar: AppBar(
+        title: const Text('Childcare Manager'),
+        actions: const [LogoutButton()],
+      ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/widgets/logout_button.dart';
 
 // StatefulWidget (not Riverpod) for the tab index: this is purely local UI
 // state — which tab is selected — that no other widget needs to know
@@ -24,7 +25,10 @@ class _ParentShellState extends State<ParentShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Childcare Manager')),
+      appBar: AppBar(
+        title: const Text('Childcare Manager'),
+        actions: const [LogoutButton()],
+      ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
