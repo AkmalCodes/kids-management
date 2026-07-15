@@ -30,4 +30,20 @@ void main() {
     await tester.pump();
     expect(find.text('Please enter your password'), findsOneWidget);
   });
+
+  testWidgets('email placeholder fades out on focus instead of floating up',
+      (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+
+    final emailOpacity = find.byKey(const Key('email-hint-opacity'));
+
+    expect(tester.widget<AnimatedOpacity>(emailOpacity).opacity, 1.0);
+
+    await tester.tap(find.byType(TextFormField).first);
+    await tester.pump();
+
+    expect(tester.widget<AnimatedOpacity>(emailOpacity).opacity, 0.0);
+  });
 }

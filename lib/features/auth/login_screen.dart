@@ -19,15 +19,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  // Focus nodes drive the placeholder fade below — Material's default
+  // labelText instead slides the label to the top-left on focus, which
+  // isn't the effect we want here.
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool _loading = false;
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild whenever focus changes so the AnimatedOpacity widgets below
+    // pick up the new target opacity and animate to it.
+    _emailFocusNode.addListener(_onFocusChange);
+    _passwordFocusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() => setState(() {});
+
+  @override
   void dispose() {
-    // Controllers hold native resources outside Dart's garbage collector —
-    // must be disposed manually or they leak every time this screen rebuilds.
+    // Controllers and focus nodes hold native resources outside Dart's
+    // garbage collector — must be disposed manually or they leak every
+    // time this screen rebuilds.
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -76,10 +95,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailController,
+                  focusNode: _emailFocusNode,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    // `hint` (a widget) instead of `hintText` (a string) —
+                    // lets us control its opacity ourselves via focus,
+                    // while Flutter still positions it correctly relative
+                    // to the prefixIcon.
+                    hint: AnimatedOpacity(
+                      key: const Key('email-hint-opacity'),
+                      opacity: _emailFocusNode.hasFocus ? 0 : 1,
+                      duration: const Duration(milliseconds: 150),
+                      child: const Text('Email'),
+                    ),
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Please enter your email' : null,
@@ -87,10 +116,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
+                  focusNode: _passwordFocusNode,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    hint: AnimatedOpacity(
+                      key: const Key('password-hint-opacity'),
+                      opacity: _passwordFocusNode.hasFocus ? 0 : 1,
+                      duration: const Duration(milliseconds: 150),
+                      child: const Text('Password'),
+                    ),
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Please enter your password' : null,
