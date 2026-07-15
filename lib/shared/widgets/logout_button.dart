@@ -8,12 +8,36 @@ import '../../core/auth/auth_service.dart';
 class LogoutButton extends ConsumerWidget {
   const LogoutButton({super.key});
 
+  Future<void> _confirmAndSignOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text('You will need to sign in again to continue.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(authServiceProvider).signOut();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       icon: const Icon(Icons.logout),
       tooltip: 'Sign out',
-      onPressed: () => ref.read(authServiceProvider).signOut(),
+      onPressed: () => _confirmAndSignOut(context, ref),
     );
   }
 }
