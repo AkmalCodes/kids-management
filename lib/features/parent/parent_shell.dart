@@ -24,26 +24,25 @@ class _ParentShellState extends State<ParentShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Childcare Manager'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Childcare Manager')),
       body: _pages[_index],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
             label: 'Schedule',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.check_circle_outline),
+            selectedIcon: Icon(Icons.check_circle),
             label: 'Attendance',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.article_outlined),
+            selectedIcon: Icon(Icons.article),
             label: 'Reports',
           ),
         ],

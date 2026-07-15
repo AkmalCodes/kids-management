@@ -63,7 +63,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.child_care, size: 72, color: Colors.blue),
+                Icon(
+                  Icons.child_care,
+                  size: 72,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Childcare Manager',
@@ -76,7 +80,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Please enter your email' : null,
@@ -88,7 +91,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Password',
                     prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
                   ),
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Please enter your password' : null,
