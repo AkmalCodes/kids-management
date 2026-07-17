@@ -63,7 +63,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Monday'), findsOneWidget);
+    expect(find.text('Mon'), findsOneWidget);
     expect(find.text('Art'), findsOneWidget);
   });
 }
