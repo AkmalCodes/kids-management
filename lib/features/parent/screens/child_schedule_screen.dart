@@ -4,7 +4,7 @@ import '../../../core/auth/auth_service.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/schedule_service.dart';
-import '../../../shared/widgets/weekly_schedule_grid.dart';
+import '../../../shared/widgets/schedule_agenda_view.dart';
 
 class ChildScheduleScreen extends ConsumerWidget {
   const ChildScheduleScreen({super.key});
@@ -65,7 +65,10 @@ class _ChildScheduleSection extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: Text('Error: $e'),
           ),
-          data: (schedule) => WeeklyScheduleGrid(entries: schedule?.entries ?? []),
+          data: (schedule) => ScheduleAgendaView(
+            entries: schedule?.entries ?? [],
+            shrinkWrap: true,
+          ),
         ),
       ],
     );

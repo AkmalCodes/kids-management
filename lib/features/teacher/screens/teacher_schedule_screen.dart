@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/services/schedule_service.dart';
-import '../../../shared/widgets/weekly_schedule_grid.dart';
+import '../../../shared/widgets/schedule_agenda_view.dart';
 
 class TeacherScheduleScreen extends ConsumerWidget {
   const TeacherScheduleScreen({super.key});
@@ -21,9 +21,7 @@ class TeacherScheduleScreen extends ConsumerWidget {
         return scheduleAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
-          data: (schedule) => SingleChildScrollView(
-            child: WeeklyScheduleGrid(entries: schedule?.entries ?? []),
-          ),
+          data: (schedule) => ScheduleAgendaView(entries: schedule?.entries ?? []),
         );
       },
     );

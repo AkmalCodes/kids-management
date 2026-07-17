@@ -1,5 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
-
-void main() {
-  // Tests added per feature task.
-}
+// Placeholder kept from project scaffolding — real tests live in
+// test/core/, test/features/ and test/shared/, one file per unit under test.
+void main() {}
