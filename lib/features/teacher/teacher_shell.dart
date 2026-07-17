@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
+import 'screens/mark_attendance_screen.dart';
+import 'screens/teacher_schedule_screen.dart';
 
 class TeacherShell extends StatefulWidget {
   const TeacherShell({super.key});
@@ -12,8 +14,8 @@ class _TeacherShellState extends State<TeacherShell> {
   int _index = 0;
 
   static const _pages = [
-    Center(child: Text('Schedule — coming soon')),
-    Center(child: Text('Attendance — coming soon')),
+    TeacherScheduleScreen(),
+    MarkAttendanceScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
     Center(child: Text('Reports — coming soon')),
   ];

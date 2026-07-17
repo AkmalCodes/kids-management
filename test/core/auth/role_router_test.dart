@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/auth/role_router.dart';
 import 'package:test_flutter/core/models/app_user.dart';
+import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
+import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.dart';
+
+class MockChildService extends Mock implements ChildService {}
 
 AppUser _user(String role) => AppUser(
   id: 'uid-1',
@@ -19,19 +25,24 @@ AppUser _user(String role) => AppUser(
 
 void main() {
   testWidgets('routes parent to ParentShell', (tester) async {
+    final mockChildren = MockChildService();
+    when(() => mockChildren.fetchForParent(any())).thenAnswer((_) async => []);
+
     await tester.pumpWidget(ProviderScope(
       // overrideWith replaces the real provider (which would hit Supabase)
       // with a fake stream — this is how we test routing logic in
-      // isolation, without a real network connection.
+      // isolation, without a real network connection. childServiceProvider
+      // also needs overriding: ParentShell's first tab (ChildScheduleScreen)
+      // reads it directly during build, which would otherwise crash since
+      // Supabase.initialize() never runs in the test environment.
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('parent'))),
+        childServiceProvider.overrideWithValue(mockChildren),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));
-    await tester.pump();
-    // Shells now render tab content ("Schedule — coming soon") instead of
-    // the plain-text placeholder from before Task 7.
-    expect(find.text('Schedule — coming soon'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(ChildScheduleScreen), findsOneWidget);
   });
 
   testWidgets('routes teacher to TeacherShell', (tester) async {
@@ -42,7 +53,7 @@ void main() {
       child: const MaterialApp(home: RoleRouter()),
     ));
     await tester.pump();
-    expect(find.text('Schedule — coming soon'), findsOneWidget);
+    expect(find.byType(TeacherScheduleScreen), findsOneWidget);
   });
 
   testWidgets('routes director to DirectorShell', (tester) async {

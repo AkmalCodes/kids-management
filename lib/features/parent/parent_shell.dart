@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
+import 'screens/child_attendance_screen.dart';
+import 'screens/child_schedule_screen.dart';
 
 // StatefulWidget (not Riverpod) for the tab index: this is purely local UI
 // state — which tab is selected — that no other widget needs to know
@@ -17,8 +19,8 @@ class _ParentShellState extends State<ParentShell> {
   // Index in this list must line up with the order of BottomNavigationBarItems
   // below — index 0 is Schedule, 1 is Attendance, 2 is Reports.
   static const _pages = [
-    Center(child: Text('Schedule — coming soon')),
-    Center(child: Text('Attendance — coming soon')),
+    ChildScheduleScreen(),
+    ChildAttendanceScreen(),
     Center(child: Text('Reports — coming soon')),
   ];
 
