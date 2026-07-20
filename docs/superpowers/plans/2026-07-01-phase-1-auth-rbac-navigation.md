@@ -305,6 +305,22 @@ CREATE POLICY "children_parents_select" ON children_parents FOR SELECT
 CREATE POLICY "children_parents_insert" ON children_parents FOR INSERT
   WITH CHECK (current_role_name() = 'director');
 
+-- schedules: director manages both child and teacher schedules; teachers
+-- read their own, parents read their linked children's
+CREATE POLICY "schedules_select" ON schedules FOR SELECT
+  USING (
+    current_role_name() = 'director'
+    OR (type = 'teacher' AND ref_id = auth.uid())
+    OR (type = 'child' AND EXISTS (
+      SELECT 1 FROM children_parents
+      WHERE child_id = schedules.ref_id AND parent_id = auth.uid()
+    ))
+  );
+CREATE POLICY "schedules_insert" ON schedules FOR INSERT
+  WITH CHECK (current_role_name() = 'director');
+CREATE POLICY "schedules_update" ON schedules FOR UPDATE
+  USING (current_role_name() = 'director');
+
 -- attendance: teachers insert/update for their class; parents read their child's; directors read all
 CREATE POLICY "attendance_select" ON attendance FOR SELECT
   USING (
