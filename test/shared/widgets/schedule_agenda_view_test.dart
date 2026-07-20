@@ -17,11 +17,16 @@ const _entries = [
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 void main() {
-  testWidgets('shows an empty state when there are no entries at all', (tester) async {
+  testWidgets('still renders the week grid with No events when there are no entries',
+      (tester) async {
     await tester.pumpWidget(
       _wrap(ScheduleAgendaView(entries: const [], anchorDate: _anchor)),
     );
-    expect(find.text('No schedule set yet.'), findsOneWidget);
+    // The toggle and all 7 day rows must render regardless of data —
+    // only the per-day content falls back to "No events".
+    expect(find.byTooltip('Month view'), findsOneWidget);
+    expect(find.text('No events'), findsNWidgets(7));
+    expect(find.text('13'), findsOneWidget); // Monday's date number
   });
 
   testWidgets('week view shows 7 day rows with events and No events placeholders',

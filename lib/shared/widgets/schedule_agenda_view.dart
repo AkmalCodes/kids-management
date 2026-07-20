@@ -95,10 +95,9 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.entries.isEmpty) {
-      return const Center(child: Text('No schedule set yet.'));
-    }
-
+    // No early-return on empty entries: the grid itself (day rows, toggle)
+    // should always render — an empty schedule just means every row falls
+    // back to its own "No events" placeholder below.
     final dates = _visibleDates;
 
     final header = Padding(

@@ -20,7 +20,7 @@ AppUser _teacher() => AppUser(
 );
 
 void main() {
-  testWidgets('shows empty state when teacher has no schedule', (tester) async {
+  testWidgets('shows the agenda grid even when teacher has no schedule', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -33,7 +33,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No schedule set yet.'), findsOneWidget);
+    expect(find.byTooltip('Month view'), findsOneWidget);
+    expect(find.text('No events'), findsWidgets);
   });
 
   testWidgets('shows schedule entries when present', (tester) async {
