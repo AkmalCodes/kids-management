@@ -32,6 +32,7 @@ ScheduleEntry _entry({required String id, required String createdBy}) => Schedul
   startTime: '08:00',
   endTime: '09:00',
   label: 'Art',
+  color: '26A69A',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: createdBy,
@@ -108,6 +109,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
+          color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async {});
     when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
@@ -131,6 +133,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: 'Music',
+          color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
   });
@@ -145,6 +148,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
+          color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async {});
     when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
@@ -169,6 +173,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: 'Music',
+          color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
     expect(find.text('Art'), findsOneWidget); // refreshed list from the mock
@@ -183,6 +188,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
+          color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async {});
     when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
@@ -205,6 +211,7 @@ void main() {
           startTime: '08:00',
           endTime: '09:00',
           label: 'Art (updated)',
+          color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
   });
@@ -226,6 +233,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
+          color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
         ));
   });
@@ -256,6 +264,7 @@ void main() {
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
+          color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
         ));
   });

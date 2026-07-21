@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/schedule_colors.dart';
 import '../../core/models/schedule.dart';
 
 sealed class ScheduleEntryFormResult {}
 
 class ScheduleEntrySaved extends ScheduleEntryFormResult {
-  ScheduleEntrySaved({required this.startTime, required this.endTime, required this.label});
+  ScheduleEntrySaved({
+    required this.startTime,
+    required this.endTime,
+    required this.label,
+    required this.color,
+  });
   final String startTime;
   final String endTime;
   final String label;
+  final String color;
 }
 
 class ScheduleEntryDeleted extends ScheduleEntryFormResult {}
@@ -51,6 +58,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
   late final TextEditingController _labelController;
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
+  late String _selectedColor;
 
   static TimeOfDay _parseTime(String hhmm) {
     final parts = hhmm.split(':');
@@ -74,6 +82,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
     _endTime = existing != null
         ? _parseTime(existing.endTime)
         : _parseTime(widget.initialEndTime ?? '09:00');
+    _selectedColor = existing?.color ?? defaultScheduleColorHex;
   }
 
   @override
@@ -99,6 +108,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         startTime: _formatTime(_startTime),
         endTime: _formatTime(_endTime),
         label: _labelController.text.trim(),
+        color: _selectedColor,
       ),
     );
   }
@@ -132,6 +142,21 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               icon: const Icon(Icons.schedule),
               label: Text('End: ${_formatTime(_endTime)}'),
             ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final swatch in scheduleColorPalette.entries)
+                  _ColorSwatch(
+                    key: Key('color-swatch-${swatch.key}'),
+                    name: swatch.key,
+                    hex: swatch.value,
+                    selected: swatch.value == _selectedColor,
+                    onTap: () => setState(() => _selectedColor = swatch.value),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -148,6 +173,48 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         ),
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
+    );
+  }
+}
+
+class _ColorSwatch extends StatelessWidget {
+  const _ColorSwatch({
+    super.key,
+    required this.name,
+    required this.hex,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String name;
+  final String hex;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = colorFromScheduleHex(hex);
+    return Tooltip(
+      message: name,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(color: Theme.of(context).colorScheme.onSurface, width: 2)
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: selected
+              ? const Icon(Icons.check, color: Colors.white, size: 18)
+              : null,
+        ),
+      ),
     );
   }
 }

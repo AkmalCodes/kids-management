@@ -126,17 +126,19 @@ class _EntryBlock extends StatelessWidget {
     final rawHeight = ((endMinutes - startMinutes) / 60) * DayTimetable.hourHeight;
     final height = rawHeight < 24 ? 24.0 : rawHeight;
 
-    final colorScheme = Theme.of(context).colorScheme;
-
+    // The palette (schedule_colors.dart) is all fairly saturated/dark
+    // swatches, so white text reads reliably on every one of them —
+    // matching the agenda view's cards, which use the same assumption.
     return Positioned(
       top: top,
       left: 8,
       right: 8,
       height: height,
       child: Container(
+        key: Key('entry-block-${entry.id}'),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: colorScheme.primaryContainer,
+          color: entry.displayColor,
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.topLeft,
@@ -146,10 +148,7 @@ class _EntryBlock extends StatelessWidget {
           children: [
             Text(
               entry.label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onPrimaryContainer,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -157,10 +156,7 @@ class _EntryBlock extends StatelessWidget {
             if (height >= 40)
               Text(
                 '${entry.startTime} – ${entry.endTime}',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
-                ),
+                style: const TextStyle(fontSize: 11, color: Colors.white70),
               ),
           ],
         ),

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:test_flutter/core/models/schedule.dart';
 import 'package:test_flutter/shared/widgets/schedule_entry_form_dialog.dart';
 
-ScheduleEntry _entry() => ScheduleEntry(
+ScheduleEntry _entry({String color = 'D81B60'}) => ScheduleEntry(
   id: 'entry-1',
   type: 'teacher',
   refId: 'teacher-1',
@@ -12,6 +12,7 @@ ScheduleEntry _entry() => ScheduleEntry(
   startTime: '08:00',
   endTime: '09:00',
   label: 'Art',
+  color: color,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',
@@ -48,7 +49,10 @@ class _HarnessState extends State<_Harness> {
             child: const Text('Open'),
           ),
           Text(!opened ? 'no result' : (result?.runtimeType.toString() ?? 'null result')),
-          if (result is ScheduleEntrySaved) Text((result as ScheduleEntrySaved).label),
+          if (result is ScheduleEntrySaved) ...[
+            Text((result as ScheduleEntrySaved).label),
+            Text('color:${(result as ScheduleEntrySaved).color}'),
+          ],
         ],
       ),
     );
@@ -124,5 +128,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('null result'), findsOneWidget);
+  });
+
+  testWidgets('add mode defaults to the default palette color', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), 'Music');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('color:26A69A'), findsOneWidget);
+  });
+
+  testWidgets('edit mode pre-selects the entry\'s existing color', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness(existing: _entry(color: 'EF5350'))));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('color:EF5350'), findsOneWidget);
+  });
+
+  testWidgets('tapping a different swatch changes the saved color', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), 'Music');
+    await tester.tap(find.byKey(const Key('color-swatch-Magenta')));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('color:D81B60'), findsOneWidget);
   });
 }

@@ -176,17 +176,6 @@ class _DayRow extends StatelessWidget {
   final List<ScheduleEntry> entries;
   final VoidCallback onTap;
 
-  // Cliche calendar-app card palette (teal / magenta / mustard / indigo /
-  // green). Picked by label hash so the same class keeps its color across
-  // days and rebuilds.
-  static const _cardColors = [
-    Color(0xFF26A69A),
-    Color(0xFFD81B60),
-    Color(0xFFC0A02A),
-    Color(0xFF5C6BC0),
-    Color(0xFF66BB6A),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -227,6 +216,7 @@ class _DayRow extends StatelessWidget {
                       children: [
                         for (final entry in entries)
                           Container(
+                            key: Key('event-card-${entry.id}'),
                             width: double.infinity,
                             margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.symmetric(
@@ -234,8 +224,7 @@ class _DayRow extends StatelessWidget {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: _cardColors[
-                                  entry.label.hashCode.abs() % _cardColors.length],
+                              color: entry.displayColor,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Column(

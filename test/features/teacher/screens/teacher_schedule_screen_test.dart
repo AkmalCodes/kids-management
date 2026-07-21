@@ -48,6 +48,7 @@ void main() {
         startTime: '08:00',
         endTime: '09:00',
         label: 'Art',
+        color: '26A69A',
         createdAt: DateTime(2026),
         updatedAt: DateTime(2026),
         createdBy: 'teacher-1',

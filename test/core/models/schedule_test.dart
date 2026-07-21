@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:test_flutter/core/models/schedule.dart';
 
@@ -12,6 +13,7 @@ void main() {
       'start_time': '08:00',
       'end_time': '09:00',
       'label': 'Art',
+      'color': 'D81B60',
       'created_at': '2026-07-01T00:00:00.000Z',
       'updated_at': '2026-07-01T00:00:00.000Z',
       'created_by': 'teacher-1',
@@ -28,8 +30,20 @@ void main() {
       expect(entry.startTime, '08:00');
       expect(entry.endTime, '09:00');
       expect(entry.label, 'Art');
+      expect(entry.color, 'D81B60');
       expect(entry.createdBy, 'teacher-1');
       expect(entry.updatedBy, 'teacher-1');
+    });
+
+    test('fromJson falls back to the default color when missing', () {
+      final withoutColor = Map<String, dynamic>.from(json)..remove('color');
+      final entry = ScheduleEntry.fromJson(withoutColor);
+      expect(entry.color, '26A69A');
+    });
+
+    test('displayColor converts the stored hex into an opaque Color', () {
+      final entry = ScheduleEntry.fromJson(json);
+      expect(entry.displayColor, const Color(0xFFD81B60));
     });
 
     test('toJson serializes writable fields and omits id/timestamps', () {
@@ -42,6 +56,7 @@ void main() {
       expect(out['start_time'], '08:00');
       expect(out['end_time'], '09:00');
       expect(out['label'], 'Art');
+      expect(out['color'], 'D81B60');
       expect(out['created_by'], 'teacher-1');
       expect(out['updated_by'], 'teacher-1');
       expect(out.containsKey('id'), isFalse);

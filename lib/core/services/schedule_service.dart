@@ -33,6 +33,7 @@ class ScheduleService {
     required String startTime,
     required String endTime,
     required String label,
+    required String color,
     required String actorUid,
   }) async {
     await _client.from('schedule_entries').insert({
@@ -43,6 +44,7 @@ class ScheduleService {
       'start_time': startTime,
       'end_time': endTime,
       'label': label,
+      'color': color,
       'created_by': actorUid,
       'updated_by': actorUid,
     });
@@ -54,6 +56,7 @@ class ScheduleService {
     required String startTime,
     required String endTime,
     required String label,
+    required String color,
     required String actorUid,
   }) async {
     await _client.from('schedule_entries').update({
@@ -61,6 +64,7 @@ class ScheduleService {
       'start_time': startTime,
       'end_time': endTime,
       'label': label,
+      'color': color,
       'updated_by': actorUid,
     }).eq('id', id);
   }

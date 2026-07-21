@@ -19,6 +19,7 @@ ScheduleEntry _entry(String id, String day, String start, String end, String lab
       startTime: start,
       endTime: end,
       label: label,
+      color: '26A69A',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       createdBy: 'teacher-1',
@@ -86,5 +87,16 @@ void main() {
 
     expect(find.byType(DayTimetable), findsOneWidget);
     expect(find.text('Monday, Jul 13'), findsOneWidget);
+  });
+
+  testWidgets('event card color follows the entry\'s saved color', (tester) async {
+    final entries = [_entry('entry-1', 'Monday', '08:00', '09:00', 'Art')];
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: entries, anchorDate: _anchor)),
+    );
+
+    final container = tester.widget<Container>(find.byKey(const Key('event-card-entry-1')));
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.color, const Color(0xFF26A69A));
   });
 }

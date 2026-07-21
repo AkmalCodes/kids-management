@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import '../constants/schedule_colors.dart';
+
 // One row per event (schedule_entries table) — not a JSON blob shared by a
 // whole person's week. This lets each entry carry its own creator, which is
 // what the edit/delete permission rule below depends on.
@@ -10,6 +13,7 @@ class ScheduleEntry {
   final String startTime;
   final String endTime;
   final String label;
+  final String color; // bare 6-digit hex, e.g. '26A69A' — see displayColor
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -24,6 +28,7 @@ class ScheduleEntry {
     required this.startTime,
     required this.endTime,
     required this.label,
+    required this.color,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -39,6 +44,7 @@ class ScheduleEntry {
     startTime: json['start_time'] as String,
     endTime: json['end_time'] as String,
     label: json['label'] as String,
+    color: json['color'] as String? ?? defaultScheduleColorHex,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,
@@ -53,9 +59,12 @@ class ScheduleEntry {
     'start_time': startTime,
     'end_time': endTime,
     'label': label,
+    'color': color,
     'created_by': createdBy,
     'updated_by': updatedBy,
   };
+
+  Color get displayColor => colorFromScheduleHex(color);
 
   // Mirrors the schedule_entries_update/delete RLS policies: the creator or
   // any director can edit/delete; everyone else with view access is

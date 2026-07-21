@@ -106,6 +106,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           startTime: result.startTime,
           endTime: result.endTime,
           label: result.label,
+          color: result.color,
           actorUid: user.id,
         );
     await _refresh();
@@ -127,13 +128,14 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
     final service = ref.read(scheduleServiceProvider);
     switch (result) {
-      case ScheduleEntrySaved(:final startTime, :final endTime, :final label):
+      case ScheduleEntrySaved(:final startTime, :final endTime, :final label, :final color):
         await service.updateEntry(
           id: entry.id,
           day: entry.day,
           startTime: startTime,
           endTime: endTime,
           label: label,
+          color: color,
           actorUid: user.id,
         );
       case ScheduleEntryDeleted():

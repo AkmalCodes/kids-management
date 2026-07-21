@@ -12,6 +12,7 @@ ScheduleEntry _entry() => ScheduleEntry(
   startTime: '08:00', // grid starts at 07:00, so this block spans hour row 1
   endTime: '09:00',
   label: 'Art',
+  color: '26A69A',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',
@@ -71,5 +72,15 @@ void main() {
     await tester.pump();
 
     expect(tappedHour, 10);
+  });
+
+  testWidgets('the entry block renders using the entry\'s saved color', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DayTimetable(entries: [_entry()]))),
+    );
+
+    final container = tester.widget<Container>(find.byKey(const Key('entry-block-entry-1')));
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.color, const Color(0xFF26A69A));
   });
 }
