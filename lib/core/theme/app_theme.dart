@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class AppTheme {
   AppTheme._();
 
-  static const seedColor = Color(0xFF2DA8A8); // soft teal
+  static const seedColor = Color(0xFFFDB0C0); // soft pink
   static const radius = 16.0;
 
   static ThemeData get light {
