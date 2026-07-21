@@ -25,9 +25,10 @@ class ScheduleService {
         .toList();
   }
 
-  // Returns the new row's id so callers can single out just that entry
-  // (e.g. to animate it in) without re-touching every other entry.
-  Future<String> createEntry({
+  // Returns the full inserted row (Postgrest already sends it back) so
+  // callers can update local state directly instead of re-fetching the
+  // whole list right after a write.
+  Future<ScheduleEntry> createEntry({
     required String type,
     required String refId,
     required String centerId,
@@ -50,10 +51,12 @@ class ScheduleService {
       'created_by': actorUid,
       'updated_by': actorUid,
     }).select().single();
-    return row['id'] as String;
+    return ScheduleEntry.fromJson(row);
   }
 
-  Future<void> updateEntry({
+  // Same reasoning as createEntry: return the updated row instead of
+  // making the caller re-fetch to see the change reflected.
+  Future<ScheduleEntry> updateEntry({
     required String id,
     required String day,
     required String startTime,
@@ -62,14 +65,15 @@ class ScheduleService {
     required String color,
     required String actorUid,
   }) async {
-    await _client.from('schedule_entries').update({
+    final row = await _client.from('schedule_entries').update({
       'day': day,
       'start_time': startTime,
       'end_time': endTime,
       'label': label,
       'color': color,
       'updated_by': actorUid,
-    }).eq('id', id);
+    }).eq('id', id).select().single();
+    return ScheduleEntry.fromJson(row);
   }
 
   Future<void> deleteEntry(String id) async {

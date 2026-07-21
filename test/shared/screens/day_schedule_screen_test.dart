@@ -23,21 +23,26 @@ AppUser _teacher(String id) => AppUser(
   updatedBy: 'director-1',
 );
 
-ScheduleEntry _entry({required String id, required String createdBy}) => ScheduleEntry(
-  id: id,
-  type: 'teacher',
-  refId: 'teacher-1',
-  centerId: 'center-1',
-  day: 'Monday',
-  startTime: '08:00',
-  endTime: '09:00',
-  label: 'Art',
-  color: '26A69A',
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-  createdBy: createdBy,
-  updatedBy: createdBy,
-);
+ScheduleEntry _entry({
+  required String id,
+  required String createdBy,
+  String label = 'Art',
+}) =>
+    ScheduleEntry(
+      id: id,
+      type: 'teacher',
+      refId: 'teacher-1',
+      centerId: 'center-1',
+      day: 'Monday',
+      startTime: '08:00',
+      endTime: '09:00',
+      label: label,
+      color: '26A69A',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: createdBy,
+      updatedBy: createdBy,
+    );
 
 final _monday = DateTime(2026, 7, 13); // matches the fixture entries' 'Monday'
 
@@ -100,7 +105,9 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('tapping the add button opens the add dialog', (tester) async {
+  testWidgets(
+      'tapping the add button creates the entry and shows it immediately, '
+      'with no extra fetch', (tester) async {
     when(() => mockService.createEntry(
           type: any(named: 'type'),
           refId: any(named: 'refId'),
@@ -111,9 +118,7 @@ void main() {
           label: any(named: 'label'),
           color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async => 'entry-1');
-    when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
-        .thenAnswer((_) async => [_entry(id: 'entry-1', createdBy: 'teacher-1')]);
+        )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Music'));
 
     await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
 
@@ -136,6 +141,12 @@ void main() {
           color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
+    // Shown from createEntry's returned row, not from a re-fetch.
+    expect(find.text('Music'), findsOneWidget);
+    verifyNever(() => mockService.fetchEntries(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+        ));
   });
 
   testWidgets('editable: tapping empty space opens the add dialog and creates an entry',
@@ -150,9 +161,7 @@ void main() {
           label: any(named: 'label'),
           color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async => 'entry-1');
-    when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
-        .thenAnswer((_) async => [_entry(id: 'entry-1', createdBy: 'teacher-1')]);
+        )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Music'));
 
     await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
 
@@ -176,10 +185,11 @@ void main() {
           color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
-    expect(find.text('Art'), findsOneWidget); // refreshed list from the mock
+    expect(find.text('Music'), findsOneWidget);
   });
 
-  testWidgets('editable: tapping your own entry opens the edit dialog and updates it',
+  testWidgets(
+      'editable: tapping your own entry updates it in place, with no extra fetch',
       (tester) async {
     final entry = _entry(id: 'entry-1', createdBy: 'teacher-1');
     when(() => mockService.updateEntry(
@@ -190,9 +200,9 @@ void main() {
           label: any(named: 'label'),
           color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async {});
-    when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
-        .thenAnswer((_) async => [entry]);
+        )).thenAnswer(
+      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Art (updated)'),
+    );
 
     await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
 
@@ -214,6 +224,34 @@ void main() {
           color: any(named: 'color'),
           actorUid: 'teacher-1',
         )).called(1);
+    expect(find.text('Art (updated)'), findsOneWidget);
+    expect(find.text('Art'), findsNothing);
+    verifyNever(() => mockService.fetchEntries(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+        ));
+  });
+
+  testWidgets('editable: deleting an entry removes it from the list, with no extra fetch',
+      (tester) async {
+    final entry = _entry(id: 'entry-1', createdBy: 'teacher-1');
+    when(() => mockService.deleteEntry('entry-1')).thenAnswer((_) async {});
+
+    await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
+
+    final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    await tester.tapAt(gridTopLeft + const Offset(10, 70));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockService.deleteEntry('entry-1')).called(1);
+    expect(find.text('Art'), findsNothing);
+    verifyNever(() => mockService.fetchEntries(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+        ));
   });
 
   testWidgets('editable: tapping someone else\'s entry does not open an edit dialog',

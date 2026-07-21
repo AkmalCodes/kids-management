@@ -55,20 +55,13 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
   String get _dayName => DayScheduleScreen._weekdayNames[widget.date.weekday - 1];
 
-  Future<void> _refresh() async {
+  // Marks ScheduleAgendaView's cached list stale so it re-fetches once the
+  // user navigates back to it — cheap and non-blocking, unlike awaiting a
+  // second round-trip here just to reflect a write we already know about.
+  void _invalidateAgendaCache() {
     final type = widget.type;
     final refId = widget.refId;
     if (type == null || refId == null) return;
-
-    final all =
-        await ref.read(scheduleServiceProvider).fetchEntries(type: type, refId: refId);
-    if (!mounted) return;
-    setState(() {
-      _entries = all.where((e) => e.day == _dayName).toList()
-        ..sort((a, b) => a.startTime.compareTo(b.startTime));
-    });
-    // So ScheduleAgendaView (still mounted underneath this route) shows
-    // the change once the user navigates back to it.
     ref.invalidate(scheduleEntriesProvider((type: type, refId: refId)));
   }
 
@@ -99,7 +92,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     );
     if (result is! ScheduleEntrySaved) return;
 
-    final newId = await ref.read(scheduleServiceProvider).createEntry(
+    final newEntry = await ref.read(scheduleServiceProvider).createEntry(
           type: type,
           refId: refId,
           centerId: centerId,
@@ -110,8 +103,13 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           color: result.color,
           actorUid: user.id,
         );
-    _newEntryId = newId;
-    await _refresh();
+    if (!mounted) return;
+    setState(() {
+      _entries = [..._entries, newEntry]
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      _newEntryId = newEntry.id;
+    });
+    _invalidateAgendaCache();
   }
 
   Future<void> _tapEntry(ScheduleEntry entry) async {
@@ -131,7 +129,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     final service = ref.read(scheduleServiceProvider);
     switch (result) {
       case ScheduleEntrySaved(:final startTime, :final endTime, :final label, :final color):
-        await service.updateEntry(
+        final updated = await service.updateEntry(
           id: entry.id,
           day: entry.day,
           startTime: startTime,
@@ -140,10 +138,20 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           color: color,
           actorUid: user.id,
         );
+        if (!mounted) return;
+        setState(() {
+          _entries = [
+            for (final e in _entries) if (e.id == updated.id) updated else e,
+          ]..sort((a, b) => a.startTime.compareTo(b.startTime));
+        });
       case ScheduleEntryDeleted():
         await service.deleteEntry(entry.id);
+        if (!mounted) return;
+        setState(() {
+          _entries = _entries.where((e) => e.id != entry.id).toList();
+        });
     }
-    await _refresh();
+    _invalidateAgendaCache();
   }
 
   @override
