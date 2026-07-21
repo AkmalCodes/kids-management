@@ -45,6 +45,7 @@ class DayScheduleScreen extends ConsumerStatefulWidget {
 
 class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
   late List<ScheduleEntry> _entries;
+  String? _newEntryId;
 
   @override
   void initState() {
@@ -98,7 +99,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     );
     if (result is! ScheduleEntrySaved) return;
 
-    await ref.read(scheduleServiceProvider).createEntry(
+    final newId = await ref.read(scheduleServiceProvider).createEntry(
           type: type,
           refId: refId,
           centerId: centerId,
@@ -109,6 +110,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           color: result.color,
           actorUid: user.id,
         );
+    _newEntryId = newId;
     await _refresh();
   }
 
@@ -162,6 +164,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
                 entries: _entries,
                 onAddEntry: widget.editable ? _addEntry : null,
                 onTapEntry: widget.editable ? _tapEntry : null,
+                newEntryId: _newEntryId,
               ),
             ),
       // Tapping the empty grid also adds an event, but that gesture has no

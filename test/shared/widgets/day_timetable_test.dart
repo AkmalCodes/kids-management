@@ -83,4 +83,32 @@ void main() {
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.color, const Color(0xFF26A69A));
   });
+
+  testWidgets('the block matching newEntryId fades in', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DayTimetable(entries: [_entry()], newEntryId: 'entry-1')),
+      ),
+    );
+
+    expect(find.byType(TweenAnimationBuilder<double>), findsOneWidget);
+  });
+
+  testWidgets('a block that is not the newEntryId does not animate', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DayTimetable(entries: [_entry()], newEntryId: 'some-other-id')),
+      ),
+    );
+
+    expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+  });
+
+  testWidgets('no newEntryId means no block animates', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: DayTimetable(entries: [_entry()]))),
+    );
+
+    expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
+  });
 }

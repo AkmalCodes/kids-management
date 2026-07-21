@@ -16,11 +16,17 @@ class DayTimetable extends StatelessWidget {
     required this.entries,
     this.onAddEntry,
     this.onTapEntry,
+    this.newEntryId,
   });
 
   final List<ScheduleEntry> entries;
   final void Function(int hour)? onAddEntry;
   final void Function(ScheduleEntry entry)? onTapEntry;
+
+  // If set, only the block whose id matches fades in — every other block
+  // renders immediately, so editing/deleting an entry doesn't cause the
+  // whole day to re-fade.
+  final String? newEntryId;
 
   static const startHour = 7;
   static const endHour = 18;
@@ -100,7 +106,8 @@ class DayTimetable extends StatelessWidget {
                           right: 0,
                           child: Divider(height: 1, color: gridLineColor),
                         ),
-                      for (final entry in entries) _EntryBlock(entry: entry),
+                      for (final entry in entries)
+                        _EntryBlock(entry: entry, isNew: entry.id == newEntryId),
                     ],
                   ),
                 ),
@@ -114,9 +121,10 @@ class DayTimetable extends StatelessWidget {
 }
 
 class _EntryBlock extends StatelessWidget {
-  const _EntryBlock({required this.entry});
+  const _EntryBlock({required this.entry, this.isNew = false});
 
   final ScheduleEntry entry;
+  final bool isNew;
 
   @override
   Widget build(BuildContext context) {
@@ -129,38 +137,50 @@ class _EntryBlock extends StatelessWidget {
     // The palette (schedule_colors.dart) is all fairly saturated/dark
     // swatches, so white text reads reliably on every one of them —
     // matching the agenda view's cards, which use the same assumption.
+    final block = Container(
+      key: Key('entry-block-${entry.id}'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: entry.displayColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.topLeft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            entry.label,
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Hide the time line on very short blocks where it can't fit.
+          if (height >= 40)
+            Text(
+              '${entry.startTime} – ${entry.endTime}',
+              style: const TextStyle(fontSize: 11, color: Colors.white70),
+            ),
+        ],
+      ),
+    );
+
     return Positioned(
       top: top,
       left: 8,
       right: 8,
       height: height,
-      child: Container(
-        key: Key('entry-block-${entry.id}'),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: entry.displayColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        alignment: Alignment.topLeft,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              entry.label,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            // Hide the time line on very short blocks where it can't fit.
-            if (height >= 40)
-              Text(
-                '${entry.startTime} – ${entry.endTime}',
-                style: const TextStyle(fontSize: 11, color: Colors.white70),
-              ),
-          ],
-        ),
-      ),
+      // Only the just-created block animates — a fixed Tween(0, 1) plays
+      // once when this widget is first built and never restarts on later
+      // rebuilds as long as the tween itself doesn't change.
+      child: isNew
+          ? TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 300),
+              builder: (context, opacity, child) => Opacity(opacity: opacity, child: child),
+              child: block,
+            )
+          : block,
     );
   }
 }

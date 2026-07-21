@@ -25,7 +25,9 @@ class ScheduleService {
         .toList();
   }
 
-  Future<void> createEntry({
+  // Returns the new row's id so callers can single out just that entry
+  // (e.g. to animate it in) without re-touching every other entry.
+  Future<String> createEntry({
     required String type,
     required String refId,
     required String centerId,
@@ -36,7 +38,7 @@ class ScheduleService {
     required String color,
     required String actorUid,
   }) async {
-    await _client.from('schedule_entries').insert({
+    final row = await _client.from('schedule_entries').insert({
       'type': type,
       'ref_id': refId,
       'center_id': centerId,
@@ -47,7 +49,8 @@ class ScheduleService {
       'color': color,
       'created_by': actorUid,
       'updated_by': actorUid,
-    });
+    }).select().single();
+    return row['id'] as String;
   }
 
   Future<void> updateEntry({

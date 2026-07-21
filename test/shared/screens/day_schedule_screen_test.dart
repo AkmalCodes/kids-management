@@ -111,7 +111,7 @@ void main() {
           label: any(named: 'label'),
           color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async {});
+        )).thenAnswer((_) async => 'entry-1');
     when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
         .thenAnswer((_) async => [_entry(id: 'entry-1', createdBy: 'teacher-1')]);
 
@@ -150,7 +150,7 @@ void main() {
           label: any(named: 'label'),
           color: any(named: 'color'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async {});
+        )).thenAnswer((_) async => 'entry-1');
     when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
         .thenAnswer((_) async => [_entry(id: 'entry-1', createdBy: 'teacher-1')]);
 
