@@ -47,7 +47,7 @@ class _ChildScheduleSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheduleAsync = ref.watch(scheduleProvider((type: 'child', refId: child.id)));
+    final entriesAsync = ref.watch(scheduleEntriesProvider((type: 'child', refId: child.id)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,7 +56,7 @@ class _ChildScheduleSection extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Text(child.name, style: Theme.of(context).textTheme.titleLarge),
         ),
-        scheduleAsync.when(
+        entriesAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
@@ -65,10 +65,9 @@ class _ChildScheduleSection extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             child: Text('Error: $e'),
           ),
-          data: (schedule) => ScheduleAgendaView(
-            entries: schedule?.entries ?? [],
-            shrinkWrap: true,
-          ),
+          // editable defaults to false: parents never edit a child's
+          // schedule, only the director (per the RBAC design) or a teacher.
+          data: (entries) => ScheduleAgendaView(entries: entries, shrinkWrap: true),
         ),
       ],
     );

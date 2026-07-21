@@ -17,6 +17,10 @@ class ScheduleAgendaView extends StatefulWidget {
     this.anchorDate,
     this.shrinkWrap = false,
     this.physics,
+    this.type,
+    this.refId,
+    this.centerId,
+    this.editable = false,
   });
 
   final List<ScheduleEntry> entries;
@@ -29,6 +33,13 @@ class ScheduleAgendaView extends StatefulWidget {
   // e.g. the parent screen that stacks one agenda per child.
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+
+  // Forwarded into DayScheduleScreen so it can create/edit/delete entries.
+  // Only required when editable is true.
+  final String? type;
+  final String? refId;
+  final String? centerId;
+  final bool editable;
 
   @override
   State<ScheduleAgendaView> createState() => _ScheduleAgendaViewState();
@@ -88,7 +99,14 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
   void _openDay(DateTime date) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DayScheduleScreen(date: date, entries: _entriesFor(date)),
+        builder: (_) => DayScheduleScreen(
+          date: date,
+          entries: _entriesFor(date),
+          type: widget.type,
+          refId: widget.refId,
+          centerId: widget.centerId,
+          editable: widget.editable,
+        ),
       ),
     );
   }

@@ -16,12 +16,18 @@ class TeacherScheduleScreen extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
-        final scheduleAsync =
-            ref.watch(scheduleProvider((type: 'teacher', refId: user.id)));
-        return scheduleAsync.when(
+        final entriesAsync =
+            ref.watch(scheduleEntriesProvider((type: 'teacher', refId: user.id)));
+        return entriesAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Error: $e')),
-          data: (schedule) => ScheduleAgendaView(entries: schedule?.entries ?? []),
+          data: (entries) => ScheduleAgendaView(
+            entries: entries,
+            type: 'teacher',
+            refId: user.id,
+            centerId: user.centerId,
+            editable: true,
+          ),
         );
       },
     );

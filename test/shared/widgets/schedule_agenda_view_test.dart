@@ -9,9 +9,25 @@ import 'package:test_flutter/shared/widgets/schedule_agenda_view.dart';
 // on DateTime.now() would break depending on when it runs).
 final _anchor = DateTime(2026, 7, 17); // a Friday; its week = Jul 13–19
 
-const _entries = [
-  ScheduleEntry(day: 'Monday', startTime: '08:00', endTime: '09:00', label: 'Art'),
-  ScheduleEntry(day: 'Wednesday', startTime: '10:00', endTime: '11:00', label: 'Music'),
+ScheduleEntry _entry(String id, String day, String start, String end, String label) =>
+    ScheduleEntry(
+      id: id,
+      type: 'teacher',
+      refId: 'teacher-1',
+      centerId: 'center-1',
+      day: day,
+      startTime: start,
+      endTime: end,
+      label: label,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+
+final _entries = [
+  _entry('entry-1', 'Monday', '08:00', '09:00', 'Art'),
+  _entry('entry-2', 'Wednesday', '10:00', '11:00', 'Music'),
 ];
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));

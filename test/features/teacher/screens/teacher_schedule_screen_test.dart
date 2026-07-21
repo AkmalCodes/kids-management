@@ -25,8 +25,8 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-          scheduleProvider((type: 'teacher', refId: 'teacher-1'))
-              .overrideWith((ref) async => null),
+          scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
+              .overrideWith((ref) async => []),
         ],
         child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),
       ),
@@ -38,26 +38,29 @@ void main() {
   });
 
   testWidgets('shows schedule entries when present', (tester) async {
-    final schedule = Schedule(
-      id: 'sched-1',
-      type: 'teacher',
-      refId: 'teacher-1',
-      centerId: 'center-1',
-      entries: const [
-        ScheduleEntry(day: 'Monday', startTime: '08:00', endTime: '09:00', label: 'Art'),
-      ],
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'director-1',
-      updatedBy: 'director-1',
-    );
+    final entries = [
+      ScheduleEntry(
+        id: 'entry-1',
+        type: 'teacher',
+        refId: 'teacher-1',
+        centerId: 'center-1',
+        day: 'Monday',
+        startTime: '08:00',
+        endTime: '09:00',
+        label: 'Art',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        createdBy: 'teacher-1',
+        updatedBy: 'teacher-1',
+      ),
+    ];
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-          scheduleProvider((type: 'teacher', refId: 'teacher-1'))
-              .overrideWith((ref) async => schedule),
+          scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
+              .overrideWith((ref) async => entries),
         ],
         child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),
       ),

@@ -74,8 +74,8 @@ void main() {
     await pumpScreen(
       tester,
       extra: [
-        scheduleProvider((type: 'child', refId: 'child-1'))
-            .overrideWith((ref) async => null),
+        scheduleEntriesProvider((type: 'child', refId: 'child-1'))
+            .overrideWith((ref) async => []),
       ],
     );
     await tester.pumpAndSettle();

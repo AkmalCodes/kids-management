@@ -4,21 +4,58 @@ import '../../core/models/schedule.dart';
 // Single-day timetable: hours down the left, entries drawn as blocks
 // positioned by their start/end times — the detail view you land on when
 // tapping a day in ScheduleAgendaView.
+//
+// onAddEntry/onTapEntry are both optional — leave both null for a read-only
+// view (e.g. a parent viewing their child's schedule). A single
+// GestureDetector dispatches to whichever one applies based on tap
+// position, rather than giving each entry block its own tap handler, so
+// there's no ambiguity about which widget "wins" an overlapping tap.
 class DayTimetable extends StatelessWidget {
-  const DayTimetable({super.key, required this.entries});
+  const DayTimetable({
+    super.key,
+    required this.entries,
+    this.onAddEntry,
+    this.onTapEntry,
+  });
 
   final List<ScheduleEntry> entries;
+  final void Function(int hour)? onAddEntry;
+  final void Function(ScheduleEntry entry)? onTapEntry;
 
   static const startHour = 7;
   static const endHour = 18;
   static const hourHeight = 56.0;
   static const _timeAxisWidth = 48.0;
 
+  static int minutesSinceGridStart(String time) {
+    final parts = time.split(':');
+    return (int.parse(parts[0]) - startHour) * 60 + int.parse(parts[1]);
+  }
+
+  void _handleTap(double localY) {
+    final tappedMinutes = (localY / hourHeight * 60).round();
+    for (final entry in entries) {
+      final start = minutesSinceGridStart(entry.startTime);
+      final end = minutesSinceGridStart(entry.endTime);
+      if (tappedMinutes >= start && tappedMinutes < end) {
+        onTapEntry?.call(entry);
+        return;
+      }
+    }
+    if (onAddEntry != null) {
+      var hour = startHour + (localY / hourHeight).floor();
+      if (hour < startHour) hour = startHour;
+      if (hour > endHour - 1) hour = endHour - 1;
+      onAddEntry!(hour);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hourCount = endHour - startHour;
     final gridHeight = hourCount * hourHeight;
     final gridLineColor = Theme.of(context).dividerColor;
+    final tapEnabled = onAddEntry != null || onTapEntry != null;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -45,22 +82,27 @@ class DayTimetable extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: Container(
-                height: gridHeight,
-                decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: gridLineColor)),
-                ),
-                child: Stack(
-                  children: [
-                    for (int h = startHour; h < endHour; h++)
-                      Positioned(
-                        top: (h - startHour) * hourHeight,
-                        left: 0,
-                        right: 0,
-                        child: Divider(height: 1, color: gridLineColor),
-                      ),
-                    for (final entry in entries) _EntryBlock(entry: entry),
-                  ],
+              child: GestureDetector(
+                key: const Key('day-timetable-grid'),
+                behavior: HitTestBehavior.opaque,
+                onTapUp: tapEnabled ? (details) => _handleTap(details.localPosition.dy) : null,
+                child: Container(
+                  height: gridHeight,
+                  decoration: BoxDecoration(
+                    border: Border(left: BorderSide(color: gridLineColor)),
+                  ),
+                  child: Stack(
+                    children: [
+                      for (int h = startHour; h < endHour; h++)
+                        Positioned(
+                          top: (h - startHour) * hourHeight,
+                          left: 0,
+                          right: 0,
+                          child: Divider(height: 1, color: gridLineColor),
+                        ),
+                      for (final entry in entries) _EntryBlock(entry: entry),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -76,15 +118,10 @@ class _EntryBlock extends StatelessWidget {
 
   final ScheduleEntry entry;
 
-  int _minutesSinceGridStart(String time) {
-    final parts = time.split(':');
-    return (int.parse(parts[0]) - DayTimetable.startHour) * 60 + int.parse(parts[1]);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final startMinutes = _minutesSinceGridStart(entry.startTime);
-    final endMinutes = _minutesSinceGridStart(entry.endTime);
+    final startMinutes = DayTimetable.minutesSinceGridStart(entry.startTime);
+    final endMinutes = DayTimetable.minutesSinceGridStart(entry.endTime);
     final top = (startMinutes / 60) * DayTimetable.hourHeight;
     final rawHeight = ((endMinutes - startMinutes) / 60) * DayTimetable.hourHeight;
     final height = rawHeight < 24 ? 24.0 : rawHeight;

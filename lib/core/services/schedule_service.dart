@@ -9,45 +9,64 @@ class ScheduleService {
   ScheduleService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  Future<Schedule?> fetchSchedule({
+  Future<List<ScheduleEntry>> fetchEntries({
     required String type,
     required String refId,
   }) async {
     final rows = await _client
-        .from('schedules')
+        .from('schedule_entries')
         .select()
         .eq('type', type)
         .eq('ref_id', refId)
-        .limit(1);
-    final list = rows as List;
-    if (list.isEmpty) return null;
-    return Schedule.fromJson(list.first as Map<String, dynamic>);
+        .order('day')
+        .order('start_time');
+    return (rows as List)
+        .map((row) => ScheduleEntry.fromJson(row as Map<String, dynamic>))
+        .toList();
   }
 
-  // existingId absent -> insert (created_by set once); existingId present ->
-  // update (created_by omitted from the payload so the original creator is
-  // preserved, only updated_by/updated_at change).
-  Future<void> saveSchedule({
+  Future<void> createEntry({
     required String type,
     required String refId,
     required String centerId,
-    required List<ScheduleEntry> entries,
+    required String day,
+    required String startTime,
+    required String endTime,
+    required String label,
     required String actorUid,
-    String? existingId,
   }) async {
-    final payload = {
+    await _client.from('schedule_entries').insert({
       'type': type,
       'ref_id': refId,
       'center_id': centerId,
-      'entries': entries.map((e) => e.toJson()).toList(),
+      'day': day,
+      'start_time': startTime,
+      'end_time': endTime,
+      'label': label,
+      'created_by': actorUid,
       'updated_by': actorUid,
-      if (existingId == null) 'created_by': actorUid,
-    };
-    if (existingId != null) {
-      await _client.from('schedules').update(payload).eq('id', existingId);
-    } else {
-      await _client.from('schedules').insert(payload);
-    }
+    });
+  }
+
+  Future<void> updateEntry({
+    required String id,
+    required String day,
+    required String startTime,
+    required String endTime,
+    required String label,
+    required String actorUid,
+  }) async {
+    await _client.from('schedule_entries').update({
+      'day': day,
+      'start_time': startTime,
+      'end_time': endTime,
+      'label': label,
+      'updated_by': actorUid,
+    }).eq('id', id);
+  }
+
+  Future<void> deleteEntry(String id) async {
+    await _client.from('schedule_entries').delete().eq('id', id);
   }
 }
 
@@ -59,9 +78,9 @@ final scheduleServiceProvider = Provider<ScheduleService>(
 // default, no extra class needed just to carry (type, refId) together.
 typedef ScheduleQuery = ({String type, String refId});
 
-final scheduleProvider =
-    FutureProvider.autoDispose.family<Schedule?, ScheduleQuery>((ref, query) {
+final scheduleEntriesProvider =
+    FutureProvider.autoDispose.family<List<ScheduleEntry>, ScheduleQuery>((ref, query) {
   return ref
       .watch(scheduleServiceProvider)
-      .fetchSchedule(type: query.type, refId: query.refId);
+      .fetchEntries(type: query.type, refId: query.refId);
 });
