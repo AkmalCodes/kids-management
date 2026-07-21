@@ -61,7 +61,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Event'), findsOneWidget);
+    expect(find.text('Create Event'), findsOneWidget);
     expect(find.text('Delete'), findsNothing);
     expect(find.text('Start: 08:00'), findsOneWidget);
     expect(find.text('End: 09:00'), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Please enter an event name'), findsOneWidget);
-    expect(find.text('Add Event'), findsOneWidget); // dialog still open
+    expect(find.text('Create Event'), findsOneWidget); // dialog still open
   });
 
   testWidgets('save returns ScheduleEntrySaved with the entered label', (tester) async {

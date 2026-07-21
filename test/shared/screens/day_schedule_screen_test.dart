@@ -56,6 +56,7 @@ void main() {
     required List<ScheduleEntry> entries,
     required String viewerId,
     bool editable = false,
+    String? centerId = 'center-1',
   }) =>
       tester.pumpWidget(
         ProviderScope(
@@ -69,7 +70,7 @@ void main() {
               entries: entries,
               type: 'teacher',
               refId: 'teacher-1',
-              centerId: 'center-1',
+              centerId: centerId,
               editable: editable,
             ),
           ),
@@ -117,7 +118,7 @@ void main() {
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Event'), findsOneWidget);
+    expect(find.text('Create Event'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), 'Music');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
@@ -155,7 +156,7 @@ void main() {
     await tester.tapAt(gridTopLeft + const Offset(10, 10)); // hour 7
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Event'), findsOneWidget);
+    expect(find.text('Create Event'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), 'Music');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
@@ -221,6 +222,36 @@ void main() {
     expect(find.text('Only the creator or a director can edit this event.'), findsOneWidget);
     verifyNever(() => mockService.updateEntry(
           id: any(named: 'id'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          actorUid: any(named: 'actorUid'),
+        ));
+  });
+
+  testWidgets('missing centerId shows an error instead of silently doing nothing',
+      (tester) async {
+    await pumpScreen(
+      tester,
+      entries: const [],
+      viewerId: 'teacher-1',
+      editable: true,
+      centerId: null,
+    );
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create Event'), findsNothing);
+    expect(
+      find.text("Can't add an event: your account has no center assigned. Contact your director."),
+      findsOneWidget,
+    );
+    verifyNever(() => mockService.createEntry(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+          centerId: any(named: 'centerId'),
           day: any(named: 'day'),
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),

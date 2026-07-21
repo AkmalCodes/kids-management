@@ -108,7 +108,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
     final isEditing = widget.existing != null;
 
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Event' : 'Add Event'),
+      title: Text(isEditing ? 'Edit Event' : 'Create Event'),
       content: Form(
         key: _formKey,
         child: Column(

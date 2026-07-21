@@ -76,12 +76,21 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     final type = widget.type;
     final refId = widget.refId;
     final centerId = widget.centerId;
-    if (user == null || type == null || refId == null || centerId == null) return;
+    if (!mounted) return;
+    if (user == null || type == null || refId == null || centerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Can't add an event: your account has no center assigned. Contact your director.",
+          ),
+        ),
+      );
+      return;
+    }
 
     final startTime = '${hour.toString().padLeft(2, '0')}:00';
     final endTime = '${(hour + 1).toString().padLeft(2, '0')}:00';
 
-    if (!mounted) return;
     final result = await showScheduleEntryFormDialog(
       context,
       initialStartTime: startTime,
