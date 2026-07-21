@@ -1,41 +1,86 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/app_user.dart';
-import '../../../core/models/child.dart';
-import '../../../core/services/child_service.dart';
 import '../../../core/services/teacher_service.dart';
 import 'person_schedule_screen.dart';
 
-// Director's "Schedules" tab: pick a teacher or a child, land on their
-// agenda view in edit mode (any teacher's or child's schedule, per the
-// schedule_entries RLS policies granting directors full access).
-class DirectorSchedulesScreen extends StatelessWidget {
+// Director's "Schedules" tab: search/pick a teacher, land on their agenda
+// view in edit mode. Director-managed child schedules aren't exposed here
+// -- teachers are the actual use case, and this stays scannable as the
+// teacher roster grows (hence the inline search instead of a full list).
+class DirectorSchedulesScreen extends StatefulWidget {
   const DirectorSchedulesScreen({super.key});
 
   @override
+  State<DirectorSchedulesScreen> createState() => _DirectorSchedulesScreenState();
+}
+
+class _DirectorSchedulesScreenState extends State<DirectorSchedulesScreen> {
+  bool _searching = false;
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searching = !_searching;
+      if (!_searching) {
+        _searchController.clear();
+        _query = '';
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          const Material(
-            child: TabBar(
-              tabs: [Tab(text: 'Teachers'), Tab(text: 'Children')],
-            ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _searching
+                    ? TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Search teachers…',
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (value) => setState(() => _query = value),
+                      )
+                    : Text(
+                        'Teachers',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+              ),
+              IconButton(
+                icon: Icon(_searching ? Icons.close : Icons.search),
+                tooltip: _searching ? 'Close search' : 'Search teachers',
+                onPressed: _toggleSearch,
+              ),
+            ],
           ),
-          const Expanded(
-            child: TabBarView(
-              children: [_TeacherList(), _ChildList()],
-            ),
-          ),
-        ],
-      ),
+        ),
+        Expanded(child: _TeacherList(query: _query)),
+      ],
     );
   }
 }
 
 class _TeacherList extends ConsumerWidget {
-  const _TeacherList();
+  const _TeacherList({required this.query});
+
+  final String query;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,9 +90,13 @@ class _TeacherList extends ConsumerWidget {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final teachers = snapshot.data!;
+        final teachers = snapshot.data!
+            .where((t) => t.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
         if (teachers.isEmpty) {
-          return const Center(child: Text('No teachers yet.'));
+          return Center(
+            child: Text(query.isEmpty ? 'No teachers yet.' : 'No teachers match "$query".'),
+          );
         }
         return ListView.builder(
           itemCount: teachers.length,
@@ -64,47 +113,6 @@ class _TeacherList extends ConsumerWidget {
                     type: 'teacher',
                     refId: teacher.id,
                     centerId: teacher.centerId,
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _ChildList extends ConsumerWidget {
-  const _ChildList();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<List<Child>>(
-      future: ref.read(childServiceProvider).fetchAll(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final children = snapshot.data!;
-        if (children.isEmpty) {
-          return const Center(child: Text('No children enrolled yet.'));
-        }
-        return ListView.builder(
-          itemCount: children.length,
-          itemBuilder: (context, i) {
-            final child = children[i];
-            return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.child_care_outlined)),
-              title: Text(child.name),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => PersonScheduleScreen(
-                    title: child.name,
-                    type: 'child',
-                    refId: child.id,
-                    centerId: child.centerId,
                   ),
                 ),
               ),
