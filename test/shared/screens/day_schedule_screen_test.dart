@@ -88,6 +88,52 @@ void main() {
     expect(find.byType(DayTimetable), findsOneWidget);
   });
 
+  testWidgets('editable shows a visible add button; read-only does not', (tester) async {
+    await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+  });
+
+  testWidgets('read-only shows no add button', (tester) async {
+    await pumpScreen(tester, entries: const [], viewerId: 'teacher-1');
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('tapping the add button opens the add dialog', (tester) async {
+    when(() => mockService.createEntry(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+          centerId: any(named: 'centerId'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async {});
+    when(() => mockService.fetchEntries(type: any(named: 'type'), refId: any(named: 'refId')))
+        .thenAnswer((_) async => [_entry(id: 'entry-1', createdBy: 'teacher-1')]);
+
+    await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add Event'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), 'Music');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockService.createEntry(
+          type: 'teacher',
+          refId: 'teacher-1',
+          centerId: 'center-1',
+          day: 'Monday',
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: 'Music',
+          actorUid: 'teacher-1',
+        )).called(1);
+  });
+
   testWidgets('editable: tapping empty space opens the add dialog and creates an entry',
       (tester) async {
     when(() => mockService.createEntry(

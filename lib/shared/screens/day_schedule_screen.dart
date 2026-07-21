@@ -153,6 +153,15 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
                 onTapEntry: widget.editable ? _tapEntry : null,
               ),
             ),
+      // Tapping the empty grid also adds an event, but that gesture has no
+      // visual hint — this button is the discoverable way to do it.
+      floatingActionButton: widget.editable
+          ? FloatingActionButton(
+              onPressed: () => _addEntry(DayTimetable.startHour),
+              tooltip: 'Add event',
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
