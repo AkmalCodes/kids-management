@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
 import 'screens/director_attendance_screen.dart';
+import 'screens/director_schedules_screen.dart';
 
 class DirectorShell extends StatefulWidget {
   const DirectorShell({super.key});
@@ -14,7 +15,7 @@ class _DirectorShellState extends State<DirectorShell> {
 
   static const _pages = [
     Center(child: Text('Teachers — coming soon')),
-    Center(child: Text('Schedules — coming soon')),
+    DirectorSchedulesScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
     DirectorAttendanceScreen(),
   ];
