@@ -296,6 +296,43 @@ void main() {
         )).called(1);
   });
 
+  testWidgets('shows an error message when the photo upload fails', (tester) async {
+    final existing = Attendance(
+      id: 'att-1',
+      childId: 'child-1',
+      centerId: 'center-1',
+      date: '2026-07-23',
+      status: AttendanceStatus.present,
+      notes: '',
+      photoPath: null,
+      belongingsPhotoPath: null,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+    when(() => mockPhotoCapture.captureFromCamera()).thenAnswer((_) async => XFile(''));
+    when(() => mockAttendance.uploadCheckInPhoto(
+          childId: any(named: 'childId'),
+          date: any(named: 'date'),
+          photo: any(named: 'photo'),
+        )).thenThrow(Exception('bucket not found'));
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Could not save photo'), findsOneWidget);
+  });
+
   testWidgets('canceling the camera does not upload or attach anything', (tester) async {
     final existing = Attendance(
       id: 'att-1',

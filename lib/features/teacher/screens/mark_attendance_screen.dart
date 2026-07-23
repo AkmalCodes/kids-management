@@ -126,31 +126,38 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     final photo = await ref.read(photoCaptureServiceProvider).captureFromCamera();
     if (photo == null) return;
     final service = ref.read(attendanceServiceProvider);
-    final Attendance updated;
-    if (isBelongings) {
-      final path = await service.uploadBelongingsPhoto(
-        childId: child.id,
-        date: _today,
-        photo: photo,
-      );
-      updated = await service.attachBelongingsPhoto(
-        id: existing.id,
-        belongingsPhotoPath: path,
-        actorUid: user.id,
-      );
-    } else {
-      final path = await service.uploadCheckInPhoto(
-        childId: child.id,
-        date: _today,
-        photo: photo,
-      );
-      updated = await service.attachCheckInPhoto(
-        id: existing.id,
-        photoPath: path,
-        actorUid: user.id,
+    try {
+      final Attendance updated;
+      if (isBelongings) {
+        final path = await service.uploadBelongingsPhoto(
+          childId: child.id,
+          date: _today,
+          photo: photo,
+        );
+        updated = await service.attachBelongingsPhoto(
+          id: existing.id,
+          belongingsPhotoPath: path,
+          actorUid: user.id,
+        );
+      } else {
+        final path = await service.uploadCheckInPhoto(
+          childId: child.id,
+          date: _today,
+          photo: photo,
+        );
+        updated = await service.attachCheckInPhoto(
+          id: existing.id,
+          photoPath: path,
+          actorUid: user.id,
+        );
+      }
+      await _applyUpdate(child.id, updated);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save photo: $e')),
       );
     }
-    await _applyUpdate(child.id, updated);
   }
 
   Widget _photoSlot({
