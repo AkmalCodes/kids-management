@@ -39,11 +39,14 @@ Roles are stored in the `profiles` table in Supabase (`profiles.role`). After lo
 | View own child's schedule | ✅ | — | — |
 | View own child's attendance | ✅ | — | — |
 | View daily reports for own child | ✅ | — | — |
-| View own schedule | — | ✅ | — |
+| View own schedule | — | ✅ | ✅ |
+| View any teacher's schedule | — | ✅ | ✅ |
+| Create/edit/delete events on own schedule | — | ✅ | ✅ |
+| Create/edit/delete events on any schedule | — | — | ✅ |
+| Edit/delete an event someone else created | — | — (unless director) | ✅ |
 | Create / edit lesson plans | — | ✅ | — |
 | Create daily reports (text + images) | — | ✅ | — |
 | Mark attendance | — | ✅ | — |
-| View all teacher schedules | — | — | ✅ |
 | View all lesson plans | — | — | ✅ |
 | View all attendance records | — | — | ✅ |
 | Manage teachers (add / edit / remove) | — | — | ✅ |
@@ -52,6 +55,8 @@ Roles are stored in the `profiles` table in Supabase (`profiles.role`). After lo
 | Manage center settings | — | — | ✅ |
 
 > **Note:** Director and Admin are the same role for now. Further permission granularity can be added in a future iteration.
+>
+> **Schedule permissions changed from the original design** (which had schedules as Director-only): teachers now manage their own schedule directly, and can see — but not edit — every other teacher's schedule. Edit/delete rights on a specific event belong to whoever created it, or any director, regardless of who created it. See §6.2 and the `schedule_entries` RLS policies below.
 
 ---
 
@@ -118,15 +123,19 @@ CREATE TABLE children_parents (
 );
 ```
 
-### `schedules`
+### `schedule_entries`
+> **Superseded design note:** the original plan stored a whole person's week as one row with a `JSONB` array of entries (`schedules` table). That was replaced with **one row per event** once per-event edit/delete permissions were needed (§6.2) — a single JSONB blob can't carry a different `created_by` per entry, but a normal row can.
 ```sql
-CREATE TABLE schedules (
+CREATE TABLE schedule_entries (
   id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   type       TEXT NOT NULL CHECK (type IN ('child', 'teacher')),
-  ref_id     UUID NOT NULL,  -- child id or teacher user id
+  ref_id     UUID NOT NULL,  -- child id or teacher user id this entry belongs to
   center_id  UUID REFERENCES centers(id) NOT NULL,
-  entries    JSONB DEFAULT '[]' NOT NULL,
-  -- entries shape: [{ "day": "Monday", "start_time": "08:00", "end_time": "09:00", "label": "Art" }]
+  day        TEXT NOT NULL CHECK (day IN ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
+  start_time TEXT NOT NULL,  -- 'HH:MM'
+  end_time   TEXT NOT NULL,
+  label      TEXT NOT NULL,
+  color      TEXT NOT NULL DEFAULT '26A69A',  -- bare 6-digit hex, no '#'; picked from a fixed palette in the UI
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by UUID REFERENCES auth.users(id),
@@ -189,12 +198,12 @@ CREATE TABLE daily_reports (
 
 ```sql
 -- Enable RLS on all tables
-ALTER TABLE profiles      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE children      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE schedules     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE lesson_plans  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE children         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lesson_plans     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_reports    ENABLE ROW LEVEL SECURITY;
 
 -- Helper: get current user's role
 CREATE OR REPLACE FUNCTION current_role_name() RETURNS TEXT AS $$
@@ -212,6 +221,32 @@ CREATE POLICY "children_select" ON children FOR SELECT
     OR teacher_id = auth.uid()
     OR EXISTS (SELECT 1 FROM children_parents WHERE child_id = children.id AND parent_id = auth.uid())
   );
+
+-- schedule_entries: director sees/edits everything; teachers see every
+-- teacher's schedule but can only create on their own, and can only
+-- edit/delete an entry they created (director can edit/delete any)
+CREATE POLICY "schedule_entries_select" ON schedule_entries FOR SELECT
+  USING (
+    current_role_name() = 'director'
+    OR (type = 'teacher' AND current_role_name() = 'teacher')
+    OR (type = 'child' AND EXISTS (
+      SELECT 1 FROM children
+      WHERE children.id = schedule_entries.ref_id AND children.teacher_id = auth.uid()
+    ))
+    OR (type = 'child' AND EXISTS (
+      SELECT 1 FROM children_parents
+      WHERE children_parents.child_id = schedule_entries.ref_id AND children_parents.parent_id = auth.uid()
+    ))
+  );
+CREATE POLICY "schedule_entries_insert" ON schedule_entries FOR INSERT
+  WITH CHECK (
+    current_role_name() = 'director'
+    OR (current_role_name() = 'teacher' AND type = 'teacher' AND ref_id = auth.uid())
+  );
+CREATE POLICY "schedule_entries_update" ON schedule_entries FOR UPDATE
+  USING (current_role_name() = 'director' OR created_by = auth.uid());
+CREATE POLICY "schedule_entries_delete" ON schedule_entries FOR DELETE
+  USING (current_role_name() = 'director' OR created_by = auth.uid());
 
 -- attendance: teachers write their class; parents read their child's; directors read all
 CREATE POLICY "attendance_select" ON attendance FOR SELECT
@@ -266,26 +301,34 @@ main.dart
 
 ### Folder structure
 
+Actual structure as of this writing — `(not yet built)` marks planned files that don't exist yet:
+
 ```
 lib/
   main.dart
   core/
     auth/
       auth_gate.dart
-      role_router.dart
-    models/
-      user_model.dart
-      child_model.dart
-      attendance_model.dart
-      schedule_model.dart
-      lesson_plan_model.dart
-      daily_report_model.dart
-    services/
       auth_service.dart
-      attendance_service.dart
+      role_router.dart
+    constants/
+      schedule_colors.dart          -- shared color palette (picker + display)
+    models/
+      app_user.dart
+      child.dart
+      attendance.dart
+      schedule.dart                 -- ScheduleEntry: one row per event, not a whole-week blob
+      lesson_plan.dart              -- model exists; no service/UI yet
+      daily_report.dart             -- model exists; no service/UI yet
+    services/
+      child_service.dart
+      teacher_service.dart
       schedule_service.dart
-      lesson_plan_service.dart
-      daily_report_service.dart
+      attendance_service.dart
+      lesson_plan_service.dart      -- (not yet built)
+      daily_report_service.dart     -- (not yet built)
+    theme/
+      app_theme.dart                -- single seed color, cascades app-wide
   features/
     auth/
       login_screen.dart
@@ -294,28 +337,31 @@ lib/
       screens/
         child_schedule_screen.dart
         child_attendance_screen.dart
-        daily_reports_screen.dart
+        daily_reports_screen.dart   -- (not yet built)
     teacher/
       teacher_shell.dart
       screens/
         teacher_schedule_screen.dart
-        attendance_screen.dart
-        lesson_plan_screen.dart
-        daily_report_create_screen.dart
+        mark_attendance_screen.dart
+        lesson_plan_screen.dart     -- (not yet built)
+        daily_report_create_screen.dart -- (not yet built)
     director/
       director_shell.dart
       screens/
-        all_teachers_screen.dart
-        all_schedules_screen.dart
-        all_lesson_plans_screen.dart
-        all_attendance_screen.dart
-        manage_children_screen.dart
-        manage_teachers_screen.dart
+        director_attendance_screen.dart
+        director_schedules_screen.dart  -- searchable teacher list -> PersonScheduleScreen
+        person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child
+        manage_teachers_screen.dart     -- (not yet built — Teachers tab is still a placeholder)
+        manage_children_screen.dart     -- (not yet built)
   shared/
+    screens/
+      day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
     widgets/
-      app_bottom_nav.dart
-      loading_indicator.dart
-      error_widget.dart
+      logout_button.dart
+      attendance_status_chip.dart
+      schedule_agenda_view.dart     -- week/month toggle, colored event cards
+      day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
+      schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
 ```
 
 ---
@@ -323,18 +369,19 @@ lib/
 ## 6. Feature Descriptions
 
 ### 6.1 Authentication
-- Firebase Auth with email + password
-- On first login, Director manually creates teacher and parent accounts via Admin panel
-- Role is set in Firestore by the Director, never self-assigned
-- Session persists across app restarts (Firebase handles token refresh)
+- Supabase Auth with email + password
+- On first login, Director manually creates teacher and parent accounts via the Supabase dashboard (no in-app admin UI yet — see §6.6)
+- Role is set in the `profiles` table by the Director, never self-assigned
+- Session persists across app restarts (Supabase handles token refresh)
 
 ### 6.2 Schedules
-- Children have a weekly schedule (days + time slots + label e.g. "Nap", "Lunch", "Art")
-- Teachers have their own weekly schedule (days + time slots + class/room)
-- Both child schedules and teacher schedules are created and edited by the Director only
-- Director can view all teacher schedules on one screen
-- Parents can view their child's schedule (read-only)
-- Teachers can view their own schedule (read-only)
+Recurring weekly pattern per person (day-of-week + time, no calendar date) — the same class shows up on every matching weekday, not a one-off dated event.
+
+- **Teacher**: manages their own schedule directly — tap a day to open its hourly timetable, tap an empty slot (or the floating **+** button) to add an event, tap an existing event to edit or delete it. Can also browse (read-only) every other teacher's schedule, for visibility into the team.
+- **Director**: full create/edit/delete rights on *any* teacher's or child's schedule, via a searchable teacher picker (Schedules tab) that lands on the same editable agenda/day view teachers use.
+- **Parent**: views their child's schedule, read-only.
+- **Edit/delete permission on a specific event**: only the person who created it, or any director — enforced by `schedule_entries` RLS, not just the UI (see §4).
+- **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
 ### 6.3 Attendance
 - Teacher opens the attendance screen, sees the list of children in their class
@@ -342,23 +389,25 @@ lib/
 - One record per child per day — re-opening the screen shows existing marks for editing
 - Director can filter and view attendance across all children and dates
 
-### 6.4 Daily Reports
+### 6.4 Daily Reports — not yet built
 - Teacher creates one report per child per day
-- Report contains free-text and images (uploaded to Firebase Storage; image limit per report to be confirmed — suggest starting with 5)
+- Report contains free-text and images (uploaded to Supabase Storage; image limit per report to be confirmed — suggest starting with 5)
 - Parent sees all reports for their child, sorted by date (newest first)
 - Reports are read-only for parents
 
-### 6.5 Lesson Plans
+### 6.5 Lesson Plans — not yet built
 - Teacher writes a lesson plan per day (title + content)
 - Director can browse all teachers' lesson plans, filtered by teacher or date
 - Lesson plans are read-only for the Director
 
-### 6.6 Director / Admin Panel
-- Add / edit / deactivate teacher accounts
-- Enroll children, assign to rooms and primary teacher
-- Create parent accounts and link to a child
-- View all schedules, attendance records, and lesson plans across the center
-- Manage center settings (center name, rooms)
+### 6.6 Director / Admin Panel — partially built
+- ✅ View all attendance records, any date (Attendance tab)
+- ✅ View/edit any teacher's or child's schedule (Schedules tab, §6.2)
+- ⬜ Add / edit / deactivate teacher accounts — currently done manually via the Supabase dashboard (Teachers tab is still a placeholder)
+- ⬜ Enroll children, assign to rooms and primary teacher — currently done manually via SQL
+- ⬜ Create parent accounts and link to a child — currently done manually via SQL
+- ⬜ View all lesson plans across the center (depends on §6.5)
+- ⬜ Manage center settings (center name, rooms)
 
 ---
 
@@ -371,26 +420,27 @@ Role Router
   ↓
 ┌─────────────────────────────────────────────┐
 │ PARENT                                       │
-│  Tab 1: Child Schedule (weekly grid)         │
-│  Tab 2: Child Attendance (calendar view)     │
-│  Tab 3: Daily Reports (list → detail)        │
+│  Tab 1: Schedule (agenda: week/month toggle) │
+│  Tab 2: Attendance (per-child history)       │
+│  Tab 3: Reports — not yet built              │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ TEACHER                                      │
-│  Tab 1: My Schedule (weekly grid)            │
+│  Tab 1: Schedule (agenda → day timetable,    │
+│          create/edit/delete own events)      │
 │  Tab 2: Attendance (today's class list)      │
-│  Tab 3: Lesson Plans (list → create/edit)    │
-│  Tab 4: Daily Reports (create per child)     │
+│  Tab 3: Lesson Plans — not yet built         │
+│  Tab 4: Reports — not yet built               │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ DIRECTOR                                     │
-│  Tab 1: Teachers (list → profile)            │
-│  Tab 2: Schedules (all teachers)             │
-│  Tab 3: Lesson Plans (all teachers)          │
-│  Tab 4: Attendance (all children, all dates) │
-│  FAB: + Add Teacher / + Enroll Child         │
+│  Tab 1: Teachers — not yet built (placeholder)│
+│  Tab 2: Schedules (search a teacher → their  │
+│          editable agenda/day view)           │
+│  Tab 3: Lesson Plans — not yet built          │
+│  Tab 4: Attendance (all children, any date)  │
 └─────────────────────────────────────────────┘
 ```
 
@@ -398,10 +448,15 @@ Role Router
 
 ## 8. Error Handling
 
-- All Firestore reads wrapped in try/catch with a shared `ErrorWidget` fallback
-- Offline: Firestore's built-in local cache keeps read data available; writes are queued and synced when back online
-- Image uploads show progress indicator; failed uploads surface a retry option
-- Auth errors (wrong password, account disabled) shown as inline form errors, not dialogs
+**Currently implemented:**
+- Screens using Riverpod's `AsyncValue` (most of them) show a plain `Error: $e` text on failure — functional but not user-friendly; no shared error widget/retry affordance yet
+- Auth errors (wrong password) shown as an inline message on the login form, not a dialog
+- Attempting to add a schedule event with no `center_id` on the account shows a specific, actionable message instead of silently failing (a real bug caught during manual testing — see git history)
+
+**Not yet implemented (unlike the original Firestore-based plan, Supabase has no built-in offline cache/write queue — this needs to be built deliberately, not assumed):**
+- Offline support — no local cache, no queued writes; the app currently requires a live connection
+- A shared, styled error widget with a retry button
+- Image upload progress/retry (moot until Daily Reports, §6.4, is built)
 
 ---
 
@@ -422,9 +477,14 @@ The following are intentionally excluded from this version:
 
 ## 10. Build Phases
 
-| Phase | Features | Target |
+This replaces the original 4-phase plan — actual delivery order ended up more granular once schedules turned out to need per-event CRUD and permissions rather than a single Director-managed blob.
+
+| Phase | Features | Status |
 |---|---|---|
-| 1 | Auth + RBAC + Schedules + Attendance | Core usable by teachers |
-| 2 | Daily Reports (text + images) | Parents get value |
-| 3 | Lesson Plans + Director panel | Directors can monitor |
-| 4 | Web build + polish | Broader access |
+| 1 | Auth + RBAC + navigation shell (Supabase) | ✅ Done |
+| 2 | Schedules (read-only agenda view) + Attendance (mark/view) | ✅ Done |
+| 3 | Schedule entries CRUD — teacher self-manage, director manage any, per-event creator/director edit permission, event colors, Director's searchable Schedules tab | ✅ Done |
+| 4 | Daily Reports (text + images) | ⬜ Not started |
+| 5 | Lesson Plans | ⬜ Not started |
+| 6 | Director account/enrollment management — Teachers tab, child enrollment, parent linking (currently all manual via Supabase dashboard/SQL) | ⬜ Not started |
+| 7 | Web build + polish | ⬜ Not started |
