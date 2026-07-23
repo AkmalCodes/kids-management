@@ -98,7 +98,22 @@ void main() {
           actorUid: any(named: 'actorUid'),
           existingId: any(named: 'existingId'),
           notes: any(named: 'notes'),
-        )).thenAnswer((_) async {});
+        )).thenAnswer(
+      (_) async => Attendance(
+        id: 'att-1',
+        childId: 'child-1',
+        centerId: 'center-1',
+        date: '2026-07-23',
+        status: AttendanceStatus.present,
+        notes: '',
+        photoPath: null,
+        belongingsPhotoPath: null,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        createdBy: 'teacher-1',
+        updatedBy: 'teacher-1',
+      ),
+    );
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
@@ -172,7 +187,22 @@ void main() {
           id: any(named: 'id'),
           photoPath: any(named: 'photoPath'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async {});
+        )).thenAnswer(
+      (_) async => Attendance(
+        id: 'att-1',
+        childId: 'child-1',
+        centerId: 'center-1',
+        date: '2026-07-23',
+        status: AttendanceStatus.present,
+        notes: '',
+        photoPath: 'child-1/2026-07-23.jpg',
+        belongingsPhotoPath: null,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        createdBy: 'teacher-1',
+        updatedBy: 'teacher-1',
+      ),
+    );
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
@@ -228,7 +258,22 @@ void main() {
           id: any(named: 'id'),
           belongingsPhotoPath: any(named: 'belongingsPhotoPath'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async {});
+        )).thenAnswer(
+      (_) async => Attendance(
+        id: 'att-1',
+        childId: 'child-1',
+        centerId: 'center-1',
+        date: '2026-07-23',
+        status: AttendanceStatus.present,
+        notes: '',
+        photoPath: null,
+        belongingsPhotoPath: 'child-1/2026-07-23-belongings.jpg',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        createdBy: 'teacher-1',
+        updatedBy: 'teacher-1',
+      ),
+    );
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
@@ -351,7 +396,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Not marked'), findsNothing);
-    expect(find.byType(ChoiceChip), findsNWidgets(3));
+    expect(find.byType(ChoiceChip), findsNWidgets(2));
   });
 
   testWidgets('only one card can be expanded at a time', (tester) async {
@@ -369,13 +414,13 @@ void main() {
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ChoiceChip), findsNWidgets(3));
+    expect(find.byType(ChoiceChip), findsNWidgets(2));
 
     await tester.tap(find.text('Bob'));
     await tester.pumpAndSettle();
 
     // Bob's card is now expanded, Alice's collapsed back down.
-    expect(find.byType(ChoiceChip), findsNWidgets(3));
+    expect(find.byType(ChoiceChip), findsNWidgets(2));
     expect(find.text('Not marked'), findsOneWidget);
   });
 

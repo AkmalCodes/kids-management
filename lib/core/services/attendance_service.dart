@@ -35,7 +35,10 @@ class AttendanceService {
   // are attached independently via attachCheckInPhoto/attachBelongingsPhoto
   // so changing status never silently wipes out a photo someone attached
   // earlier.
-  Future<void> markAttendance({
+  // Returns the saved row (via .select().single()) so the caller can
+  // update its local state directly instead of re-fetching the whole
+  // roster -- same round-trip-avoidance as ScheduleService's create/update.
+  Future<Attendance> markAttendance({
     required String childId,
     required String centerId,
     required String date,
@@ -53,11 +56,10 @@ class AttendanceService {
       'updated_by': actorUid,
       if (existingId == null) 'created_by': actorUid,
     };
-    if (existingId != null) {
-      await _client.from('attendance').update(payload).eq('id', existingId);
-    } else {
-      await _client.from('attendance').insert(payload);
-    }
+    final row = existingId != null
+        ? await _client.from('attendance').update(payload).eq('id', existingId).select().single()
+        : await _client.from('attendance').insert(payload).select().single();
+    return Attendance.fromJson(row);
   }
 
   // Both photo attachments require an existing attendance record (the UI
@@ -65,26 +67,28 @@ class AttendanceService {
   // day), so these are always a plain update of one column -- no
   // insert-vs-update branching needed.
 
-  Future<void> attachCheckInPhoto({
+  Future<Attendance> attachCheckInPhoto({
     required String id,
     required String photoPath,
     required String actorUid,
   }) async {
-    await _client.from('attendance').update({
+    final row = await _client.from('attendance').update({
       'photo_path': photoPath,
       'updated_by': actorUid,
-    }).eq('id', id);
+    }).eq('id', id).select().single();
+    return Attendance.fromJson(row);
   }
 
-  Future<void> attachBelongingsPhoto({
+  Future<Attendance> attachBelongingsPhoto({
     required String id,
     required String belongingsPhotoPath,
     required String actorUid,
   }) async {
-    await _client.from('attendance').update({
+    final row = await _client.from('attendance').update({
       'belongings_photo_path': belongingsPhotoPath,
       'updated_by': actorUid,
-    }).eq('id', id);
+    }).eq('id', id).select().single();
+    return Attendance.fromJson(row);
   }
 
   // Deterministic path per child+day so retaking a photo overwrites (via

@@ -27,7 +27,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
 
   // Fixed for the life of the screen so a mark made right before midnight
   // doesn't silently target a different day than what's on screen.
-  final String _today = DateTime.now().toIso8601String().substring(0, 10);
+  final DateTime _todayDate = DateTime.now();
+  late final String _today = _todayDate.toIso8601String().substring(0, 10);
 
   bool _searching = false;
   final _searchController = TextEditingController();
@@ -79,10 +80,27 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     );
   }
 
+  // Applies a write's returned row straight to the already-loaded roster
+  // instead of re-fetching everything from the network -- that round trip
+  // was why status changes visibly lagged before this (same fix already
+  // applied to schedule entries; see ScheduleService).
+  Future<void> _applyUpdate(String childId, Attendance updated) async {
+    final data = await _future;
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(
+        _RosterData(
+          children: data.children,
+          attendanceByChild: {...data.attendanceByChild, childId: updated},
+        ),
+      );
+    });
+  }
+
   Future<void> _setStatus(Child child, AttendanceStatus status, Attendance? existing) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    await ref.read(attendanceServiceProvider).markAttendance(
+    final updated = await ref.read(attendanceServiceProvider).markAttendance(
           childId: child.id,
           centerId: child.centerId,
           date: _today,
@@ -90,9 +108,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
           actorUid: user.id,
           existingId: existing?.id,
         );
-    setState(() {
-      _future = _load();
-    });
+    await _applyUpdate(child.id, updated);
   }
 
   // Both photo kinds are entirely optional and independent of each other
@@ -110,13 +126,14 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     final photo = await ref.read(photoCaptureServiceProvider).captureFromCamera();
     if (photo == null) return;
     final service = ref.read(attendanceServiceProvider);
+    final Attendance updated;
     if (isBelongings) {
       final path = await service.uploadBelongingsPhoto(
         childId: child.id,
         date: _today,
         photo: photo,
       );
-      await service.attachBelongingsPhoto(
+      updated = await service.attachBelongingsPhoto(
         id: existing.id,
         belongingsPhotoPath: path,
         actorUid: user.id,
@@ -127,15 +144,13 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         date: _today,
         photo: photo,
       );
-      await service.attachCheckInPhoto(
+      updated = await service.attachCheckInPhoto(
         id: existing.id,
         photoPath: path,
         actorUid: user.id,
       );
     }
-    setState(() {
-      _future = _load();
-    });
+    await _applyUpdate(child.id, updated);
   }
 
   Widget _photoSlot({
@@ -170,11 +185,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     );
   }
 
-  static const _statusChoices = [
-    AttendanceStatus.present,
-    AttendanceStatus.absent,
-    AttendanceStatus.late,
-  ];
+  static const _statusChoices = [AttendanceStatus.present, AttendanceStatus.absent];
 
   String _statusLabel(AttendanceStatus status) => switch (status) {
     AttendanceStatus.present => 'Present',
@@ -182,6 +193,15 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     AttendanceStatus.late => 'Late',
     AttendanceStatus.excused => 'Excused',
   };
+
+  static const _weekdayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  String _formatHeaderDate(DateTime date) {
+    final dd = date.day.toString().padLeft(2, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    final yy = (date.year % 100).toString().padLeft(2, '0');
+    return '$dd/$mm/$yy ${_weekdayAbbreviations[date.weekday - 1]}';
+  }
 
   Widget _avatar(Attendance? existing) {
     // Reuses today's check-in photo (once taken) as a visual identifier --
@@ -238,6 +258,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                     ChoiceChip(
                       label: Text(_statusLabel(status)),
                       selected: existing?.status == status,
+                      showCheckmark: false,
                       onSelected: (_) => _setStatus(child, status, existing),
                     ),
                 ],
@@ -294,12 +315,23 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                         ),
                         onChanged: (value) => setState(() => _query = value),
                       )
-                    : Text(
-                        'Attendance',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                    : Row(
+                        children: [
+                          Text(
+                            'Attendance',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatHeaderDate(_todayDate),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
                       ),
               ),
               IconButton(
