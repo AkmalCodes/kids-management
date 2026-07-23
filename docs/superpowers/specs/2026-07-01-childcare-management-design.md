@@ -432,10 +432,11 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
 ### 6.3 Attendance
-- Teacher opens the attendance screen, sees a searchable list of children in their class (search bar at the top filters by name, same pattern as the Director's teacher search in §6.2)
+- Teacher opens the attendance screen, sees today's date (`DD/MM/YY Day`) next to the header and a searchable list of children in their class (search bar at the top filters by name, same pattern as the Director's teacher search in §6.2)
 - Each child's card starts collapsed, showing only avatar, name, and current status; tapping expands it to the full marking view (status chips, photo capture) and collapses whichever other card was open — only one expanded at a time
-- Marks each child: Present / Absent / Late
+- Marks each child: Present / Absent (Late/Excused still exist in the `status` enum and DB check constraint, but aren't offered as choices on this screen)
 - One record per child per day — re-opening the screen shows existing marks for editing
+- Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleService`'s create/update)
 - Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day (retaking isn't supported in this first version)
 - Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
