@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Centralized so every screen picks up the same look automatically —
 // change the seed color or radius here and it cascades everywhere,
@@ -11,11 +12,16 @@ class AppTheme {
 
   static ThemeData get light {
     final colorScheme = ColorScheme.fromSeed(seedColor: seedColor);
+    // Applies Comfortaa to every standard text style (buttons, app bar
+    // titles, list tiles, etc. all resolve their font from this), so
+    // switching the app's font is just this one line.
+    final textTheme = GoogleFonts.comfortaaTextTheme();
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
+      textTheme: textTheme,
 
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
