@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -392,15 +394,14 @@ void main() {
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+    // Never resolves -- this test only cares that SignedPhotoThumbnail is
+    // wired up with the right path, not that its image actually renders.
+    // Letting the signed-URL future resolve would have CircleAvatar attempt
+    // a real network image decode, which the test environment can't do.
     when(() => mockAttendance.getSignedPhotoUrl('child-1/2026-07-23.jpg'))
-        .thenAnswer((_) async => 'https://example.supabase.co/signed/child-1/2026-07-23.jpg');
+        .thenAnswer((_) => Completer<String>().future);
 
     await pumpScreen(tester);
-    // Deliberately single pumps (not pumpAndSettle): once the signed URL
-    // resolves, CircleAvatar would attempt a real network image decode in
-    // the test environment and throw. Checking the thumbnail's photoPath
-    // prop is enough to confirm it was wired up correctly.
-    await tester.pump();
     await tester.pump();
 
     // The collapsed card's leading avatar already reuses the check-in photo.
