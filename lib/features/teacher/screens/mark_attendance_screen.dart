@@ -176,7 +176,22 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(child.name, style: Theme.of(context).textTheme.titleMedium),
+                    Row(
+                      children: [
+                        // Reuses today's check-in photo (once taken) as a
+                        // visual identifier -- there's no separate profile
+                        // picture for a child yet, just a placeholder icon
+                        // until one has been captured for the day.
+                        existing?.photoPath != null
+                            ? SignedPhotoThumbnail(photoPath: existing!.photoPath!, radius: 16)
+                            : CircleAvatar(
+                                radius: 16,
+                                child: const Icon(Icons.person_outline, size: 18),
+                              ),
+                        const SizedBox(width: 8),
+                        Text(child.name, style: Theme.of(context).textTheme.titleMedium),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     // Wrap (not SegmentedButton) so status chips flow onto a
                     // second line on a narrow card instead of being squeezed
