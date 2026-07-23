@@ -164,7 +164,7 @@ CREATE TABLE attendance (
 > Both photo fields are entirely optional and independent of status and of each other — marking a child Present never requires a photo. Photos are attached via dedicated `attachCheckInPhoto`/`attachBelongingsPhoto` calls that touch only their own column, so a later status change never clobbers a photo taken earlier. One photo of each kind per child per day (overwritten via `upsert` on retake), not a multi-photo gallery — kept simple given Storage's per-file cost.
 
 ### Storage: `attendance-photos` bucket
-Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(name)[1]` recovers the child for RLS checks. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
+Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(objects.name)[1]` recovers the child for RLS checks — must be qualified as `objects.name` since `children` also has its own `name` column that would otherwise shadow it inside the `EXISTS` subquery. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
 
 ### `lesson_plans`
 ```sql
@@ -267,7 +267,11 @@ CREATE POLICY "attendance_update" ON attendance FOR UPDATE
   USING (current_role_name() = 'teacher' AND created_by = auth.uid());
 
 -- attendance-photos Storage bucket: private; paths are "<child_id>/..." so
--- storage.foldername(name)[1] recovers the child_id for the check below.
+-- storage.foldername(objects.name)[1] recovers the child_id for the check
+-- below. Must be qualified as objects.name, not bare `name` -- `children`
+-- also has its own `name` column (the child's name), and inside the EXISTS
+-- subquery an unqualified `name` silently binds to that instead of the
+-- storage object's path, which made every insert/update fail RLS silently.
 CREATE POLICY "attendance_photos_teacher_insert"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -275,7 +279,7 @@ WITH CHECK (
   AND current_role_name() = 'teacher'
   AND EXISTS (
     SELECT 1 FROM children
-    WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+    WHERE children.id::text = (storage.foldername(objects.name))[1] AND children.teacher_id = auth.uid()
   )
 );
 CREATE POLICY "attendance_photos_teacher_update"
@@ -285,7 +289,7 @@ USING (
   AND current_role_name() = 'teacher'
   AND EXISTS (
     SELECT 1 FROM children
-    WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+    WHERE children.id::text = (storage.foldername(objects.name))[1] AND children.teacher_id = auth.uid()
   )
 );
 CREATE POLICY "attendance_photos_select"
@@ -296,11 +300,11 @@ USING (
     current_role_name() = 'director'
     OR EXISTS (
       SELECT 1 FROM children
-      WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+      WHERE children.id::text = (storage.foldername(objects.name))[1] AND children.teacher_id = auth.uid()
     )
     OR EXISTS (
       SELECT 1 FROM children_parents
-      WHERE children_parents.child_id::text = (storage.foldername(name))[1]
+      WHERE children_parents.child_id::text = (storage.foldername(objects.name))[1]
         AND children_parents.parent_id = auth.uid()
     )
   )
