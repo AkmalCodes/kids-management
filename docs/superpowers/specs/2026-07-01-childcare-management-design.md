@@ -146,19 +146,25 @@ CREATE TABLE schedule_entries (
 ### `attendance`
 ```sql
 CREATE TABLE attendance (
-  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  child_id   UUID REFERENCES children(id) NOT NULL,
-  center_id  UUID REFERENCES centers(id) NOT NULL,
-  date       DATE NOT NULL,
-  status     TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused')),
-  notes      TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
-  updated_by UUID REFERENCES auth.users(id),
+  id                    UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  child_id              UUID REFERENCES children(id) NOT NULL,
+  center_id             UUID REFERENCES centers(id) NOT NULL,
+  date                  DATE NOT NULL,
+  status                TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused')),
+  notes                 TEXT DEFAULT '',
+  photo_path            TEXT,  -- optional check-in photo, Storage path in `attendance-photos`
+  belongings_photo_path TEXT,  -- optional photo of the child's belongings/clothes for the day
+  created_at            TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at            TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by            UUID REFERENCES auth.users(id),
+  updated_by            UUID REFERENCES auth.users(id),
   UNIQUE (child_id, date)  -- one record per child per day
 );
 ```
+> Both photo fields are entirely optional and independent of status and of each other — marking a child Present never requires a photo. Photos are attached via dedicated `attachCheckInPhoto`/`attachBelongingsPhoto` calls that touch only their own column, so a later status change never clobbers a photo taken earlier. One photo of each kind per child per day (overwritten via `upsert` on retake), not a multi-photo gallery — kept simple given Storage's per-file cost.
+
+### Storage: `attendance-photos` bucket
+Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(name)[1]` recovers the child for RLS checks. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
 
 ### `lesson_plans`
 ```sql
@@ -260,6 +266,46 @@ CREATE POLICY "attendance_insert" ON attendance FOR INSERT
 CREATE POLICY "attendance_update" ON attendance FOR UPDATE
   USING (current_role_name() = 'teacher' AND created_by = auth.uid());
 
+-- attendance-photos Storage bucket: private; paths are "<child_id>/..." so
+-- storage.foldername(name)[1] recovers the child_id for the check below.
+CREATE POLICY "attendance_photos_teacher_insert"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'attendance-photos'
+  AND current_role_name() = 'teacher'
+  AND EXISTS (
+    SELECT 1 FROM children
+    WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+  )
+);
+CREATE POLICY "attendance_photos_teacher_update"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'attendance-photos'
+  AND current_role_name() = 'teacher'
+  AND EXISTS (
+    SELECT 1 FROM children
+    WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+  )
+);
+CREATE POLICY "attendance_photos_select"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'attendance-photos'
+  AND (
+    current_role_name() = 'director'
+    OR EXISTS (
+      SELECT 1 FROM children
+      WHERE children.id::text = (storage.foldername(name))[1] AND children.teacher_id = auth.uid()
+    )
+    OR EXISTS (
+      SELECT 1 FROM children_parents
+      WHERE children_parents.child_id::text = (storage.foldername(name))[1]
+        AND children_parents.parent_id = auth.uid()
+    )
+  )
+);
+
 -- lesson_plans: teachers write their own; directors read all
 CREATE POLICY "lesson_plans_select" ON lesson_plans FOR SELECT
   USING (teacher_id = auth.uid() OR current_role_name() = 'director');
@@ -325,6 +371,7 @@ lib/
       teacher_service.dart
       schedule_service.dart
       attendance_service.dart
+      photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
@@ -359,6 +406,7 @@ lib/
     widgets/
       logout_button.dart
       attendance_status_chip.dart
+      signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
       schedule_agenda_view.dart     -- week/month toggle, colored event cards
       day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
       schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
@@ -387,6 +435,8 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Teacher opens the attendance screen, sees the list of children in their class
 - Marks each child: Present / Absent / Late / Excused
 - One record per child per day — re-opening the screen shows existing marks for editing
+- Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day (retaking isn't supported in this first version)
+- Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
 
 ### 6.4 Daily Reports — not yet built

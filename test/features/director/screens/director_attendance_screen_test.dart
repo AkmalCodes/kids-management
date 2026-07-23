@@ -7,6 +7,7 @@ import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/attendance_service.dart';
 import 'package:test_flutter/core/services/child_service.dart';
 import 'package:test_flutter/features/director/screens/director_attendance_screen.dart';
+import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockChildService extends Mock implements ChildService {}
 
@@ -35,6 +36,8 @@ Attendance _record(String childId, AttendanceStatus status) => Attendance(
   date: '2026-07-17',
   status: status,
   notes: '',
+  photoPath: null,
+  belongingsPhotoPath: null,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',
@@ -83,5 +86,35 @@ void main() {
     expect(find.text('Bob'), findsOneWidget);
     expect(find.text('Present'), findsOneWidget);
     expect(find.text('Not marked'), findsOneWidget);
+  });
+
+  testWidgets('shows photo thumbnails when a record has attached photos', (tester) async {
+    final record = Attendance(
+      id: 'att-child-1',
+      childId: 'child-1',
+      centerId: 'center-1',
+      date: '2026-07-17',
+      status: AttendanceStatus.present,
+      notes: '',
+      photoPath: 'child-1/2026-07-17.jpg',
+      belongingsPhotoPath: 'child-1/2026-07-17-belongings.jpg',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+    when(() => mockChildren.fetchAll()).thenAnswer((_) async => [_child('child-1', 'Alice')]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [record]);
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) async => 'https://example.supabase.co/signed/photo.jpg');
+
+    await pumpScreen(tester);
+    // Single pumps (not pumpAndSettle): once the signed URLs resolve,
+    // CircleAvatar would attempt a real network image decode in the test
+    // environment and throw.
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
   });
 }

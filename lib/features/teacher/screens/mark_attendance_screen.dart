@@ -5,6 +5,8 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
+import '../../../core/services/photo_capture_service.dart';
+import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
@@ -61,6 +63,61 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     });
   }
 
+  // Both photo kinds are entirely optional and independent of each other
+  // and of status -- this only requires an existing attendance record so
+  // there's an id to attach the photo to (the buttons are disabled until
+  // then). Once taken, a photo isn't retaken here; that keeps this first
+  // version simple.
+  Future<void> _capturePhoto(
+    Child child,
+    Attendance existing, {
+    required bool isBelongings,
+  }) async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+    final photo = await ref.read(photoCaptureServiceProvider).captureFromCamera();
+    if (photo == null) return;
+    final service = ref.read(attendanceServiceProvider);
+    if (isBelongings) {
+      final path = await service.uploadBelongingsPhoto(
+        childId: child.id,
+        date: _today,
+        photo: photo,
+      );
+      await service.attachBelongingsPhoto(
+        id: existing.id,
+        belongingsPhotoPath: path,
+        actorUid: user.id,
+      );
+    } else {
+      final path = await service.uploadCheckInPhoto(
+        childId: child.id,
+        date: _today,
+        photo: photo,
+      );
+      await service.attachCheckInPhoto(
+        id: existing.id,
+        photoPath: path,
+        actorUid: user.id,
+      );
+    }
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Widget _photoSlot({
+    required Key key,
+    required IconData icon,
+    required String? photoPath,
+    required VoidCallback? onPressed,
+  }) {
+    if (photoPath != null) {
+      return SignedPhotoThumbnail(photoPath: photoPath, radius: 18);
+    }
+    return IconButton(key: key, icon: Icon(icon), onPressed: onPressed);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_RosterData>(
@@ -110,6 +167,38 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                         if (selection.isEmpty) return;
                         _setStatus(child, selection.first, existing);
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _photoSlot(
+                          key: Key('checkin-photo-${child.id}'),
+                          icon: Icons.camera_alt_outlined,
+                          photoPath: existing?.photoPath,
+                          onPressed: existing == null
+                              ? null
+                              : () => _capturePhoto(child, existing, isBelongings: false),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Check-in photo',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(width: 16),
+                        _photoSlot(
+                          key: Key('belongings-photo-${child.id}'),
+                          icon: Icons.checkroom_outlined,
+                          photoPath: existing?.belongingsPhotoPath,
+                          onPressed: existing == null
+                              ? null
+                              : () => _capturePhoto(child, existing, isBelongings: true),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Belongings photo',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ],
                 ),

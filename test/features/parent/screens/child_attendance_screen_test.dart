@@ -9,6 +9,7 @@ import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/attendance_service.dart';
 import 'package:test_flutter/core/services/child_service.dart';
 import 'package:test_flutter/features/parent/screens/child_attendance_screen.dart';
+import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockChildService extends Mock implements ChildService {}
 
@@ -49,6 +50,8 @@ Attendance _record(String date, AttendanceStatus status) => Attendance(
   date: date,
   status: status,
   notes: '',
+  photoPath: null,
+  belongingsPhotoPath: null,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',
@@ -97,5 +100,40 @@ void main() {
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('2026-07-17'), findsOneWidget);
     expect(find.text('Present'), findsOneWidget);
+  });
+
+  testWidgets('shows photo thumbnails when a record has attached photos', (tester) async {
+    final record = Attendance(
+      id: 'att-2026-07-17',
+      childId: 'child-1',
+      centerId: 'center-1',
+      date: '2026-07-17',
+      status: AttendanceStatus.present,
+      notes: '',
+      photoPath: 'child-1/2026-07-17.jpg',
+      belongingsPhotoPath: 'child-1/2026-07-17-belongings.jpg',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+    when(() => mockChildren.fetchForParent('parent-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForChild('child-1')).thenAnswer((_) async => [record]);
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) async => 'https://example.supabase.co/signed/photo.jpg');
+
+    await pumpScreen(tester);
+    // Several single pumps (not pumpAndSettle) to walk through this
+    // screen's nested FutureBuilders (user stream -> children -> per-child
+    // attendance) one resolution at a time, stopping short of letting the
+    // thumbnails' own signed-URL futures resolve -- once those resolve,
+    // CircleAvatar would attempt a real network image decode in the test
+    // environment and throw.
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
   });
 }

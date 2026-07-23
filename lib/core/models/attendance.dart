@@ -7,6 +7,13 @@ class Attendance {
   final String date; // YYYY-MM-DD
   final AttendanceStatus status;
   final String notes;
+  // Both photos are entirely optional, independent of status and of each
+  // other — teachers may attach either, neither, or both. Stored as
+  // Supabase Storage object paths (private bucket), not ready-to-use
+  // URLs: display code must exchange these for a signed URL (see
+  // AttendanceService.getSignedPhotoUrl).
+  final String? photoPath; // optional check-in photo
+  final String? belongingsPhotoPath; // optional photo of the child's belongings/clothes
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -19,6 +26,8 @@ class Attendance {
     required this.date,
     required this.status,
     required this.notes,
+    required this.photoPath,
+    required this.belongingsPhotoPath,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -34,6 +43,8 @@ class Attendance {
       (e) => e.name == (json['status'] as String),
     ),
     notes: json['notes'] as String? ?? '',
+    photoPath: json['photo_path'] as String?,
+    belongingsPhotoPath: json['belongings_photo_path'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,
@@ -46,6 +57,8 @@ class Attendance {
     'date': date,
     'status': status.name,
     'notes': notes,
+    'photo_path': photoPath,
+    'belongings_photo_path': belongingsPhotoPath,
     'created_by': createdBy,
     'updated_by': updatedBy,
   };

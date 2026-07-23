@@ -6,6 +6,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
+import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
 class ChildAttendanceScreen extends ConsumerWidget {
   const ChildAttendanceScreen({super.key});
@@ -75,6 +76,7 @@ class _ChildAttendanceSection extends ConsumerWidget {
               children: [
                 for (final record in records)
                   ListTile(
+                    leading: _photoThumbnails(record),
                     title: Text(record.date),
                     trailing: AttendanceStatusChip(status: record.status),
                   ),
@@ -82,6 +84,25 @@ class _ChildAttendanceSection extends ConsumerWidget {
             );
           },
         ),
+      ],
+    );
+  }
+
+  // Either or both may be absent since both photos are optional -- only
+  // shows a leading widget at all if there's something to show.
+  Widget? _photoThumbnails(Attendance record) {
+    final thumbnails = [
+      if (record.photoPath != null)
+        SignedPhotoThumbnail(photoPath: record.photoPath!, radius: 16),
+      if (record.belongingsPhotoPath != null)
+        SignedPhotoThumbnail(photoPath: record.belongingsPhotoPath!, radius: 16),
+    ];
+    if (thumbnails.isEmpty) return null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final thumbnail in thumbnails)
+          Padding(padding: const EdgeInsets.only(right: 4), child: thumbnail),
       ],
     );
   }

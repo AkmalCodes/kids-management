@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/auth_service.dart';
 import '../models/attendance.dart';
@@ -30,6 +31,10 @@ class AttendanceService {
 
   // existingId absent -> insert; existingId present -> update, preserving
   // the original created_by (same pattern as ScheduleService.saveSchedule).
+  // Deliberately doesn't touch photo_path/belongings_photo_path -- those
+  // are attached independently via attachCheckInPhoto/attachBelongingsPhoto
+  // so changing status never silently wipes out a photo someone attached
+  // earlier.
   Future<void> markAttendance({
     required String childId,
     required String centerId,
@@ -53,6 +58,72 @@ class AttendanceService {
     } else {
       await _client.from('attendance').insert(payload);
     }
+  }
+
+  // Both photo attachments require an existing attendance record (the UI
+  // only enables the camera buttons once a status has been picked for the
+  // day), so these are always a plain update of one column -- no
+  // insert-vs-update branching needed.
+
+  Future<void> attachCheckInPhoto({
+    required String id,
+    required String photoPath,
+    required String actorUid,
+  }) async {
+    await _client.from('attendance').update({
+      'photo_path': photoPath,
+      'updated_by': actorUid,
+    }).eq('id', id);
+  }
+
+  Future<void> attachBelongingsPhoto({
+    required String id,
+    required String belongingsPhotoPath,
+    required String actorUid,
+  }) async {
+    await _client.from('attendance').update({
+      'belongings_photo_path': belongingsPhotoPath,
+      'updated_by': actorUid,
+    }).eq('id', id);
+  }
+
+  // Deterministic path per child+day so retaking a photo overwrites (via
+  // upsert) rather than accumulating old photos. The two kinds use a
+  // distinct suffix so they never collide in Storage.
+  Future<String> uploadCheckInPhoto({
+    required String childId,
+    required String date,
+    required XFile photo,
+  }) async {
+    final path = '$childId/$date.jpg';
+    final bytes = await photo.readAsBytes();
+    await _client.storage.from('attendance-photos').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        );
+    return path;
+  }
+
+  Future<String> uploadBelongingsPhoto({
+    required String childId,
+    required String date,
+    required XFile photo,
+  }) async {
+    final path = '$childId/$date-belongings.jpg';
+    final bytes = await photo.readAsBytes();
+    await _client.storage.from('attendance-photos').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        );
+    return path;
+  }
+
+  // The bucket is private, so a stored path isn't directly viewable —
+  // exchange it for a time-limited signed URL each time it's displayed.
+  Future<String> getSignedPhotoUrl(String path) {
+    return _client.storage.from('attendance-photos').createSignedUrl(path, 3600);
   }
 }
 
