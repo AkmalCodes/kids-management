@@ -31,9 +31,9 @@ AppUser _teacher() => AppUser(
   updatedBy: 'director-1',
 );
 
-Child _child() => Child(
-  id: 'child-1',
-  name: 'Alice',
+Child _child({String id = 'child-1', String name = 'Alice'}) => Child(
+  id: id,
+  name: name,
   dob: DateTime(2022, 1, 1),
   centerId: 'center-1',
   roomId: '',
@@ -105,6 +105,10 @@ void main() {
 
     expect(find.text('Alice'), findsOneWidget);
 
+    // Cards start collapsed; expand this one before marking attendance.
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Present'));
     await tester.pumpAndSettle();
 
@@ -126,6 +130,9 @@ void main() {
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
 
     await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     final checkInButton = tester.widget<IconButton>(find.byKey(const Key('checkin-photo-child-1')));
@@ -168,6 +175,9 @@ void main() {
         )).thenAnswer((_) async {});
 
     await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     final checkInButton = tester.widget<IconButton>(find.byKey(const Key('checkin-photo-child-1')));
@@ -223,6 +233,9 @@ void main() {
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('belongings-photo-child-1')));
     await tester.pumpAndSettle();
 
@@ -259,6 +272,9 @@ void main() {
     when(() => mockPhotoCapture.captureFromCamera()).thenAnswer((_) async => null);
 
     await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
@@ -305,8 +321,92 @@ void main() {
     await tester.pump();
     await tester.pump();
 
+    // The collapsed card's leading avatar already reuses the check-in photo.
+    final avatar = tester.widget<SignedPhotoThumbnail>(find.byType(SignedPhotoThumbnail).first);
+    expect(avatar.photoPath, 'child-1/2026-07-23.jpg');
+
+    // Expanding shows the same photo in the check-in slot instead of the
+    // capture button.
+    await tester.tap(find.text('Alice'));
+    await tester.pump();
+
     expect(find.byKey(const Key('checkin-photo-child-1')), findsNothing);
-    final thumbnail = tester.widget<SignedPhotoThumbnail>(find.byType(SignedPhotoThumbnail).first);
-    expect(thumbnail.photoPath, 'child-1/2026-07-23.jpg');
+    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
+  });
+
+  testWidgets('cards start collapsed showing only avatar, name, and status',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('Not marked'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNothing);
+
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not marked'), findsNothing);
+    expect(find.byType(ChoiceChip), findsNWidgets(3));
+  });
+
+  testWidgets('only one card can be expanded at a time', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer(
+      (_) async => [
+        _child(id: 'child-1', name: 'Alice'),
+        _child(id: 'child-2', name: 'Bob'),
+      ],
+    );
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChoiceChip), findsNWidgets(3));
+
+    await tester.tap(find.text('Bob'));
+    await tester.pumpAndSettle();
+
+    // Bob's card is now expanded, Alice's collapsed back down.
+    expect(find.byType(ChoiceChip), findsNWidgets(3));
+    expect(find.text('Not marked'), findsOneWidget);
+  });
+
+  testWidgets('typing a query in the search bar filters students by name',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer(
+      (_) async => [
+        _child(id: 'child-1', name: 'Alice'),
+        _child(id: 'child-2', name: 'Bob'),
+      ],
+    );
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'ali');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('Bob'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('Bob'), findsOneWidget);
   });
 }
