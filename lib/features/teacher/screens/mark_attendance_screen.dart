@@ -118,6 +118,39 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     return IconButton(key: key, icon: Icon(icon), onPressed: onPressed);
   }
 
+  // Icon + label kept together as one Row so Wrap only ever breaks the
+  // line between the two photo slots, never between an icon and its own
+  // label.
+  Widget _photoSlotWithLabel({
+    required Key key,
+    required IconData icon,
+    required String label,
+    required String? photoPath,
+    required VoidCallback? onPressed,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _photoSlot(key: key, icon: icon, photoPath: photoPath, onPressed: onPressed),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  static const _statusChoices = [
+    AttendanceStatus.present,
+    AttendanceStatus.absent,
+    AttendanceStatus.late,
+  ];
+
+  String _statusLabel(AttendanceStatus status) => switch (status) {
+    AttendanceStatus.present => 'Present',
+    AttendanceStatus.absent => 'Absent',
+    AttendanceStatus.late => 'Late',
+    AttendanceStatus.excused => 'Excused',
+  };
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_RosterData>(
@@ -145,58 +178,44 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                   children: [
                     Text(child.name, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    SegmentedButton<AttendanceStatus>(
-                      segments: const [
-                        ButtonSegment(
-                          value: AttendanceStatus.present,
-                          label: Text('Present'),
-                        ),
-                        ButtonSegment(
-                          value: AttendanceStatus.absent,
-                          label: Text('Absent'),
-                        ),
-                        ButtonSegment(value: AttendanceStatus.late, label: Text('Late')),
-                        ButtonSegment(
-                          value: AttendanceStatus.excused,
-                          label: Text('Excused'),
-                        ),
+                    // Wrap (not SegmentedButton) so status chips flow onto a
+                    // second line on a narrow card instead of being squeezed
+                    // down to a width too small for their own label text.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final status in _statusChoices)
+                          ChoiceChip(
+                            label: Text(_statusLabel(status)),
+                            selected: existing?.status == status,
+                            onSelected: (_) => _setStatus(child, status, existing),
+                          ),
                       ],
-                      selected: existing == null ? {} : {existing.status},
-                      emptySelectionAllowed: true,
-                      onSelectionChanged: (selection) {
-                        if (selection.isEmpty) return;
-                        _setStatus(child, selection.first, existing);
-                      },
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        _photoSlot(
+                        _photoSlotWithLabel(
                           key: Key('checkin-photo-${child.id}'),
                           icon: Icons.camera_alt_outlined,
+                          label: 'Check-in photo',
                           photoPath: existing?.photoPath,
                           onPressed: existing == null
                               ? null
                               : () => _capturePhoto(child, existing, isBelongings: false),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Check-in photo',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(width: 16),
-                        _photoSlot(
+                        _photoSlotWithLabel(
                           key: Key('belongings-photo-${child.id}'),
                           icon: Icons.checkroom_outlined,
+                          label: 'Belongings photo',
                           photoPath: existing?.belongingsPhotoPath,
                           onPressed: existing == null
                               ? null
                               : () => _capturePhoto(child, existing, isBelongings: true),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Belongings photo',
-                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
