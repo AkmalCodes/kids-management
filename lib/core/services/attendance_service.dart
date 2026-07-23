@@ -91,6 +91,35 @@ class AttendanceService {
     return Attendance.fromJson(row);
   }
 
+  // Removes both the stored file and the column reference -- leaving the
+  // file behind would just be an orphaned object nobody can reach once the
+  // column is cleared.
+  Future<Attendance> removeCheckInPhoto({
+    required String id,
+    required String photoPath,
+    required String actorUid,
+  }) async {
+    await _client.storage.from('attendance-photos').remove([photoPath]);
+    final row = await _client.from('attendance').update({
+      'photo_path': null,
+      'updated_by': actorUid,
+    }).eq('id', id).select().single();
+    return Attendance.fromJson(row);
+  }
+
+  Future<Attendance> removeBelongingsPhoto({
+    required String id,
+    required String belongingsPhotoPath,
+    required String actorUid,
+  }) async {
+    await _client.storage.from('attendance-photos').remove([belongingsPhotoPath]);
+    final row = await _client.from('attendance').update({
+      'belongings_photo_path': null,
+      'updated_by': actorUid,
+    }).eq('id', id).select().single();
+    return Attendance.fromJson(row);
+  }
+
   // Deterministic path per child+day so retaking a photo overwrites (via
   // upsert) rather than accumulating old photos. The two kinds use a
   // distinct suffix so they never collide in Storage.

@@ -14,6 +14,10 @@ class PhotoCaptureService {
   Future<XFile?> captureFromCamera() {
     return _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
   }
+
+  Future<XFile?> pickFromGallery() {
+    return _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+  }
 }
 
 final photoCaptureServiceProvider = Provider<PhotoCaptureService>(

@@ -9,6 +9,8 @@ import '../../../core/services/photo_capture_service.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
+enum _PhotoAction { camera, gallery, delete }
+
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
 
@@ -113,17 +115,20 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
 
   // Both photo kinds are entirely optional and independent of each other
   // and of status -- this only requires an existing attendance record so
-  // there's an id to attach the photo to (the buttons are disabled until
-  // then). Once taken, a photo isn't retaken here; that keeps this first
-  // version simple.
-  Future<void> _capturePhoto(
+  // there's an id to attach the photo to (the slot's tap target is
+  // disabled until then).
+  Future<void> _pickAndSavePhoto(
     Child child,
     Attendance existing, {
     required bool isBelongings,
+    required bool fromGallery,
   }) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    final photo = await ref.read(photoCaptureServiceProvider).captureFromCamera();
+    final captureService = ref.read(photoCaptureServiceProvider);
+    final photo = fromGallery
+        ? await captureService.pickFromGallery()
+        : await captureService.captureFromCamera();
     if (photo == null) return;
     final service = ref.read(attendanceServiceProvider);
     try {
@@ -160,32 +165,124 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     }
   }
 
+  Future<void> _deletePhoto(
+    Child child,
+    Attendance existing, {
+    required bool isBelongings,
+  }) async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+    final service = ref.read(attendanceServiceProvider);
+    try {
+      final updated = isBelongings
+          ? await service.removeBelongingsPhoto(
+              id: existing.id,
+              belongingsPhotoPath: existing.belongingsPhotoPath!,
+              actorUid: user.id,
+            )
+          : await service.removeCheckInPhoto(
+              id: existing.id,
+              photoPath: existing.photoPath!,
+              actorUid: user.id,
+            );
+      await _applyUpdate(child.id, updated);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete photo: $e')),
+      );
+    }
+  }
+
+  // Offers take/retake, choose from gallery, and (only once a photo
+  // exists) delete -- one entry point covers both the "nothing yet" and
+  // "already have one" states.
+  Future<void> _showPhotoOptions(
+    Child child,
+    Attendance existing, {
+    required bool isBelongings,
+    required bool hasPhoto,
+  }) async {
+    final action = await showModalBottomSheet<_PhotoAction>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: Text(hasPhoto ? 'Retake photo' : 'Take photo'),
+              onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.gallery),
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Delete photo'),
+                onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.delete),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    switch (action) {
+      case _PhotoAction.camera:
+        await _pickAndSavePhoto(child, existing, isBelongings: isBelongings, fromGallery: false);
+      case _PhotoAction.gallery:
+        await _pickAndSavePhoto(child, existing, isBelongings: isBelongings, fromGallery: true);
+      case _PhotoAction.delete:
+        await _deletePhoto(child, existing, isBelongings: isBelongings);
+    }
+  }
+
+  // Fixed-size regardless of whether it shows the placeholder icon or an
+  // existing thumbnail, so the row's total width -- and therefore whether
+  // it fits on one line -- never changes depending on photo state.
+  static const _photoSlotSize = 36.0;
+
   Widget _photoSlot({
     required Key key,
     required IconData icon,
     required String? photoPath,
-    required VoidCallback? onPressed,
+    required VoidCallback? onTap,
   }) {
-    if (photoPath != null) {
-      return SignedPhotoThumbnail(photoPath: photoPath, radius: 18);
-    }
-    return IconButton(key: key, icon: Icon(icon), onPressed: onPressed);
+    final content = photoPath != null
+        ? SignedPhotoThumbnail(photoPath: photoPath, radius: _photoSlotSize / 2)
+        : Icon(
+            icon,
+            size: 20,
+            color: onTap == null ? Theme.of(context).disabledColor : null,
+          );
+    return SizedBox(
+      key: key,
+      width: _photoSlotSize,
+      height: _photoSlotSize,
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const CircleBorder(),
+        child: InkWell(customBorder: const CircleBorder(), onTap: onTap, child: content),
+      ),
+    );
   }
 
-  // Icon + label kept together as one Row so Wrap only ever breaks the
-  // line between the two photo slots, never between an icon and its own
-  // label.
+  // Icon/thumbnail + label kept together as one Row so a plain (non-Wrap)
+  // Row for both slots never breaks a label away from its own icon.
   Widget _photoSlotWithLabel({
     required Key key,
     required IconData icon,
     required String label,
     required String? photoPath,
-    required VoidCallback? onPressed,
+    required VoidCallback? onTap,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _photoSlot(key: key, icon: icon, photoPath: photoPath, onPressed: onPressed),
+        _photoSlot(key: key, icon: icon, photoPath: photoPath, onTap: onTap),
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
@@ -271,28 +368,39 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              // Plain Row (not Wrap): both slots are now a fixed size
+              // regardless of photo state (see _photoSlot), so the row's
+              // width is stable and this never needs to break lines.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _photoSlotWithLabel(
                     key: Key('checkin-photo-${child.id}'),
                     icon: Icons.camera_alt_outlined,
                     label: 'Check-in photo',
                     photoPath: existing?.photoPath,
-                    onPressed: existing == null
+                    onTap: existing == null
                         ? null
-                        : () => _capturePhoto(child, existing, isBelongings: false),
+                        : () => _showPhotoOptions(
+                              child,
+                              existing,
+                              isBelongings: false,
+                              hasPhoto: existing.photoPath != null,
+                            ),
                   ),
                   _photoSlotWithLabel(
                     key: Key('belongings-photo-${child.id}'),
                     icon: Icons.checkroom_outlined,
                     label: 'Belongings photo',
                     photoPath: existing?.belongingsPhotoPath,
-                    onPressed: existing == null
+                    onTap: existing == null
                         ? null
-                        : () => _capturePhoto(child, existing, isBelongings: true),
+                        : () => _showPhotoOptions(
+                              child,
+                              existing,
+                              isBelongings: true,
+                              hasPhoto: existing.belongingsPhotoPath != null,
+                            ),
                   ),
                 ],
               ),

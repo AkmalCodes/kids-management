@@ -140,7 +140,29 @@ void main() {
         )).called(1);
   });
 
-  testWidgets('photo buttons are disabled until a status has been set for the day',
+  InkWell inkWellFor(WidgetTester tester, Key key) => tester.widget<InkWell>(
+        find.descendant(of: find.byKey(key), matching: find.byType(InkWell)),
+      );
+
+  Attendance buildAttendance({
+    String? photoPath,
+    String? belongingsPhotoPath,
+  }) => Attendance(
+    id: 'att-1',
+    childId: 'child-1',
+    centerId: 'center-1',
+    date: '2026-07-23',
+    status: AttendanceStatus.present,
+    notes: '',
+    photoPath: photoPath,
+    belongingsPhotoPath: belongingsPhotoPath,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    createdBy: 'teacher-1',
+    updatedBy: 'teacher-1',
+  );
+
+  testWidgets('photo slots are disabled until a status has been set for the day',
       (tester) async {
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
@@ -152,29 +174,59 @@ void main() {
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
-    final checkInButton = tester.widget<IconButton>(find.byKey(const Key('checkin-photo-child-1')));
-    final belongingsButton =
-        tester.widget<IconButton>(find.byKey(const Key('belongings-photo-child-1')));
-    expect(checkInButton.onPressed, isNull);
-    expect(belongingsButton.onPressed, isNull);
+    expect(inkWellFor(tester, const Key('checkin-photo-child-1')).onTap, isNull);
+    expect(inkWellFor(tester, const Key('belongings-photo-child-1')).onTap, isNull);
   });
 
-  testWidgets('capturing a check-in photo uploads and attaches it once a status exists',
+  testWidgets('tapping an empty photo slot offers Take photo and Choose from gallery, no delete',
       (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-07-23',
-      status: AttendanceStatus.present,
-      notes: '',
-      photoPath: null,
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
+    final existing = buildAttendance();
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Delete photo'), findsNothing);
+  });
+
+  testWidgets('tapping a filled photo slot offers Retake, Choose from gallery, and Delete',
+      (tester) async {
+    final existing = buildAttendance(photoPath: 'child-1/2026-07-23.jpg');
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+
+    await pumpScreen(tester);
+    await tester.pump();
+    await tester.tap(find.text('Alice'));
+    await tester.pump();
+
+    // A never-resolving getSignedPhotoUrl (see above) leaves a spinner
+    // animating forever, so pumpAndSettle would hang -- use a couple of
+    // finite pumps to let the bottom sheet's entrance transition play out.
+    await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Retake photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Delete photo'), findsOneWidget);
+  });
+
+  testWidgets('taking a check-in photo from the camera uploads and attaches it',
+      (tester) async {
+    final existing = buildAttendance();
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
@@ -189,35 +241,20 @@ void main() {
           id: any(named: 'id'),
           photoPath: any(named: 'photoPath'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer(
-      (_) async => Attendance(
-        id: 'att-1',
-        childId: 'child-1',
-        centerId: 'center-1',
-        date: '2026-07-23',
-        status: AttendanceStatus.present,
-        notes: '',
-        photoPath: 'child-1/2026-07-23.jpg',
-        belongingsPhotoPath: null,
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-        createdBy: 'teacher-1',
-        updatedBy: 'teacher-1',
-      ),
-    );
+        )).thenAnswer((_) async => buildAttendance(photoPath: 'child-1/2026-07-23.jpg'));
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
-    final checkInButton = tester.widget<IconButton>(find.byKey(const Key('checkin-photo-child-1')));
-    expect(checkInButton.onPressed, isNotNull);
-
     await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Take photo'));
+    await tester.pumpAndSettle();
 
+    verify(() => mockPhotoCapture.captureFromCamera()).called(1);
+    verifyNever(() => mockPhotoCapture.pickFromGallery());
     verify(() => mockAttendance.uploadCheckInPhoto(
           childId: 'child-1',
           date: any(named: 'date'),
@@ -230,27 +267,14 @@ void main() {
         )).called(1);
   });
 
-  testWidgets('capturing a belongings photo uploads and attaches it once a status exists',
+  testWidgets('choosing a belongings photo from the gallery uploads and attaches it',
       (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-07-23',
-      status: AttendanceStatus.present,
-      notes: '',
-      photoPath: null,
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
+    final existing = buildAttendance();
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
     final photo = XFile('');
-    when(() => mockPhotoCapture.captureFromCamera()).thenAnswer((_) async => photo);
+    when(() => mockPhotoCapture.pickFromGallery()).thenAnswer((_) async => photo);
     when(() => mockAttendance.uploadBelongingsPhoto(
           childId: any(named: 'childId'),
           date: any(named: 'date'),
@@ -261,31 +285,21 @@ void main() {
           belongingsPhotoPath: any(named: 'belongingsPhotoPath'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer(
-      (_) async => Attendance(
-        id: 'att-1',
-        childId: 'child-1',
-        centerId: 'center-1',
-        date: '2026-07-23',
-        status: AttendanceStatus.present,
-        notes: '',
-        photoPath: null,
-        belongingsPhotoPath: 'child-1/2026-07-23-belongings.jpg',
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-        createdBy: 'teacher-1',
-        updatedBy: 'teacher-1',
-      ),
+      (_) async => buildAttendance(belongingsPhotoPath: 'child-1/2026-07-23-belongings.jpg'),
     );
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('belongings-photo-child-1')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
 
+    verify(() => mockPhotoCapture.pickFromGallery()).called(1);
+    verifyNever(() => mockPhotoCapture.captureFromCamera());
     verify(() => mockAttendance.uploadBelongingsPhoto(
           childId: 'child-1',
           date: any(named: 'date'),
@@ -298,21 +312,45 @@ void main() {
         )).called(1);
   });
 
+  testWidgets('deleting a check-in photo removes it from storage and clears the column',
+      (tester) async {
+    final existing = buildAttendance(photoPath: 'child-1/2026-07-23.jpg');
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+    when(() => mockAttendance.removeCheckInPhoto(
+          id: any(named: 'id'),
+          photoPath: any(named: 'photoPath'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => buildAttendance());
+
+    await pumpScreen(tester);
+    await tester.pump();
+    await tester.tap(find.text('Alice'));
+    await tester.pump();
+
+    // A never-resolving getSignedPhotoUrl (see above) leaves a spinner
+    // animating forever, so pumpAndSettle would hang -- use finite pumps
+    // throughout this test instead.
+    await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Delete photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    verify(() => mockAttendance.removeCheckInPhoto(
+          id: 'att-1',
+          photoPath: 'child-1/2026-07-23.jpg',
+          actorUid: 'teacher-1',
+        )).called(1);
+    expect(find.text('Take photo'), findsNothing);
+  });
+
   testWidgets('shows an error message when the photo upload fails', (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-07-23',
-      status: AttendanceStatus.present,
-      notes: '',
-      photoPath: null,
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
+    final existing = buildAttendance();
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
@@ -325,31 +363,19 @@ void main() {
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take photo'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Could not save photo'), findsOneWidget);
   });
 
   testWidgets('canceling the camera does not upload or attach anything', (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-07-23',
-      status: AttendanceStatus.present,
-      notes: '',
-      photoPath: null,
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
+    final existing = buildAttendance();
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
@@ -357,11 +383,12 @@ void main() {
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('Alice'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('checkin-photo-child-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take photo'));
     await tester.pumpAndSettle();
 
     verifyNever(() => mockAttendance.uploadCheckInPhoto(
@@ -377,20 +404,7 @@ void main() {
   });
 
   testWidgets('shows the thumbnail once a check-in photo has been attached', (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-07-23',
-      status: AttendanceStatus.present,
-      notes: '',
-      photoPath: 'child-1/2026-07-23.jpg',
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
+    final existing = buildAttendance(photoPath: 'child-1/2026-07-23.jpg');
     when(() => mockChildren.fetchForTeacher('teacher-1'))
         .thenAnswer((_) async => [_child()]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
@@ -409,11 +423,12 @@ void main() {
     expect(avatar.photoPath, 'child-1/2026-07-23.jpg');
 
     // Expanding shows the same photo in the check-in slot instead of the
-    // capture button.
+    // capture icon -- the slot itself (found by key) still exists since
+    // it's the tap target for retake/gallery/delete, but its rendered
+    // content is a thumbnail now, not the placeholder icon.
     await tester.tap(find.text('Alice'));
     await tester.pump();
 
-    expect(find.byKey(const Key('checkin-photo-child-1')), findsNothing);
     expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
   });
 
