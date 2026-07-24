@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../shared/widgets/logout_button.dart';
 import '../profile/profile_screen.dart';
 import 'screens/child_attendance_screen.dart';
 import 'screens/child_schedule_screen.dart';
@@ -31,7 +30,6 @@ class _ParentShellState extends State<ParentShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Childcare Manager'),
-        actions: const [LogoutButton()],
       ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(

@@ -12,10 +12,15 @@ class AppTheme {
 
   static ThemeData get light {
     final colorScheme = ColorScheme.fromSeed(seedColor: seedColor);
-    // Applies Comfortaa to every standard text style (buttons, app bar
+    // Applies Nunito to every standard text style (buttons, app bar
     // titles, list tiles, etc. all resolve their font from this), so
     // switching the app's font is just this one line.
-    final textTheme = GoogleFonts.comfortaaTextTheme();
+    final textTheme = GoogleFonts.nunitoTextTheme();
+
+    // A tinted (soft-pink) fill for the top and bottom bars so they read as
+    // distinct surfaces framing the content, rather than blending into the
+    // near-white scaffold. primaryContainer is the seed-derived pink.
+    final barColor = colorScheme.primaryContainer;
 
     return ThemeData(
       useMaterial3: true,
@@ -24,8 +29,8 @@ class AppTheme {
       textTheme: textTheme,
 
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
+        backgroundColor: barColor,
+        foregroundColor: colorScheme.onPrimaryContainer,
         elevation: 0,
         centerTitle: true,
       ),
@@ -82,8 +87,10 @@ class AppTheme {
       // as more modern than the older BottomNavigationBar — used in every
       // shell instead.
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colorScheme.surface,
-        indicatorColor: colorScheme.secondaryContainer,
+        backgroundColor: barColor,
+        // A near-white pill so the selected tab stands out clearly against
+        // the pink bar.
+        indicatorColor: colorScheme.surface,
         elevation: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),

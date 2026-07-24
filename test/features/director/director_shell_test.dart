@@ -29,8 +29,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('People'), findsOneWidget);
-    expect(find.text('Schedules'), findsOneWidget);
-    expect(find.text('Lesson Plans'), findsOneWidget);
+    expect(find.text('Schedule'), findsOneWidget);
+    expect(find.text('Lessons'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
   });

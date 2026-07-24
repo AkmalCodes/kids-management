@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../shared/widgets/logout_button.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/teacher_schedule_screen.dart';
@@ -27,7 +26,6 @@ class _TeacherShellState extends State<TeacherShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Childcare Manager'),
-        actions: const [LogoutButton()],
       ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
@@ -47,7 +45,7 @@ class _TeacherShellState extends State<TeacherShell> {
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
-            label: 'Lesson Plans',
+            label: 'Lessons',
           ),
           NavigationDestination(
             icon: Icon(Icons.article_outlined),

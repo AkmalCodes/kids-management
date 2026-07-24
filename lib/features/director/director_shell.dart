@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../shared/widgets/logout_button.dart';
 import '../profile/profile_screen.dart';
 import 'screens/director_attendance_screen.dart';
 import 'screens/director_schedules_screen.dart';
@@ -28,7 +27,6 @@ class _DirectorShellState extends State<DirectorShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Childcare Manager'),
-        actions: const [LogoutButton()],
       ),
       body: _pages[_index],
       bottomNavigationBar: NavigationBar(
@@ -43,12 +41,12 @@ class _DirectorShellState extends State<DirectorShell> {
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
-            label: 'Schedules',
+            label: 'Schedule',
           ),
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
-            label: 'Lesson Plans',
+            label: 'Lessons',
           ),
           NavigationDestination(
             icon: Icon(Icons.check_circle_outline),
