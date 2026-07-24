@@ -24,6 +24,10 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
   DateTime _selectedDate = DateTime.now();
   late Future<_RosterData> _future;
 
+  // Only one child's card is expanded at a time (same accordion behaviour
+  // as the teacher's attendance screen).
+  String? _expandedChildId;
+
   String get _dateString => _selectedDate.toIso8601String().substring(0, 10);
 
   @override
@@ -51,8 +55,99 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
     if (picked == null) return;
     setState(() {
       _selectedDate = picked;
+      _expandedChildId = null;
       _future = _load();
     });
+  }
+
+  void _toggleExpanded(String childId) {
+    setState(() {
+      _expandedChildId = _expandedChildId == childId ? null : childId;
+    });
+  }
+
+  Widget _avatar(Attendance? record) {
+    // Reuses today's check-in photo (if any) as a visual identifier,
+    // otherwise a placeholder icon -- matches the teacher screen.
+    if (record?.photoPath != null) {
+      return SignedPhotoThumbnail(photoPath: record!.photoPath!, radius: 16);
+    }
+    return const CircleAvatar(radius: 16, child: Icon(Icons.person_outline, size: 18));
+  }
+
+  // A read-only photo slot for the expanded view (director doesn't capture
+  // photos): a thumbnail if present, or a muted "none" placeholder.
+  Widget _photoSlot(String label, String? photoPath) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        photoPath != null
+            ? SignedPhotoThumbnail(photoPath: photoPath, radius: 18)
+            : CircleAvatar(
+                radius: 18,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 18,
+                  color: Theme.of(context).disabledColor,
+                ),
+              ),
+        const SizedBox(width: 4),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  Widget _childCard(BuildContext context, Child child, Attendance? record) {
+    final isExpanded = _expandedChildId == child.id;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => _toggleExpanded(child.id),
+              child: Row(
+                children: [
+                  _avatar(record),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(child.name, style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  record == null
+                      ? const Chip(label: Text('Not marked'), side: BorderSide.none)
+                      : AttendanceStatusChip(status: record.status),
+                  const SizedBox(width: 4),
+                  AnimatedRotation(
+                    turns: isExpanded ? -0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(Icons.chevron_left),
+                  ),
+                ],
+              ),
+            ),
+            if (isExpanded) ...[
+              const SizedBox(height: 12),
+              if (record == null)
+                Text(
+                  'No attendance recorded for this day.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(child: _photoSlot('Check-in photo', record.photoPath)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _photoSlot('Belongings photo', record.belongingsPhotoPath)),
+                  ],
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -87,41 +182,16 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
               }
               final sorted = [...data.children]..sort((a, b) => a.name.compareTo(b.name));
               return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 itemCount: sorted.length,
                 itemBuilder: (context, i) {
                   final child = sorted[i];
-                  final record = data.attendanceByChild[child.id];
-                  return ListTile(
-                    leading: record == null ? null : _photoThumbnails(record),
-                    title: Text(child.name),
-                    trailing: record == null
-                        ? const Chip(label: Text('Not marked'), side: BorderSide.none)
-                        : AttendanceStatusChip(status: record.status),
-                  );
+                  return _childCard(context, child, data.attendanceByChild[child.id]);
                 },
               );
             },
           ),
         ),
-      ],
-    );
-  }
-
-  // Either or both may be absent since both photos are optional -- only
-  // shows a leading widget at all if there's something to show.
-  Widget? _photoThumbnails(Attendance record) {
-    final thumbnails = [
-      if (record.photoPath != null)
-        SignedPhotoThumbnail(photoPath: record.photoPath!, radius: 16),
-      if (record.belongingsPhotoPath != null)
-        SignedPhotoThumbnail(photoPath: record.belongingsPhotoPath!, radius: 16),
-    ];
-    if (thumbnails.isEmpty) return null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final thumbnail in thumbnails)
-          Padding(padding: const EdgeInsets.only(right: 4), child: thumbnail),
       ],
     );
   }

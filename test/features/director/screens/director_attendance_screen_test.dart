@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,7 +90,8 @@ void main() {
     expect(find.text('Not marked'), findsOneWidget);
   });
 
-  testWidgets('shows photo thumbnails when a record has attached photos', (tester) async {
+  testWidgets('a card starts collapsed and expands to show the photos on tap',
+      (tester) async {
     final record = Attendance(
       id: 'att-child-1',
       childId: 'child-1',
@@ -105,16 +108,23 @@ void main() {
     );
     when(() => mockChildren.fetchAll()).thenAnswer((_) async => [_child('child-1', 'Alice')]);
     when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [record]);
+    // Never resolves -- keeps the signed-URL futures pending so CircleAvatar
+    // never attempts a real network image decode (which the test env can't).
     when(() => mockAttendance.getSignedPhotoUrl(any()))
-        .thenAnswer((_) async => 'https://example.supabase.co/signed/photo.jpg');
+        .thenAnswer((_) => Completer<String>().future);
 
     await pumpScreen(tester);
-    // Single pumps (not pumpAndSettle): once the signed URLs resolve,
-    // CircleAvatar would attempt a real network image decode in the test
-    // environment and throw.
-    await tester.pump();
     await tester.pump();
 
-    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
+    // Collapsed: only the leading avatar reuses the check-in photo.
+    expect(find.byType(SignedPhotoThumbnail), findsOneWidget);
+
+    await tester.tap(find.text('Alice'));
+    await tester.pump();
+
+    // Expanded adds the check-in and belongings photo slots.
+    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(3));
+    expect(find.text('Check-in photo'), findsOneWidget);
+    expect(find.text('Belongings photo'), findsOneWidget);
   });
 }
