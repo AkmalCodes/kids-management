@@ -114,12 +114,13 @@ $$ LANGUAGE sql SECURITY DEFINER;
 CREATE TABLE children (
   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name        TEXT NOT NULL,
-  dob         DATE NOT NULL,
+  dob         DATE NOT NULL,  -- age is derived from this in the UI, not stored
   center_id   UUID REFERENCES centers(id) NOT NULL,
   room_id     TEXT DEFAULT '',
-  teacher_id  UUID REFERENCES auth.users(id),
+  teacher_id  UUID REFERENCES auth.users(id),  -- the child's "class"/primary teacher
   allergies   TEXT DEFAULT '',
   notes       TEXT DEFAULT '',
+  height_cm   REAL,  -- optional recorded height, editable in the child-detail screen (§6.6)
   enrolled_at DATE DEFAULT CURRENT_DATE NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -236,6 +237,12 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER;
 -- profiles: users read their own; directors read all in their center
 CREATE POLICY "profiles_select" ON profiles FOR SELECT
   USING (id = auth.uid() OR current_role_name() = 'director');
+-- Directors can edit any profile (name/phone, via the person-detail screen).
+-- Scoped to directors so a non-director can't self-escalate their role --
+-- that's why regular-user self-edits (avatar, password flag) go through
+-- narrow SECURITY DEFINER RPCs instead of a broad self-update policy.
+CREATE POLICY "profiles_update_director" ON profiles FOR UPDATE
+  USING (current_role_name() = 'director');
 
 -- children: parents see their linked children; teachers see their class; directors see all
 CREATE POLICY "children_select" ON children FOR SELECT
@@ -413,7 +420,7 @@ lib/
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
-      app_theme.dart                -- single seed color + font (Comfortaa via google_fonts), cascades app-wide
+      app_theme.dart                -- single seed color + font (Nunito via google_fonts) + tinted top/bottom bars, cascades app-wide
   features/
     auth/
       login_screen.dart             -- includes "Forgot password?" -> ForgotPasswordScreen
@@ -442,9 +449,11 @@ lib/
         director_schedules_screen.dart  -- searchable teacher list -> PersonScheduleScreen
         person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child
         people_screen.dart              -- Teachers | Children sub-tabs (§6.6)
-        manage_teachers_screen.dart     -- teacher list + invite-a-teacher
-        manage_children_screen.dart     -- child list + invite-a-parent
+        manage_teachers_screen.dart     -- teacher list (tap -> PersonDetailScreen) + invite-a-teacher
+        manage_children_screen.dart     -- child list (tap -> ChildDetailScreen) + invite-a-parent
         enroll_child_screen.dart        -- child record + first parent invite in one form
+        child_detail_screen.dart        -- director view/edit of one child (§6.6)
+        person_detail_screen.dart       -- director view/edit of one teacher/parent (§6.6)
   shared/
     screens/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
@@ -488,7 +497,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleService`'s create/update)
 - Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day
 - Tapping a photo slot opens a menu: Take/Retake photo (camera), Choose from gallery, and — once a photo exists — Delete photo (removes both the Storage object and the column reference). Both slots are a fixed size regardless of whether they show the placeholder icon or an existing thumbnail, so the row's layout doesn't shift depending on photo state
-- The photo row's two halves are `Expanded` with an ellipsizing `Flexible` label (not sized to their own intrinsic content width) so the row can't overflow on a narrow screen; same fix applied to the header's date text next to "Attendance" — both surfaced after switching the app font to Comfortaa (see folder structure note on `app_theme.dart` below) rendered text wider than the previous default. Covered by a regression test that pumps the screen at a 320px-wide surface
+- The photo row's two halves are `Expanded` with an ellipsizing `Flexible` label (not sized to their own intrinsic content width) so the row can't overflow on a narrow screen; same fix applied to the header's date text next to "Attendance" — both surfaced after switching the app font (now Nunito; see folder structure note on `app_theme.dart` below) rendered text wider than the previous default. Covered by a regression test that pumps the screen at a 320px-wide surface
 - Signed URLs (see below) are cached per photo path in a Riverpod `FutureProvider.family` (`signedPhotoUrlProvider`) for the app's session, so re-expanding a card reuses the already-fetched URL instead of re-hitting Storage
 - Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
@@ -510,7 +519,10 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - ✅ **People tab** (Teachers | Children sub-tabs) for account provisioning:
   - Invite a teacher by email
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
-- ⬜ Edit / deactivate existing teacher/parent accounts (only create is built)
+- ✅ **Tap a row to view/edit details:**
+  - A child → `ChildDetailScreen`: edit name, date of birth (age is shown, derived), height, room, class teacher (dropdown), allergies, notes. Saves via `ChildService.updateChild` (director-only per `children_update` RLS).
+  - A teacher/parent → `PersonDetailScreen`: edit name and phone. Saves via `ProfileService.updatePersonDetails` (director-only per `profiles_update_director` RLS). Email isn't shown (lives on `auth.users`, not readable cross-user from the client) and the avatar shows a placeholder (avatars bucket is owner-read-only).
+- ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
 - ⬜ View all lesson plans across the center (depends on §6.5)
 - ⬜ Manage center settings (center name, rooms)
 

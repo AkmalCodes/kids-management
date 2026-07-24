@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/auth_service.dart';
+import '../models/app_user.dart';
 
 // Profile pictures live in a private 'avatars' Storage bucket, one file per
 // user keyed by their own id ('<uid>/avatar.jpg'), same private-bucket +
@@ -35,6 +36,23 @@ class ProfileService {
 
   Future<String> getSignedAvatarUrl(String path) =>
       _client.storage.from('avatars').createSignedUrl(path, 3600);
+
+  // Director-only edit of another user's profile (name/phone), per the
+  // profiles_update_director RLS policy. A regular user can't use this --
+  // the policy checks the caller is a director. Returns the saved row.
+  Future<AppUser> updatePersonDetails({
+    required String userId,
+    required String name,
+    required String phone,
+    required String actorUid,
+  }) async {
+    final row = await _client.from('profiles').update({
+      'name': name,
+      'phone': phone,
+      'updated_by': actorUid,
+    }).eq('id', userId).select().single();
+    return AppUser.fromJson(row);
+  }
 }
 
 final profileServiceProvider = Provider<ProfileService>(

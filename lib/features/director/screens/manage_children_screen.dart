@@ -4,6 +4,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
+import 'child_detail_screen.dart';
 import 'enroll_child_screen.dart';
 
 class ManageChildrenScreen extends ConsumerStatefulWidget {
@@ -62,6 +63,18 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
     }
   }
 
+  Future<void> _openDetail(Child child) async {
+    final updated = await Navigator.of(context).push<Child>(
+      MaterialPageRoute(builder: (_) => ChildDetailScreen(child: child)),
+    );
+    if (updated == null || !mounted) return;
+    // A save returns the updated child -- refresh the list so the row
+    // reflects any changed name/room.
+    setState(() {
+      _future = _load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,6 +97,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
                 leading: const CircleAvatar(child: Icon(Icons.child_care_outlined)),
                 title: Text(child.name),
                 subtitle: Text(child.roomId.isEmpty ? 'No room on file' : child.roomId),
+                onTap: () => _openDetail(child),
                 trailing: IconButton(
                   icon: const Icon(Icons.person_add_alt_1_outlined),
                   tooltip: 'Invite a parent',

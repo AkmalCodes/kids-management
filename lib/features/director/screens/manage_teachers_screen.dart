@@ -4,6 +4,7 @@ import '../../../core/models/app_user.dart';
 import '../../../core/services/teacher_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
+import 'person_detail_screen.dart';
 
 class ManageTeachersScreen extends ConsumerStatefulWidget {
   const ManageTeachersScreen({super.key});
@@ -47,6 +48,16 @@ class _ManageTeachersScreenState extends ConsumerState<ManageTeachersScreen> {
     }
   }
 
+  Future<void> _openDetail(AppUser teacher) async {
+    final updated = await Navigator.of(context).push<AppUser>(
+      MaterialPageRoute(builder: (_) => PersonDetailScreen(person: teacher)),
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      _future = _load();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,6 +80,8 @@ class _ManageTeachersScreenState extends ConsumerState<ManageTeachersScreen> {
                 leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                 title: Text(teacher.name),
                 subtitle: Text(teacher.phone.isEmpty ? 'No phone on file' : teacher.phone),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openDetail(teacher),
               );
             },
           );

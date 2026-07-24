@@ -6,6 +6,7 @@ import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/core/services/user_management_service.dart';
 import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
+import 'package:test_flutter/features/director/screens/person_detail_screen.dart';
 
 class MockTeacherService extends Mock implements TeacherService {}
 
@@ -64,6 +65,20 @@ void main() {
 
     expect(find.text('Ms. Smith'), findsOneWidget);
     expect(find.text('555-0100'), findsOneWidget);
+  });
+
+  testWidgets('tapping a teacher row opens their detail screen', (tester) async {
+    when(() => mockTeachers.fetchAll())
+        .thenAnswer((_) async => [_teacher('teacher-1', 'Ms. Smith')]);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ms. Smith'));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<PersonDetailScreen>(find.byType(PersonDetailScreen));
+    expect(screen.person.id, 'teacher-1');
   });
 
   testWidgets('inviting a teacher calls the service and refreshes the list', (tester) async {

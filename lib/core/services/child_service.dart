@@ -50,6 +50,18 @@ class ChildService {
     final row = await _client.from('children').insert(child.toJson()).select().single();
     return Child.fromJson(row);
   }
+
+  // Director-only per the children_update RLS policy. Returns the saved row
+  // so the caller can update local state directly.
+  Future<Child> updateChild(Child child) async {
+    final row = await _client
+        .from('children')
+        .update(child.toJson())
+        .eq('id', child.id)
+        .select()
+        .single();
+    return Child.fromJson(row);
+  }
 }
 
 final childServiceProvider = Provider<ChildService>(
