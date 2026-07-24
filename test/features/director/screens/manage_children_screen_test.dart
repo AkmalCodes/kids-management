@@ -56,6 +56,9 @@ void main() {
     mockTeachers = MockTeacherService();
     mockUserManagement = MockUserManagementService();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
+    // ChildDetailScreen (opened by the tap-through test) loads parents in
+    // initState.
+    when(() => mockChildren.fetchParentsForChild(any())).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester) async {

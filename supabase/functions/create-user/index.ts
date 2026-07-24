@@ -100,6 +100,9 @@ Deno.serve(async (req) => {
     role,
     name,
     phone: phone ?? "",
+    // Denormalized so a director can display this person's email later
+    // (auth.users isn't readable cross-user from the client).
+    email,
     center_id: callerProfile.center_id,
     // Forces the set-password screen on first entry (they were invited,
     // so they've never chosen a password).

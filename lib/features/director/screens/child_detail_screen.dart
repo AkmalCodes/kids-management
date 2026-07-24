@@ -33,6 +33,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   late String? _teacherId;
   late String? _avatarPath;
   late Future<List<AppUser>> _teachersFuture;
+  late Future<List<AppUser>> _parentsFuture;
   bool _saving = false;
 
   @override
@@ -43,6 +44,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     _classController = TextEditingController(text: c.className);
     _allergiesController = TextEditingController(text: c.allergies);
     _notesController = TextEditingController(text: c.notes);
+    _parentsFuture = ref.read(childServiceProvider).fetchParentsForChild(c.id);
     _dob = c.dob;
     _teacherId = c.teacherId;
     _avatarPath = c.avatarPath;
@@ -221,6 +223,40 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Save changes'),
+            ),
+            const SizedBox(height: 24),
+            Text('Parents', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            FutureBuilder<List<AppUser>>(
+              future: _parentsFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final parents = snapshot.data!;
+                if (parents.isEmpty) {
+                  return const Text('No parents linked yet.');
+                }
+                return Column(
+                  children: [
+                    for (final parent in parents)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                        title: Text(parent.name),
+                        subtitle: Text(
+                          parent.email ?? 'No email on file',
+                          style: parent.email == null
+                              ? TextStyle(color: Theme.of(context).disabledColor)
+                              : null,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/auth_service.dart';
+import '../models/app_user.dart';
 import '../models/child.dart';
 
 class ChildService {
@@ -93,6 +94,23 @@ class ChildService {
 
   Future<String> getSignedChildAvatarUrl(String path) =>
       _client.storage.from('child-avatars').createSignedUrl(path, 3600);
+
+  // The parents linked to a child, for the director's child-detail contacts
+  // section. Done as two queries because children_parents.parent_id points
+  // at auth.users (not profiles), so Postgrest can't embed profiles across
+  // it directly -- fetch the ids, then the profile rows.
+  Future<List<AppUser>> fetchParentsForChild(String childId) async {
+    final links = await _client
+        .from('children_parents')
+        .select('parent_id')
+        .eq('child_id', childId);
+    final ids = (links as List).map((l) => l['parent_id'] as String).toList();
+    if (ids.isEmpty) return [];
+    final rows = await _client.from('profiles').select().inFilter('id', ids);
+    return (rows as List)
+        .map((row) => AppUser.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
 }
 
 final childServiceProvider = Provider<ChildService>(

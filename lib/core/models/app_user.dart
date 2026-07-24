@@ -3,6 +3,11 @@ class AppUser {
   final String role;
   final String name;
   final String phone;
+  // Denormalized copy of the auth.users email so a director can display a
+  // parent/teacher's email (auth.users itself isn't readable cross-user
+  // from the client). Set by the create-user Edge Function; may be null on
+  // accounts created before the column existed until backfilled.
+  final String? email;
   final String? centerId;
   // Set true when a director invites this account; forces a set-password
   // screen on first entry, then cleared. Existing accounts default false.
@@ -21,6 +26,7 @@ class AppUser {
     required this.role,
     required this.name,
     required this.phone,
+    this.email,
     required this.centerId,
     this.mustSetPassword = false,
     this.avatarPath,
@@ -35,6 +41,7 @@ class AppUser {
     role: json['role'] as String,
     name: json['name'] as String,
     phone: json['phone'] as String? ?? '',
+    email: json['email'] as String?,
     centerId: json['center_id'] as String?,
     mustSetPassword: json['must_set_password'] as bool? ?? false,
     avatarPath: json['avatar_path'] as String?,

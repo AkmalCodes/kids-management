@@ -62,6 +62,7 @@ void main() {
     mockTeachers = MockTeacherService();
     mockPhotoCapture = MockPhotoCaptureService();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
+    when(() => mockChildren.fetchParentsForChild(any())).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester) async {
@@ -148,5 +149,38 @@ void main() {
           path: 'child-1/avatar.jpg',
           actorUid: 'director-1',
         )).called(1);
+  });
+
+  testWidgets('shows the linked parents with their names and emails', (tester) async {
+    when(() => mockChildren.fetchParentsForChild('child-1')).thenAnswer(
+      (_) async => [
+        AppUser(
+          id: 'parent-1',
+          role: 'parent',
+          name: 'Jane Doe',
+          phone: '',
+          email: 'jane@example.com',
+          centerId: 'center-1',
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+          createdBy: 'director-1',
+          updatedBy: 'director-1',
+        ),
+      ],
+    );
+
+    await pumpScreen(tester);
+
+    expect(find.text('Parents'), findsOneWidget);
+    expect(find.text('Jane Doe'), findsOneWidget);
+    expect(find.text('jane@example.com'), findsOneWidget);
+  });
+
+  testWidgets('shows a message when no parents are linked', (tester) async {
+    when(() => mockChildren.fetchParentsForChild('child-1')).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+
+    expect(find.text('No parents linked yet.'), findsOneWidget);
   });
 }
