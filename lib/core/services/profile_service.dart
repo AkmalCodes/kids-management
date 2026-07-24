@@ -53,6 +53,18 @@ class ProfileService {
     }).eq('id', userId).select().single();
     return AppUser.fromJson(row);
   }
+
+  // Any user editing their OWN name/phone, via a SECURITY DEFINER RPC that
+  // only ever touches auth.uid()'s row and only those two columns -- so it
+  // can't be used to change one's own role (same reasoning as
+  // set_avatar_path). Returns the updated profile.
+  Future<AppUser> updateOwnDetails({required String name, required String phone}) async {
+    final row = await _client.rpc(
+      'update_own_profile',
+      params: {'new_name': name, 'new_phone': phone},
+    );
+    return AppUser.fromJson(row as Map<String, dynamic>);
+  }
 }
 
 final profileServiceProvider = Provider<ProfileService>(

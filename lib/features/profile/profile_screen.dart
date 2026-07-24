@@ -5,6 +5,7 @@ import '../../core/models/app_user.dart';
 import '../../core/services/photo_capture_service.dart';
 import '../../core/services/profile_service.dart';
 import 'change_password_screen.dart';
+import 'person_detail_screen.dart';
 
 // Shared account-settings tab for every role. Shows the user's avatar,
 // name, email and role, plus actions to change the avatar and password.
@@ -85,6 +86,14 @@ class ProfileScreen extends ConsumerWidget {
               value: user.role[0].toUpperCase() + user.role.substring(1),
             ),
             const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => PersonDetailScreen(person: user)),
+              ),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Profile details'),
+            ),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),

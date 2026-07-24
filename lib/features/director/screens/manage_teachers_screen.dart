@@ -4,7 +4,7 @@ import '../../../core/models/app_user.dart';
 import '../../../core/services/teacher_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
-import 'person_detail_screen.dart';
+import '../../profile/person_detail_screen.dart';
 
 class ManageTeachersScreen extends ConsumerStatefulWidget {
   const ManageTeachersScreen({super.key});

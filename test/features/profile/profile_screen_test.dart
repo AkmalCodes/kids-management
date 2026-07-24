@@ -8,6 +8,7 @@ import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/services/photo_capture_service.dart';
 import 'package:test_flutter/core/services/profile_service.dart';
 import 'package:test_flutter/features/profile/change_password_screen.dart';
+import 'package:test_flutter/features/profile/person_detail_screen.dart';
 import 'package:test_flutter/features/profile/profile_screen.dart';
 
 class MockAuthService extends Mock implements AuthService {}
@@ -102,6 +103,17 @@ void main() {
 
     verify(() => mockProfile.uploadAvatar(userId: 'uid-1', photo: photo)).called(1);
     verify(() => mockProfile.setAvatarPath('uid-1/avatar.jpg')).called(1);
+  });
+
+  testWidgets('opening Profile details navigates to the person detail screen', (tester) async {
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Profile details'));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<PersonDetailScreen>(find.byType(PersonDetailScreen));
+    expect(screen.person.id, 'uid-1');
   });
 
   testWidgets('signs out when Sign out is tapped', (tester) async {

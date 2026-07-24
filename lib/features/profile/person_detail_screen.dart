@@ -46,14 +46,23 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
     setState(() => _saving = true);
+    final service = ref.read(profileServiceProvider);
+    final name = _nameController.text.trim();
+    final phone = _phoneController.text.trim();
     try {
-      final updated = await ref.read(profileServiceProvider).updatePersonDetails(
-            userId: widget.person.id,
-            name: _nameController.text.trim(),
-            phone: _phoneController.text.trim(),
-            actorUid: user.id,
-          );
+      // Editing yourself goes through the self-only RPC (works for any
+      // role); editing someone else uses the director-only policy.
+      final updated = user.id == widget.person.id
+          ? await service.updateOwnDetails(name: name, phone: phone)
+          : await service.updatePersonDetails(
+              userId: widget.person.id,
+              name: name,
+              phone: phone,
+              actorUid: user.id,
+            );
       if (!mounted) return;
+      // Self-edits change the current user's own profile, so refresh it.
+      if (user.id == widget.person.id) ref.invalidate(currentUserProvider);
       Navigator.of(context).pop(updated);
     } catch (e) {
       if (!mounted) return;

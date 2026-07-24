@@ -6,7 +6,7 @@ import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/core/services/user_management_service.dart';
 import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
-import 'package:test_flutter/features/director/screens/person_detail_screen.dart';
+import 'package:test_flutter/features/profile/person_detail_screen.dart';
 
 class MockTeacherService extends Mock implements TeacherService {}
 
