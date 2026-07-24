@@ -20,6 +20,17 @@ class AuthService {
         return AppUser.fromJson(data);
       });
 
+  // Emits true when a password-recovery deep link is opened (the app is now
+  // authenticated with a recovery session and should force a new password),
+  // false for every other auth event -- so completing the password update
+  // (which fires userUpdated) naturally drops back out of recovery mode.
+  Stream<bool> get passwordRecoveryStream => _client.auth.onAuthStateChange
+      .map((event) => event.event == AuthChangeEvent.passwordRecovery);
+
+  // The signed-in user's email lives on auth.users (not the profiles row),
+  // so it's read straight off the current session rather than AppUser.
+  String? get currentEmail => _client.auth.currentUser?.email;
+
   Future<void> signIn(String email, String password) =>
       _client.auth.signInWithPassword(email: email, password: password);
 
@@ -56,4 +67,8 @@ final authServiceProvider = Provider<AuthService>(
 
 final currentUserProvider = StreamProvider<AppUser?>((ref) {
   return ref.watch(authServiceProvider).userStream;
+});
+
+final passwordRecoveryProvider = StreamProvider<bool>((ref) {
+  return ref.watch(authServiceProvider).passwordRecoveryStream;
 });

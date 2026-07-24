@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
+import '../profile/profile_screen.dart';
 import 'screens/director_attendance_screen.dart';
 import 'screens/director_schedules_screen.dart';
 import 'screens/people_screen.dart';
@@ -19,6 +20,7 @@ class _DirectorShellState extends State<DirectorShell> {
     DirectorSchedulesScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
     DirectorAttendanceScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -52,6 +54,11 @@ class _DirectorShellState extends State<DirectorShell> {
             icon: Icon(Icons.check_circle_outline),
             selectedIcon: Icon(Icons.check_circle),
             label: 'Attendance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

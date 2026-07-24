@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
+import '../profile/profile_screen.dart';
 import 'screens/child_attendance_screen.dart';
 import 'screens/child_schedule_screen.dart';
 
@@ -22,6 +23,7 @@ class _ParentShellState extends State<ParentShell> {
     ChildScheduleScreen(),
     ChildAttendanceScreen(),
     Center(child: Text('Reports — coming soon')),
+    ProfileScreen(),
   ];
 
   @override
@@ -50,6 +52,11 @@ class _ParentShellState extends State<ParentShell> {
             icon: Icon(Icons.article_outlined),
             selectedIcon: Icon(Icons.article),
             label: 'Reports',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

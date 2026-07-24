@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:test_flutter/features/teacher/teacher_shell.dart';
 
 void main() {
-  testWidgets('TeacherShell renders four tabs', (tester) async {
+  testWidgets('TeacherShell renders its tabs', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: TeacherShell())),
     );
@@ -12,5 +12,6 @@ void main() {
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.text('Lesson Plans'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }

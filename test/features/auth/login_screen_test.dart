@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:test_flutter/features/auth/forgot_password_screen.dart';
 import 'package:test_flutter/features/auth/login_screen.dart';
 
 void main() {
@@ -10,6 +11,17 @@ void main() {
     );
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.text('Sign In'), findsOneWidget);
+  });
+
+  testWidgets('tapping Forgot password? opens the ForgotPasswordScreen', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ForgotPasswordScreen), findsOneWidget);
   });
 
   testWidgets('shows email error when Sign In tapped with empty fields', (tester) async {

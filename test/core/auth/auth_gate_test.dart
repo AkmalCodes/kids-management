@@ -25,6 +25,7 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(null)),
+        passwordRecoveryProvider.overrideWith((ref) => Stream.value(false)),
       ],
       child: const MaterialApp(home: AuthGate()),
     ));
@@ -37,11 +38,29 @@ void main() {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user(mustSetPassword: true))),
+        passwordRecoveryProvider.overrideWith((ref) => Stream.value(false)),
       ],
       child: const MaterialApp(home: AuthGate()),
     ));
     await tester.pumpAndSettle();
 
     expect(find.byType(SetPasswordScreen), findsOneWidget);
+  });
+
+  testWidgets('shows SetPasswordScreen (recovery mode) when a recovery link fires',
+      (tester) async {
+    // A normal, fully-provisioned user -- but a recovery deep link has
+    // fired, so they must still set a new password first.
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        currentUserProvider.overrideWith((ref) => Stream.value(_user())),
+        passwordRecoveryProvider.overrideWith((ref) => Stream.value(true)),
+      ],
+      child: const MaterialApp(home: AuthGate()),
+    ));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<SetPasswordScreen>(find.byType(SetPasswordScreen));
+    expect(screen.clearMustSetPasswordFlag, isFalse);
   });
 }

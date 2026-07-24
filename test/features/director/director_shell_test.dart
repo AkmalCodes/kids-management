@@ -11,7 +11,7 @@ class MockChildService extends Mock implements ChildService {}
 class MockTeacherService extends Mock implements TeacherService {}
 
 void main() {
-  testWidgets('DirectorShell renders four tabs', (tester) async {
+  testWidgets('DirectorShell renders its tabs', (tester) async {
     final mockChildren = MockChildService();
     final mockTeachers = MockTeacherService();
     when(() => mockChildren.fetchAll()).thenAnswer((_) async => []);
@@ -32,5 +32,6 @@ void main() {
     expect(find.text('Schedules'), findsOneWidget);
     expect(find.text('Lesson Plans'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
   });
 }

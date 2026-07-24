@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_service.dart';
+import 'forgot_password_screen.dart';
 
 // ConsumerStatefulWidget instead of plain StatefulWidget: this screen needs
 // both local UI state (text controllers, loading/error flags via setState)
@@ -146,6 +147,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           )
                         : const Text('Sign In'),
                   ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(),
+                            ),
+                          ),
+                  child: const Text('Forgot password?'),
                 ),
               ],
             ),

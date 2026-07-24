@@ -89,16 +89,22 @@ CREATE TABLE profiles (
   phone             TEXT DEFAULT '',
   center_id         UUID REFERENCES centers(id),
   must_set_password BOOLEAN NOT NULL DEFAULT false,  -- true for invited accounts until they choose a password (§6.6a)
+  avatar_path       TEXT,  -- profile picture in the private 'avatars' bucket (§6.7), null if unset
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by        UUID REFERENCES auth.users(id),
   updated_by        UUID REFERENCES auth.users(id)
 );
 
--- Lets a user clear their own must_set_password flag without a broad
--- profiles UPDATE policy (which could let them change their own role).
+-- Both let a user update one specific field on their own profile row
+-- without a broad UPDATE policy (which could let them change their own
+-- role). SECURITY DEFINER; each only ever touches the caller's own row.
 CREATE OR REPLACE FUNCTION complete_password_setup() RETURNS void AS $$
   UPDATE profiles SET must_set_password = false, updated_at = now() WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION set_avatar_path(new_path TEXT) RETURNS void AS $$
+  UPDATE profiles SET avatar_path = new_path, updated_at = now() WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 > Supabase Auth manages the email + password in `auth.users`. `profiles` holds everything else. The `id` in `profiles` is the same UUID as in `auth.users`.
@@ -173,6 +179,9 @@ CREATE TABLE attendance (
 
 ### Storage: `attendance-photos` bucket
 Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(objects.name)[1]` recovers the child for RLS checks — must be qualified as `objects.name` since `children` also has its own `name` column that would otherwise shadow it inside the `EXISTS` subquery. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
+
+### Storage: `avatars` bucket
+Private bucket for profile pictures, one file per user at `<user_id>/avatar.jpg` (§6.7). A user can only insert/update/select their own avatar — RLS checks `storage.foldername(objects.name)[1] = auth.uid()::text`. Displayed via a session-cached signed URL (`signedAvatarUrlProvider`).
 
 ### `lesson_plans`
 ```sql
@@ -400,14 +409,19 @@ lib/
       attendance_service.dart
       photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
       user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
+      profile_service.dart          -- avatar upload/signed-url + set_avatar_path RPC (§6.7)
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
       app_theme.dart                -- single seed color + font (Comfortaa via google_fonts), cascades app-wide
   features/
     auth/
-      login_screen.dart
-      set_password_screen.dart      -- invite completion + password recovery (§6.6a)
+      login_screen.dart             -- includes "Forgot password?" -> ForgotPasswordScreen
+      set_password_screen.dart      -- invite completion + password recovery (§6.6a / §6.7a)
+      forgot_password_screen.dart   -- sends the recovery email (§6.7a)
+    profile/
+      profile_screen.dart           -- shared account settings tab, all roles (§6.7)
+      change_password_screen.dart   -- change password while signed in (§6.7)
     parent/
       parent_shell.dart
       screens/
@@ -504,12 +518,22 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 
 > ⚠️ **Production requirement — custom SMTP not yet configured.** Invite and password-recovery emails currently go through Supabase's built-in email sender, which is a shared, heavily rate-limited service intended only for development (hitting "email rate limit exceeded" after a few test invites is expected). Before inviting real teachers/parents, a custom SMTP provider (e.g. Resend, SendGrid) **must** be configured in Dashboard → Project Settings → Authentication → SMTP Settings. Supabase generates the invite/recovery link and its token; the SMTP provider is what actually delivers the email reliably to real inboxes (analogous to why production PHP uses PHPMailer + a real mail service instead of the built-in `mail()`).
 
+### 6.7 Profile / Account settings — all roles
+Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, name, email (read from the auth session, not the profiles row), and role, with actions to:
+- **Change photo** — take or pick a photo, uploaded to the private `avatars` bucket; the path is saved via the `set_avatar_path()` RPC and displayed through a signed URL.
+- **Change password** — `ChangePasswordScreen` (already signed in, so just captures a new password via `updateUser`; distinct from the invite/recovery `SetPasswordScreen` because it pops back on success instead of relying on `AuthGate` to re-route).
+- **Sign out**.
+
+**Forgot password (§6.7a):** `LoginScreen` has a "Forgot password?" link → `ForgotPasswordScreen`, which calls `resetPasswordForEmail` with the same `com.example.test_flutter://login-callback/` deep-link `redirectTo`. Opening that link fires an `AuthChangeEvent.passwordRecovery` (exposed as `passwordRecoveryProvider`); `AuthGate` then shows `SetPasswordScreen` in recovery mode (`clearMustSetPasswordFlag: false`) regardless of the user's normal routing. Completing the password update fires `userUpdated`, which drops back out of recovery mode automatically.
+
 ---
 
 ## 7. Navigation Flow
 
 ```
-Login
+Login ──("Forgot password?")──► ForgotPasswordScreen
+  ↓
+AuthGate  (recovery link → SetPasswordScreen; invited & must_set_password → SetPasswordScreen)
   ↓
 Role Router
   ↓
@@ -518,6 +542,7 @@ Role Router
 │  Tab 1: Schedule (agenda: week/month toggle) │
 │  Tab 2: Attendance (per-child history)       │
 │  Tab 3: Reports — not yet built              │
+│  Tab 4: Profile (avatar, password, sign out) │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
@@ -527,15 +552,17 @@ Role Router
 │  Tab 2: Attendance (today's class list)      │
 │  Tab 3: Lesson Plans — not yet built         │
 │  Tab 4: Reports — not yet built               │
+│  Tab 5: Profile (avatar, password, sign out) │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
 │ DIRECTOR                                     │
-│  Tab 1: Teachers — not yet built (placeholder)│
+│  Tab 1: People (Teachers | Children sub-tabs)│
 │  Tab 2: Schedules (search a teacher → their  │
 │          editable agenda/day view)           │
 │  Tab 3: Lesson Plans — not yet built          │
 │  Tab 4: Attendance (all children, any date)  │
+│  Tab 5: Profile (avatar, password, sign out) │
 └─────────────────────────────────────────────┘
 ```
 
@@ -580,7 +607,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 2 | Schedules (read-only agenda view) + Attendance (mark/view) | ✅ Done |
 | 3 | Schedule entries CRUD — teacher self-manage, director manage any, per-event creator/director edit permission, event colors, Director's searchable Schedules tab | ✅ Done |
 | 4 | Director account/enrollment management — People tab: invite teachers, enroll children + invite parents, via a `create-user` Edge Function + invite/set-password deep-link flow (§6.6a) | ✅ Done (⚠️ needs custom SMTP before real use) |
-| 5 | Profile/settings (change password, profile picture) + Forgot Password on login | ⬜ Not started |
+| 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
 | 6 | Daily Reports (text + images) | ⬜ Not started |
 | 7 | Lesson Plans | ⬜ Not started |
 | 8 | Web build + polish | ⬜ Not started |

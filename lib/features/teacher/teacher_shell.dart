@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
+import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/teacher_schedule_screen.dart';
 
@@ -18,6 +19,7 @@ class _TeacherShellState extends State<TeacherShell> {
     MarkAttendanceScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
     Center(child: Text('Reports — coming soon')),
+    ProfileScreen(),
   ];
 
   @override
@@ -51,6 +53,11 @@ class _TeacherShellState extends State<TeacherShell> {
             icon: Icon(Icons.article_outlined),
             selectedIcon: Icon(Icons.article),
             label: 'Reports',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),

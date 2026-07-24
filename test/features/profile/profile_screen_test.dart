@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/models/app_user.dart';
+import 'package:test_flutter/core/services/photo_capture_service.dart';
+import 'package:test_flutter/core/services/profile_service.dart';
+import 'package:test_flutter/features/profile/change_password_screen.dart';
+import 'package:test_flutter/features/profile/profile_screen.dart';
+
+class MockAuthService extends Mock implements AuthService {}
+
+class MockProfileService extends Mock implements ProfileService {}
+
+class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+
+AppUser _user({String? avatarPath}) => AppUser(
+  id: 'uid-1',
+  role: 'teacher',
+  name: 'Alice',
+  phone: '',
+  centerId: 'center-1',
+  avatarPath: avatarPath,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
+void main() {
+  setUpAll(() {
+    registerFallbackValue(XFile(''));
+  });
+
+  late MockAuthService mockAuth;
+  late MockProfileService mockProfile;
+  late MockPhotoCaptureService mockPhotoCapture;
+
+  setUp(() {
+    mockAuth = MockAuthService();
+    mockProfile = MockProfileService();
+    mockPhotoCapture = MockPhotoCaptureService();
+    when(() => mockAuth.currentEmail).thenReturn('alice@example.com');
+  });
+
+  Future<void> pumpScreen(WidgetTester tester, {String? avatarPath}) => tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(mockAuth),
+            currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath))),
+            profileServiceProvider.overrideWithValue(mockProfile),
+            photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+          ],
+          child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
+        ),
+      );
+
+  testWidgets('shows the account name, email and role', (tester) async {
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('alice@example.com'), findsOneWidget);
+    expect(find.text('Teacher'), findsOneWidget);
+  });
+
+  testWidgets('shows a placeholder avatar when none is set', (tester) async {
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    // No signed-url lookup happens without an avatar path.
+    verifyNever(() => mockProfile.getSignedAvatarUrl(any()));
+    expect(find.byIcon(Icons.person_outline), findsWidgets);
+  });
+
+  testWidgets('opening Change password navigates to ChangePasswordScreen', (tester) async {
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Change password'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ChangePasswordScreen), findsOneWidget);
+  });
+
+  testWidgets('changing the photo uploads it and saves the path', (tester) async {
+    final photo = XFile('');
+    when(() => mockPhotoCapture.pickFromGallery()).thenAnswer((_) async => photo);
+    when(() => mockProfile.uploadAvatar(userId: any(named: 'userId'), photo: any(named: 'photo')))
+        .thenAnswer((_) async => 'uid-1/avatar.jpg');
+    when(() => mockProfile.setAvatarPath(any())).thenAnswer((_) async {});
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Change photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockProfile.uploadAvatar(userId: 'uid-1', photo: photo)).called(1);
+    verify(() => mockProfile.setAvatarPath('uid-1/avatar.jpg')).called(1);
+  });
+
+  testWidgets('signs out when Sign out is tapped', (tester) async {
+    when(() => mockAuth.signOut()).thenAnswer((_) async {});
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Sign out'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockAuth.signOut()).called(1);
+  });
+}

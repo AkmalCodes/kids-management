@@ -6,13 +6,15 @@ import 'package:test_flutter/features/parent/screens/child_attendance_screen.dar
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 
 void main() {
-  testWidgets('ParentShell renders Schedule, Attendance and Reports tabs', (tester) async {
+  testWidgets('ParentShell renders Schedule, Attendance, Reports and Profile tabs',
+      (tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: ParentShell())),
     );
     expect(find.text('Schedule'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
     expect(find.byType(ChildScheduleScreen), findsOneWidget);
   });
 
