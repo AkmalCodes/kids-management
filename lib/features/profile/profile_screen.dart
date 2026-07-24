@@ -4,6 +4,8 @@ import '../../core/auth/auth_service.dart';
 import '../../core/models/app_user.dart';
 import '../../core/services/photo_capture_service.dart';
 import '../../core/services/profile_service.dart';
+import '../../shared/widgets/avatar_source_sheet.dart';
+import '../../shared/widgets/signed_avatar.dart';
 import 'change_password_screen.dart';
 import 'person_detail_screen.dart';
 
@@ -13,29 +15,12 @@ class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   Future<void> _changeAvatar(BuildContext context, WidgetRef ref, AppUser user) async {
-    final action = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.of(sheetContext).pop(false),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.of(sheetContext).pop(true),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (action == null) return;
+    final source = await showAvatarSourceSheet(context);
+    if (source == null) return;
     final capture = ref.read(photoCaptureServiceProvider);
-    final photo = action ? await capture.pickFromGallery() : await capture.captureFromCamera();
+    final photo = source == AvatarSource.gallery
+        ? await capture.pickFromGallery()
+        : await capture.captureFromCamera();
     if (photo == null) return;
     final profile = ref.read(profileServiceProvider);
     try {
@@ -67,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
             Center(
               child: Column(
                 children: [
-                  _Avatar(avatarPath: user.avatarPath),
+                  SignedAvatar(avatarPath: user.avatarPath, radius: 48),
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () => _changeAvatar(context, ref, user),
@@ -113,30 +98,6 @@ class ProfileScreen extends ConsumerWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _Avatar extends ConsumerWidget {
-  const _Avatar({required this.avatarPath});
-
-  final String? avatarPath;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    const radius = 48.0;
-    if (avatarPath == null) {
-      return const CircleAvatar(radius: radius, child: Icon(Icons.person_outline, size: 48));
-    }
-    final urlAsync = ref.watch(signedAvatarUrlProvider(avatarPath!));
-    return urlAsync.when(
-      loading: () => const CircleAvatar(
-        radius: radius,
-        child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      error: (_, _) =>
-          const CircleAvatar(radius: radius, child: Icon(Icons.broken_image_outlined, size: 40)),
-      data: (url) => CircleAvatar(radius: radius, backgroundImage: NetworkImage(url)),
     );
   }
 }

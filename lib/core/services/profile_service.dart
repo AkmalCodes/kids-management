@@ -34,6 +34,20 @@ class ProfileService {
         params: {'new_path': path},
       );
 
+  // Director-only: sets the avatar path on ANOTHER user's profile, via the
+  // profiles_update_director policy. Used when a director changes a
+  // teacher's/parent's photo. (Self uses setAvatarPath's RPC instead.)
+  Future<void> setAvatarPathFor({
+    required String userId,
+    required String path,
+    required String actorUid,
+  }) async {
+    await _client.from('profiles').update({
+      'avatar_path': path,
+      'updated_by': actorUid,
+    }).eq('id', userId);
+  }
+
   Future<String> getSignedAvatarUrl(String path) =>
       _client.storage.from('avatars').createSignedUrl(path, 3600);
 
