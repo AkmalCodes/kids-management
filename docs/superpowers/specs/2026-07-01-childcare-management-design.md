@@ -90,21 +90,30 @@ CREATE TABLE profiles (
   center_id         UUID REFERENCES centers(id),
   must_set_password BOOLEAN NOT NULL DEFAULT false,  -- true for invited accounts until they choose a password (§6.6a)
   avatar_path       TEXT,  -- profile picture in the private 'avatars' bucket (§6.7), null if unset
+  email             TEXT,  -- denormalized copy of auth.users.email (§6.6) so directors can display it; auth.users isn't readable cross-user from the client
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by        UUID REFERENCES auth.users(id),
   updated_by        UUID REFERENCES auth.users(id)
 );
 
--- Both let a user update one specific field on their own profile row
--- without a broad UPDATE policy (which could let them change their own
--- role). SECURITY DEFINER; each only ever touches the caller's own row.
+-- Each lets a user update just their own row's specific fields without a
+-- broad self-UPDATE policy (which could let them change their own role).
+-- SECURITY DEFINER; each only ever touches the caller's own row.
 CREATE OR REPLACE FUNCTION complete_password_setup() RETURNS void AS $$
   UPDATE profiles SET must_set_password = false, updated_at = now() WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION set_avatar_path(new_path TEXT) RETURNS void AS $$
   UPDATE profiles SET avatar_path = new_path, updated_at = now() WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Self-edit of own name/phone (any role), from the Profile tab's "Profile
+-- details" screen. Directors editing OTHERS go through profiles_update_director.
+CREATE OR REPLACE FUNCTION update_own_profile(new_name TEXT, new_phone TEXT)
+RETURNS profiles AS $$
+  UPDATE profiles SET name = new_name, phone = new_phone, updated_at = now()
+  WHERE id = auth.uid() RETURNING *;
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 > Supabase Auth manages the email + password in `auth.users`. `profiles` holds everything else. The `id` in `profiles` is the same UUID as in `auth.users`.
@@ -116,10 +125,11 @@ CREATE TABLE children (
   name        TEXT NOT NULL,
   dob         DATE NOT NULL,  -- age is derived from this in the UI, not stored
   center_id   UUID REFERENCES centers(id) NOT NULL,
-  room_id     TEXT DEFAULT '',
-  teacher_id  UUID REFERENCES auth.users(id),  -- the child's "class"/primary teacher
+  class_name  TEXT DEFAULT '',  -- the child's class/group (formerly "room_id")
+  teacher_id  UUID REFERENCES auth.users(id),  -- the child's class/primary teacher
   allergies   TEXT DEFAULT '',
   notes       TEXT DEFAULT '',
+  avatar_path TEXT,  -- child photo in the private 'child-avatars' bucket (§6.6), null if unset
   enrolled_at DATE DEFAULT CURRENT_DATE NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -181,7 +191,10 @@ CREATE TABLE attendance (
 Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(objects.name)[1]` recovers the child for RLS checks — must be qualified as `objects.name` since `children` also has its own `name` column that would otherwise shadow it inside the `EXISTS` subquery. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
 
 ### Storage: `avatars` bucket
-Private bucket for profile pictures, one file per user at `<user_id>/avatar.jpg` (§6.7). A user can only insert/update/select their own avatar — RLS checks `storage.foldername(objects.name)[1] = auth.uid()::text`. Displayed via a session-cached signed URL (`signedAvatarUrlProvider`).
+Private bucket for **user** profile pictures, one file per user at `<user_id>/avatar.jpg` (§6.7). RLS allows the owner (`storage.foldername(objects.name)[1] = auth.uid()::text`) **or a director** to insert/update/select — so a director can change a teacher's/parent's photo from the person-detail screen. Displayed via a session-cached signed URL (`signedAvatarUrlProvider`).
+
+### Storage: `child-avatars` bucket
+Private bucket for **child** photos, one file per child at `<child_id>/avatar.jpg` (§6.6). Children have no auth account, so they can't use the user `avatars` bucket. Only directors insert/update; select is available to any director, the child's own teacher, or a linked parent. Displayed via `signedChildAvatarUrlProvider`.
 
 ### `lesson_plans`
 ```sql
@@ -415,7 +428,7 @@ lib/
       attendance_service.dart
       photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
       user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
-      profile_service.dart          -- avatar upload/signed-url + set_avatar_path RPC (§6.7)
+      profile_service.dart          -- user avatar upload/signed-url + set/update RPCs + director edit (§6.7)
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
@@ -428,6 +441,7 @@ lib/
     profile/
       profile_screen.dart           -- shared account settings tab, all roles (§6.7)
       change_password_screen.dart   -- change password while signed in (§6.7)
+      person_detail_screen.dart     -- view/edit a person's name/phone/photo; self or director-edits-other (§6.6/§6.7)
     parent/
       parent_shell.dart
       screens/
@@ -451,8 +465,7 @@ lib/
         manage_teachers_screen.dart     -- teacher list (tap -> PersonDetailScreen) + invite-a-teacher
         manage_children_screen.dart     -- child list (tap -> ChildDetailScreen) + invite-a-parent
         enroll_child_screen.dart        -- child record + first parent invite in one form
-        child_detail_screen.dart        -- director view/edit of one child (§6.6)
-        person_detail_screen.dart       -- director view/edit of one teacher/parent (§6.6)
+        child_detail_screen.dart        -- director view/edit of one child + parent contacts (§6.6)
   shared/
     screens/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
@@ -460,6 +473,8 @@ lib/
       logout_button.dart
       attendance_status_chip.dart
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
+      signed_avatar.dart            -- round avatar from any bucket's signed-URL provider, with placeholder (§6.6/§6.7)
+      avatar_source_sheet.dart      -- shared take-photo/gallery bottom sheet for avatar edits
       person_invite_dialog.dart     -- shared name/email/phone dialog for teacher & parent invites
       schedule_agenda_view.dart     -- week/month toggle, colored event cards
       day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
@@ -519,8 +534,8 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
   - Invite a teacher by email
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
 - ✅ **Tap a row to view/edit details:**
-  - A child → `ChildDetailScreen`: edit name, date of birth (age is shown, derived), room, class teacher (dropdown), allergies, notes. Saves via `ChildService.updateChild` (director-only per `children_update` RLS).
-  - A teacher/parent → `PersonDetailScreen`: edit name and phone. Saves via `ProfileService.updatePersonDetails` (director-only per `profiles_update_director` RLS). Email isn't shown (lives on `auth.users`, not readable cross-user from the client) and the avatar shows a placeholder (avatars bucket is owner-read-only).
+  - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), class, class teacher (dropdown), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
+  - A teacher/parent → `PersonDetailScreen`: edit photo, name and phone. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7). Email isn't shown (lives on `auth.users`, not readable cross-user from the client).
 - ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
 - ⬜ View all lesson plans across the center (depends on §6.5)
 - ⬜ Manage center settings (center name, rooms)
@@ -532,6 +547,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 ### 6.7 Profile / Account settings — all roles
 Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, name, email (read from the auth session, not the profiles row), and role, with actions to:
 - **Change photo** — take or pick a photo, uploaded to the private `avatars` bucket; the path is saved via the `set_avatar_path()` RPC and displayed through a signed URL.
+- **Profile details** — opens the shared `PersonDetailScreen` for the current user, to edit name/phone/photo (self-edit path: `update_own_profile` / `setAvatarPath`). The same screen is reused by the director's People tab for editing others.
 - **Change password** — `ChangePasswordScreen` (already signed in, so just captures a new password via `updateUser`; distinct from the invite/recovery `SetPasswordScreen` because it pops back on success instead of relying on `AuthGate` to re-route).
 - **Sign out**.
 
