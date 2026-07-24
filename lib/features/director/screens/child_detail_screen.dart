@@ -22,7 +22,7 @@ class ChildDetailScreen extends ConsumerStatefulWidget {
 class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _roomController;
+  late final TextEditingController _classController;
   late final TextEditingController _allergiesController;
   late final TextEditingController _notesController;
 
@@ -36,7 +36,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     super.initState();
     final c = widget.child;
     _nameController = TextEditingController(text: c.name);
-    _roomController = TextEditingController(text: c.roomId);
+    _classController = TextEditingController(text: c.className);
     _allergiesController = TextEditingController(text: c.allergies);
     _notesController = TextEditingController(text: c.notes);
     _dob = c.dob;
@@ -47,7 +47,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _roomController.dispose();
+    _classController.dispose();
     _allergiesController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -86,7 +86,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
             widget.child.copyWith(
               name: _nameController.text.trim(),
               dob: _dob,
-              roomId: _roomController.text.trim(),
+              className: _classController.text.trim(),
               teacherId: _teacherId,
               clearTeacherId: _teacherId == null,
               allergies: _allergiesController.text.trim(),
@@ -130,8 +130,8 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
-              controller: _roomController,
-              decoration: const InputDecoration(labelText: 'Room'),
+              controller: _classController,
+              decoration: const InputDecoration(labelText: 'Class'),
             ),
             const SizedBox(height: 12),
             FutureBuilder<List<AppUser>>(

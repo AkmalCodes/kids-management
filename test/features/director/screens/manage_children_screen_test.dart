@@ -30,12 +30,12 @@ AppUser _director() => AppUser(
   updatedBy: 'director-1',
 );
 
-Child _child(String id, String name, {String roomId = ''}) => Child(
+Child _child(String id, String name, {String className = ''}) => Child(
   id: id,
   name: name,
   dob: DateTime(2022, 1, 1),
   centerId: 'center-1',
-  roomId: roomId,
+  className: className,
   teacherId: null,
   allergies: '',
   notes: '',
@@ -85,13 +85,13 @@ void main() {
 
   testWidgets('shows the child list', (tester) async {
     when(() => mockChildren.fetchAll())
-        .thenAnswer((_) async => [_child('child-1', 'Alice', roomId: 'Room A')]);
+        .thenAnswer((_) async => [_child('child-1', 'Alice', className: 'Class A')]);
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
     expect(find.text('Alice'), findsOneWidget);
-    expect(find.text('Room A'), findsOneWidget);
+    expect(find.text('Class A'), findsOneWidget);
   });
 
   testWidgets('inviting a parent for an existing child calls the service', (tester) async {

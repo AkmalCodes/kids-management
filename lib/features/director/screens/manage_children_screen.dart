@@ -69,7 +69,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
     );
     if (updated == null || !mounted) return;
     // A save returns the updated child -- refresh the list so the row
-    // reflects any changed name/room.
+    // reflects any changed name/class.
     setState(() {
       _future = _load();
     });
@@ -96,7 +96,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
               return ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.child_care_outlined)),
                 title: Text(child.name),
-                subtitle: Text(child.roomId.isEmpty ? 'No room on file' : child.roomId),
+                subtitle: Text(child.className.isEmpty ? 'No class on file' : child.className),
                 onTap: () => _openDetail(child),
                 trailing: IconButton(
                   icon: const Icon(Icons.person_add_alt_1_outlined),

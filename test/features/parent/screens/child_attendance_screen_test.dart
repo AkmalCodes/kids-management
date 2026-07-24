@@ -32,7 +32,7 @@ Child _child() => Child(
   name: 'Alice',
   dob: DateTime(2022, 1, 1),
   centerId: 'center-1',
-  roomId: '',
+  className: '',
   teacherId: 'teacher-1',
   allergies: '',
   notes: '',

@@ -21,7 +21,7 @@ class EnrollChildScreen extends ConsumerStatefulWidget {
 class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
   final _formKey = GlobalKey<FormState>();
   final _childNameController = TextEditingController();
-  final _roomController = TextEditingController();
+  final _classController = TextEditingController();
   final _allergiesController = TextEditingController();
   final _notesController = TextEditingController();
   final _parentNameController = TextEditingController();
@@ -42,7 +42,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
   @override
   void dispose() {
     _childNameController.dispose();
-    _roomController.dispose();
+    _classController.dispose();
     _allergiesController.dispose();
     _notesController.dispose();
     _parentNameController.dispose();
@@ -80,7 +80,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               name: _childNameController.text.trim(),
               dob: _dob,
               centerId: centerId,
-              roomId: _roomController.text.trim(),
+              className: _classController.text.trim(),
               teacherId: _selectedTeacherId,
               allergies: _allergiesController.text.trim(),
               notes: _notesController.text.trim(),
@@ -138,8 +138,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
-              controller: _roomController,
-              decoration: const InputDecoration(labelText: 'Room (optional)'),
+              controller: _classController,
+              decoration: const InputDecoration(labelText: 'Class (optional)'),
             ),
             const SizedBox(height: 12),
             FutureBuilder<List<AppUser>>(

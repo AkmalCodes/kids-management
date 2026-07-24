@@ -3,7 +3,7 @@ class Child {
   final String name;
   final DateTime dob;
   final String centerId;
-  final String roomId;
+  final String className; // the child's class/group (was "room")
   final String? teacherId;
   final String allergies;
   final String notes;
@@ -18,7 +18,7 @@ class Child {
     required this.name,
     required this.dob,
     required this.centerId,
-    required this.roomId,
+    required this.className,
     required this.teacherId,
     required this.allergies,
     required this.notes,
@@ -34,7 +34,7 @@ class Child {
     name: json['name'] as String,
     dob: DateTime.parse(json['dob'] as String),
     centerId: json['center_id'] as String,
-    roomId: json['room_id'] as String? ?? '',
+    className: json['class_name'] as String? ?? '',
     teacherId: json['teacher_id'] as String?,
     allergies: json['allergies'] as String? ?? '',
     notes: json['notes'] as String? ?? '',
@@ -49,7 +49,7 @@ class Child {
     'name': name,
     'dob': dob.toIso8601String().substring(0, 10), // YYYY-MM-DD
     'center_id': centerId,
-    'room_id': roomId,
+    'class_name': className,
     'teacher_id': teacherId,
     'allergies': allergies,
     'notes': notes,
@@ -61,7 +61,7 @@ class Child {
   Child copyWith({
     String? name,
     DateTime? dob,
-    String? roomId,
+    String? className,
     String? teacherId,
     bool clearTeacherId = false,
     String? allergies,
@@ -72,7 +72,7 @@ class Child {
     name: name ?? this.name,
     dob: dob ?? this.dob,
     centerId: centerId,
-    roomId: roomId ?? this.roomId,
+    className: className ?? this.className,
     teacherId: clearTeacherId ? null : (teacherId ?? this.teacherId),
     allergies: allergies ?? this.allergies,
     notes: notes ?? this.notes,

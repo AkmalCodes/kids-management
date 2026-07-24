@@ -32,7 +32,7 @@ Child _child() => Child(
   name: 'Alice',
   dob: DateTime(2022, 6, 1),
   centerId: 'center-1',
-  roomId: 'Room A',
+  className: 'Class A',
   teacherId: null,
   allergies: 'Peanuts',
   notes: '',
@@ -77,7 +77,7 @@ void main() {
     await pumpScreen(tester);
 
     expect(find.widgetWithText(TextFormField, 'Alice'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Room A'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Class A'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'Peanuts'), findsOneWidget);
     // Born 2022-06-01; current test date is 2026, so age is 3 or 4.
     expect(find.textContaining('Age '), findsOneWidget);
@@ -89,14 +89,14 @@ void main() {
     await pumpScreen(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Alice'), 'Alice B');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Room A'), 'Room B');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Class A'), 'Class B');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
     final saved = verify(() => mockChildren.updateChild(captureAny())).captured.single as Child;
     expect(saved.id, 'child-1');
     expect(saved.name, 'Alice B');
-    expect(saved.roomId, 'Room B');
+    expect(saved.className, 'Class B');
     expect(saved.allergies, 'Peanuts');
     expect(saved.updatedBy, 'director-1');
   });

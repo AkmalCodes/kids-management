@@ -28,7 +28,7 @@ Child _child(String id, String name) => Child(
   name: name,
   dob: DateTime(2022, 1, 1),
   centerId: 'center-1',
-  roomId: '',
+  className: '',
   teacherId: 'teacher-1',
   allergies: '',
   notes: '',

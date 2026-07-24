@@ -7,7 +7,7 @@ void main() {
     'name': 'Alice',
     'dob': '2022-06-01',
     'center_id': 'center-1',
-    'room_id': 'Room A',
+    'class_name': 'Class A',
     'teacher_id': 'teacher-1',
     'allergies': 'Peanuts',
     'notes': 'n/a',
@@ -20,10 +20,10 @@ void main() {
 
   test('copyWith updates only the given fields', () {
     final child = Child.fromJson(sampleJson);
-    final updated = child.copyWith(name: 'Alice B', roomId: 'Room B');
+    final updated = child.copyWith(name: 'Alice B', className: 'Class B');
 
     expect(updated.name, 'Alice B');
-    expect(updated.roomId, 'Room B');
+    expect(updated.className, 'Class B');
     expect(updated.allergies, 'Peanuts'); // unchanged
     expect(updated.id, 'child-1');
   });

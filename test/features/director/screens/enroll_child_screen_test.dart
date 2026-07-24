@@ -35,7 +35,7 @@ Child _savedChild() => Child(
   name: 'Alice',
   dob: DateTime(2023, 1, 1),
   centerId: 'center-1',
-  roomId: '',
+  className: '',
   teacherId: null,
   allergies: '',
   notes: '',
