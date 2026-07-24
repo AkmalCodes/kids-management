@@ -23,7 +23,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _roomController;
-  late final TextEditingController _heightController;
   late final TextEditingController _allergiesController;
   late final TextEditingController _notesController;
 
@@ -38,9 +37,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     final c = widget.child;
     _nameController = TextEditingController(text: c.name);
     _roomController = TextEditingController(text: c.roomId);
-    _heightController = TextEditingController(
-      text: c.heightCm == null ? '' : _trimTrailingZero(c.heightCm!),
-    );
     _allergiesController = TextEditingController(text: c.allergies);
     _notesController = TextEditingController(text: c.notes);
     _dob = c.dob;
@@ -52,15 +48,9 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   void dispose() {
     _nameController.dispose();
     _roomController.dispose();
-    _heightController.dispose();
     _allergiesController.dispose();
     _notesController.dispose();
     super.dispose();
-  }
-
-  static String _trimTrailingZero(double v) {
-    // 105.0 -> "105", 105.5 -> "105.5"
-    return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   }
 
   // Whole years, flooring — the usual way a child's age reads.
@@ -90,7 +80,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
 
-    final heightText = _heightController.text.trim();
     setState(() => _saving = true);
     try {
       final updated = await ref.read(childServiceProvider).updateChild(
@@ -102,8 +91,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
               clearTeacherId: _teacherId == null,
               allergies: _allergiesController.text.trim(),
               notes: _notesController.text.trim(),
-              heightCm: heightText.isEmpty ? null : double.tryParse(heightText),
-              clearHeight: heightText.isEmpty,
               updatedBy: user.id,
             ),
           );
@@ -140,21 +127,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
               onPressed: _pickDob,
               icon: const Icon(Icons.cake_outlined),
               label: Text('Date of birth: ${_formatDate(_dob)}  •  Age $_ageYears'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _heightController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Height (cm)',
-                suffixText: 'cm',
-              ),
-              validator: (v) {
-                final value = v?.trim() ?? '';
-                if (value.isEmpty) return null; // optional
-                if (double.tryParse(value) == null) return 'Enter a number';
-                return null;
-              },
             ),
             const SizedBox(height: 12),
             TextFormField(

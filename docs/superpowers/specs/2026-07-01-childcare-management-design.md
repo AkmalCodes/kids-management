@@ -120,7 +120,6 @@ CREATE TABLE children (
   teacher_id  UUID REFERENCES auth.users(id),  -- the child's "class"/primary teacher
   allergies   TEXT DEFAULT '',
   notes       TEXT DEFAULT '',
-  height_cm   REAL,  -- optional recorded height, editable in the child-detail screen (§6.6)
   enrolled_at DATE DEFAULT CURRENT_DATE NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -520,7 +519,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
   - Invite a teacher by email
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
 - ✅ **Tap a row to view/edit details:**
-  - A child → `ChildDetailScreen`: edit name, date of birth (age is shown, derived), height, room, class teacher (dropdown), allergies, notes. Saves via `ChildService.updateChild` (director-only per `children_update` RLS).
+  - A child → `ChildDetailScreen`: edit name, date of birth (age is shown, derived), room, class teacher (dropdown), allergies, notes. Saves via `ChildService.updateChild` (director-only per `children_update` RLS).
   - A teacher/parent → `PersonDetailScreen`: edit name and phone. Saves via `ProfileService.updatePersonDetails` (director-only per `profiles_update_director` RLS). Email isn't shown (lives on `auth.users`, not readable cross-user from the client) and the avatar shows a placeholder (avatars bucket is owner-read-only).
 - ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
 - ⬜ View all lesson plans across the center (depends on §6.5)

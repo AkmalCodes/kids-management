@@ -7,7 +7,6 @@ class Child {
   final String? teacherId;
   final String allergies;
   final String notes;
-  final double? heightCm; // optional recorded height in centimetres
   final DateTime enrolledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -23,7 +22,6 @@ class Child {
     required this.teacherId,
     required this.allergies,
     required this.notes,
-    this.heightCm,
     required this.enrolledAt,
     required this.createdAt,
     required this.updatedAt,
@@ -40,8 +38,6 @@ class Child {
     teacherId: json['teacher_id'] as String?,
     allergies: json['allergies'] as String? ?? '',
     notes: json['notes'] as String? ?? '',
-    // Postgres numeric can come back as int or double, so coerce via num.
-    heightCm: (json['height_cm'] as num?)?.toDouble(),
     enrolledAt: DateTime.parse(json['enrolled_at'] as String),
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -57,7 +53,6 @@ class Child {
     'teacher_id': teacherId,
     'allergies': allergies,
     'notes': notes,
-    'height_cm': heightCm,
     'enrolled_at': enrolledAt.toIso8601String().substring(0, 10),
     'created_by': createdBy,
     'updated_by': updatedBy,
@@ -71,8 +66,6 @@ class Child {
     bool clearTeacherId = false,
     String? allergies,
     String? notes,
-    double? heightCm,
-    bool clearHeight = false,
     String? updatedBy,
   }) => Child(
     id: id,
@@ -83,7 +76,6 @@ class Child {
     teacherId: clearTeacherId ? null : (teacherId ?? this.teacherId),
     allergies: allergies ?? this.allergies,
     notes: notes ?? this.notes,
-    heightCm: clearHeight ? null : (heightCm ?? this.heightCm),
     enrolledAt: enrolledAt,
     createdAt: createdAt,
     updatedAt: updatedAt,
