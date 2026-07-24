@@ -52,7 +52,12 @@ class ProfileScreen extends ConsumerWidget {
             Center(
               child: Column(
                 children: [
-                  SignedAvatar(avatarPath: user.avatarPath, radius: 48),
+                  SignedAvatar(
+                    urlProvider: user.avatarPath == null
+                        ? null
+                        : signedAvatarUrlProvider(user.avatarPath!),
+                    radius: 48,
+                  ),
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () => _changeAvatar(context, ref, user),

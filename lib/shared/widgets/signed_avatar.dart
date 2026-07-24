@@ -1,35 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/services/profile_service.dart';
 
-// A round profile picture from the private 'avatars' bucket. Given a stored
-// path it fetches a signed URL (cached via signedAvatarUrlProvider); given
-// null it shows a person placeholder. Shared by the Profile tab and the
-// person-detail screen.
+// A round avatar backed by a private-bucket signed URL. The caller passes
+// the URL provider for the relevant bucket (e.g. signedAvatarUrlProvider
+// for users, signedChildAvatarUrlProvider for children), or null to show a
+// person placeholder. Kept bucket-agnostic so it's reused everywhere.
 class SignedAvatar extends ConsumerWidget {
-  const SignedAvatar({super.key, required this.avatarPath, this.radius = 40});
+  const SignedAvatar({super.key, required this.urlProvider, this.radius = 40});
 
-  final String? avatarPath;
+  final ProviderListenable<AsyncValue<String>>? urlProvider;
   final double radius;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (avatarPath == null) {
+    final provider = urlProvider;
+    if (provider == null) {
       return CircleAvatar(radius: radius, child: Icon(Icons.person_outline, size: radius));
     }
-    final urlAsync = ref.watch(signedAvatarUrlProvider(avatarPath!));
-    return urlAsync.when(
-      loading: () => CircleAvatar(
-        radius: radius,
-        child: SizedBox(
-          width: radius / 2,
-          height: radius / 2,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-      error: (_, _) =>
-          CircleAvatar(radius: radius, child: Icon(Icons.broken_image_outlined, size: radius)),
-      data: (url) => CircleAvatar(radius: radius, backgroundImage: NetworkImage(url)),
-    );
+    return ref.watch(provider).when(
+          loading: () => CircleAvatar(
+            radius: radius,
+            child: SizedBox(
+              width: radius / 2,
+              height: radius / 2,
+              child: const CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          error: (_, _) =>
+              CircleAvatar(radius: radius, child: Icon(Icons.broken_image_outlined, size: radius)),
+          data: (url) => CircleAvatar(radius: radius, backgroundImage: NetworkImage(url)),
+        );
   }
 }

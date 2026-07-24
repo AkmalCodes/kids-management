@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/auth_service.dart';
 import '../models/child.dart';
@@ -62,8 +63,44 @@ class ChildService {
         .single();
     return Child.fromJson(row);
   }
+
+  // Child photos live in the private 'child-avatars' bucket (children have
+  // no auth account, so they can't use the user 'avatars' bucket), one file
+  // per child at '<child_id>/avatar.jpg'.
+  Future<String> uploadChildAvatar({required String childId, required XFile photo}) async {
+    final path = '$childId/avatar.jpg';
+    final bytes = await photo.readAsBytes();
+    await _client.storage.from('child-avatars').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        );
+    return path;
+  }
+
+  // Director-only: writes just the avatar path (immediate, independent of
+  // the detail form's Save), per children_update RLS.
+  Future<void> setChildAvatarPath({
+    required String childId,
+    required String path,
+    required String actorUid,
+  }) async {
+    await _client.from('children').update({
+      'avatar_path': path,
+      'updated_by': actorUid,
+    }).eq('id', childId);
+  }
+
+  Future<String> getSignedChildAvatarUrl(String path) =>
+      _client.storage.from('child-avatars').createSignedUrl(path, 3600);
 }
 
 final childServiceProvider = Provider<ChildService>(
   (ref) => ChildService(client: ref.watch(supabaseClientProvider)),
 );
+
+// Session-cached signed URL for a child avatar path (same pattern as
+// signedAvatarUrlProvider, but for the child-avatars bucket).
+final signedChildAvatarUrlProvider = FutureProvider.family<String, String>((ref, path) {
+  return ref.watch(childServiceProvider).getSignedChildAvatarUrl(path);
+});

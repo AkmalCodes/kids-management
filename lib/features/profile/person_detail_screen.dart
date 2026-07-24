@@ -123,7 +123,11 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Center(child: SignedAvatar(avatarPath: _avatarPath)),
+            Center(
+              child: SignedAvatar(
+                urlProvider: _avatarPath == null ? null : signedAvatarUrlProvider(_avatarPath!),
+              ),
+            ),
             Center(
               child: TextButton.icon(
                 onPressed: _changeAvatar,

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/photo_capture_service.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/features/director/screens/child_detail_screen.dart';
 
 class MockChildService extends Mock implements ChildService {}
 
 class MockTeacherService extends Mock implements TeacherService {}
+
+class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
 
 class FakeChild extends Fake implements Child {}
 
@@ -46,14 +50,17 @@ Child _child() => Child(
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeChild());
+    registerFallbackValue(XFile(''));
   });
 
   late MockChildService mockChildren;
   late MockTeacherService mockTeachers;
+  late MockPhotoCaptureService mockPhotoCapture;
 
   setUp(() {
     mockChildren = MockChildService();
     mockTeachers = MockTeacherService();
+    mockPhotoCapture = MockPhotoCaptureService();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
   });
 
@@ -66,6 +73,7 @@ void main() {
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
           childServiceProvider.overrideWithValue(mockChildren),
           teacherServiceProvider.overrideWithValue(mockTeachers),
+          photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
         ],
         child: MaterialApp(home: ChildDetailScreen(child: _child())),
       ),
@@ -111,5 +119,34 @@ void main() {
 
     expect(find.textContaining('Could not save changes'), findsOneWidget);
     expect(find.byType(ChildDetailScreen), findsOneWidget);
+  });
+
+  testWidgets('changing the photo uploads it and saves the child avatar path',
+      (tester) async {
+    final photo = XFile('');
+    when(() => mockPhotoCapture.pickFromGallery()).thenAnswer((_) async => photo);
+    when(() => mockChildren.uploadChildAvatar(
+          childId: any(named: 'childId'),
+          photo: any(named: 'photo'),
+        )).thenAnswer((_) async => 'child-1/avatar.jpg');
+    when(() => mockChildren.setChildAvatarPath(
+          childId: any(named: 'childId'),
+          path: any(named: 'path'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async {});
+
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Change photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockChildren.uploadChildAvatar(childId: 'child-1', photo: photo)).called(1);
+    verify(() => mockChildren.setChildAvatarPath(
+          childId: 'child-1',
+          path: 'child-1/avatar.jpg',
+          actorUid: 'director-1',
+        )).called(1);
   });
 }

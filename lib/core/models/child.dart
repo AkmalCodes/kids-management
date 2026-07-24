@@ -7,6 +7,9 @@ class Child {
   final String? teacherId;
   final String allergies;
   final String notes;
+  // Storage path (private 'child-avatars' bucket) of the child's photo, or
+  // null if unset. Exchange for a signed URL to display.
+  final String? avatarPath;
   final DateTime enrolledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -22,6 +25,7 @@ class Child {
     required this.teacherId,
     required this.allergies,
     required this.notes,
+    this.avatarPath,
     required this.enrolledAt,
     required this.createdAt,
     required this.updatedAt,
@@ -38,6 +42,7 @@ class Child {
     teacherId: json['teacher_id'] as String?,
     allergies: json['allergies'] as String? ?? '',
     notes: json['notes'] as String? ?? '',
+    avatarPath: json['avatar_path'] as String?,
     enrolledAt: DateTime.parse(json['enrolled_at'] as String),
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -53,6 +58,7 @@ class Child {
     'teacher_id': teacherId,
     'allergies': allergies,
     'notes': notes,
+    'avatar_path': avatarPath,
     'enrolled_at': enrolledAt.toIso8601String().substring(0, 10),
     'created_by': createdBy,
     'updated_by': updatedBy,
@@ -66,6 +72,7 @@ class Child {
     bool clearTeacherId = false,
     String? allergies,
     String? notes,
+    String? avatarPath,
     String? updatedBy,
   }) => Child(
     id: id,
@@ -76,6 +83,7 @@ class Child {
     teacherId: clearTeacherId ? null : (teacherId ?? this.teacherId),
     allergies: allergies ?? this.allergies,
     notes: notes ?? this.notes,
+    avatarPath: avatarPath ?? this.avatarPath,
     enrolledAt: enrolledAt,
     createdAt: createdAt,
     updatedAt: updatedAt,

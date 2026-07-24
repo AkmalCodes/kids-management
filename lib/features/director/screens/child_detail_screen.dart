@@ -4,7 +4,10 @@ import '../../../core/auth/auth_service.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
+import '../../../core/services/photo_capture_service.dart';
 import '../../../core/services/teacher_service.dart';
+import '../../../shared/widgets/avatar_source_sheet.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 
 // Director-only view/edit of a single child's details. Reached by tapping a
 // child in the People > Children list. Every field is editable; saving
@@ -28,6 +31,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
 
   late DateTime _dob;
   late String? _teacherId;
+  late String? _avatarPath;
   late Future<List<AppUser>> _teachersFuture;
   bool _saving = false;
 
@@ -41,7 +45,35 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     _notesController = TextEditingController(text: c.notes);
     _dob = c.dob;
     _teacherId = c.teacherId;
+    _avatarPath = c.avatarPath;
     _teachersFuture = ref.read(teacherServiceProvider).fetchAll();
+  }
+
+  // Immediate (independent of the Save button): pick -> upload -> write the
+  // avatar path onto the child row -> refresh.
+  Future<void> _changeAvatar() async {
+    final source = await showAvatarSourceSheet(context);
+    if (source == null) return;
+    final user = await ref.read(currentUserProvider.future);
+    if (user == null) return;
+    final capture = ref.read(photoCaptureServiceProvider);
+    final photo = source == AvatarSource.gallery
+        ? await capture.pickFromGallery()
+        : await capture.captureFromCamera();
+    if (photo == null) return;
+    final service = ref.read(childServiceProvider);
+    try {
+      final path = await service.uploadChildAvatar(childId: widget.child.id, photo: photo);
+      await service.setChildAvatarPath(childId: widget.child.id, path: path, actorUid: user.id);
+      if (!mounted) return;
+      ref.invalidate(signedChildAvatarUrlProvider(path));
+      setState(() => _avatarPath = path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update photo: $e')),
+      );
+    }
   }
 
   @override
@@ -91,6 +123,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
               clearTeacherId: _teacherId == null,
               allergies: _allergiesController.text.trim(),
               notes: _notesController.text.trim(),
+              avatarPath: _avatarPath,
               updatedBy: user.id,
             ),
           );
@@ -117,6 +150,20 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Center(
+              child: SignedAvatar(
+                urlProvider:
+                    _avatarPath == null ? null : signedChildAvatarUrlProvider(_avatarPath!),
+              ),
+            ),
+            Center(
+              child: TextButton.icon(
+                onPressed: _changeAvatar,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Change photo'),
+              ),
+            ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
