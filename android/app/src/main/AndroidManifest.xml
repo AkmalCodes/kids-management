@@ -25,6 +25,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Deep link for Supabase auth callbacks (invite / password
+                 recovery). The emailed link uses this scheme so it opens
+                 the app instead of a browser; supabase_flutter then reads
+                 the session tokens out of the URL automatically. Scheme +
+                 host must match the redirectTo used when sending the
+                 email. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="com.example.test_flutter" android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

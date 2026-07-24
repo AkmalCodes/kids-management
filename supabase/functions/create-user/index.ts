@@ -83,8 +83,13 @@ Deno.serve(async (req) => {
   // does below, never anything driven by unvalidated request input.
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+  // redirectTo makes the invite email link deep-link back into the app
+  // (see the matching scheme in AndroidManifest.xml / Info.plist) instead
+  // of the project's default Site URL.
   const { data: invited, error: inviteError } = await adminClient.auth.admin
-    .inviteUserByEmail(email);
+    .inviteUserByEmail(email, {
+      redirectTo: "com.example.test_flutter://login-callback/",
+    });
   if (inviteError || !invited?.user) {
     return jsonResponse({ error: inviteError?.message ?? "Invite failed" }, 400);
   }
@@ -96,6 +101,9 @@ Deno.serve(async (req) => {
     name,
     phone: phone ?? "",
     center_id: callerProfile.center_id,
+    // Forces the set-password screen on first entry (they were invited,
+    // so they've never chosen a password).
+    must_set_password: true,
     created_by: caller.id,
     updated_by: caller.id,
   });

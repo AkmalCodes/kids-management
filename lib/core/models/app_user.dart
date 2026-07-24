@@ -4,6 +4,9 @@ class AppUser {
   final String name;
   final String phone;
   final String? centerId;
+  // Set true when a director invites this account; forces a set-password
+  // screen on first entry, then cleared. Existing accounts default false.
+  final bool mustSetPassword;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -15,6 +18,7 @@ class AppUser {
     required this.name,
     required this.phone,
     required this.centerId,
+    this.mustSetPassword = false,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -27,6 +31,7 @@ class AppUser {
     name: json['name'] as String,
     phone: json['phone'] as String? ?? '',
     centerId: json['center_id'] as String?,
+    mustSetPassword: json['must_set_password'] as bool? ?? false,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,

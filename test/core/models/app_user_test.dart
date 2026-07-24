@@ -43,5 +43,17 @@ void main() {
       final user = AppUser.fromJson(json);
       expect(user.phone, '');
     });
+
+    test('mustSetPassword defaults to false when absent', () {
+      final user = AppUser.fromJson(sampleJson);
+      expect(user.mustSetPassword, isFalse);
+    });
+
+    test('fromJson parses must_set_password when present', () {
+      final json = Map<String, dynamic>.from(sampleJson);
+      json['must_set_password'] = true;
+      final user = AppUser.fromJson(json);
+      expect(user.mustSetPassword, isTrue);
+    });
   });
 }

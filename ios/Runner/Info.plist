@@ -28,6 +28,17 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Used to take a check-in photo when marking a child present.</string>
+	<!-- Deep link scheme for Supabase auth callbacks (invite / password
+	     recovery); must match the redirectTo used when sending the email. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.example.test_flutter</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -24,6 +24,26 @@ class AuthService {
       _client.auth.signInWithPassword(email: email, password: password);
 
   Future<void> signOut() => _client.auth.signOut();
+
+  // Sets the password for the *currently authenticated* user -- used both
+  // after an invite (session already established via the invite deep link)
+  // and after a password-recovery link. No old password needed: possession
+  // of the valid session from the emailed link is the proof of identity.
+  Future<void> updatePassword(String newPassword) =>
+      _client.auth.updateUser(UserAttributes(password: newPassword));
+
+  // Clears the must_set_password flag via a SECURITY DEFINER Postgres
+  // function rather than a direct profiles UPDATE -- that keeps us from
+  // having to grant users a broad update policy on their own profile row
+  // (which could otherwise let them change their own role).
+  Future<void> completePasswordSetup() => _client.rpc('complete_password_setup');
+
+  // Sends a password-recovery email; the link deep-links back into the app
+  // (see redirectTo scheme in AndroidManifest / Info.plist).
+  Future<void> sendPasswordReset(String email) => _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'com.example.test_flutter://login-callback/',
+      );
 }
 
 final supabaseClientProvider = Provider<SupabaseClient>(
