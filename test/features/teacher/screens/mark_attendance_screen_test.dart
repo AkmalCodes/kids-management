@@ -198,6 +198,27 @@ void main() {
     expect(find.text('Delete photo'), findsNothing);
   });
 
+  testWidgets('does not overflow the photo row on a narrow screen', (tester) async {
+    final existing = buildAttendance();
+    when(() => mockChildren.fetchForTeacher('teacher-1'))
+        .thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
+
+    // Regression guard for a RenderFlex overflow on the Belongings photo
+    // label -- the photo row's two halves need to actually share the
+    // available width (Expanded + ellipsizing text) rather than each
+    // sizing to its own intrinsic content width.
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alice'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tapping a filled photo slot offers Retake, Choose from gallery, and Delete',
       (tester) async {
     final existing = buildAttendance(photoPath: 'child-1/2026-07-23.jpg');

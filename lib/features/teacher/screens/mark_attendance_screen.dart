@@ -271,7 +271,10 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }
 
   // Icon/thumbnail + label kept together as one Row so a plain (non-Wrap)
-  // Row for both slots never breaks a label away from its own icon.
+  // Row for both slots never breaks a label away from its own icon. The
+  // label is Flexible + ellipsized (not sized to its own intrinsic width)
+  // so this fits within whatever width its parent Expanded gives it,
+  // instead of forcing the outer Row to overflow on a narrow card.
   Widget _photoSlotWithLabel({
     required Key key,
     required IconData icon,
@@ -280,11 +283,17 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     required VoidCallback? onTap,
   }) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         _photoSlot(key: key, icon: icon, photoPath: photoPath, onTap: onTap),
         const SizedBox(width: 4),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
       ],
     );
   }
@@ -368,39 +377,45 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              // Plain Row (not Wrap): both slots are now a fixed size
-              // regardless of photo state (see _photoSlot), so the row's
-              // width is stable and this never needs to break lines.
+              // Plain Row (not Wrap): both slots are a fixed size
+              // regardless of photo state (see _photoSlot), and each half
+              // is Expanded with an ellipsizing label (see
+              // _photoSlotWithLabel), so this always fits on one line no
+              // matter how narrow the card is.
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _photoSlotWithLabel(
-                    key: Key('checkin-photo-${child.id}'),
-                    icon: Icons.camera_alt_outlined,
-                    label: 'Check-in photo',
-                    photoPath: existing?.photoPath,
-                    onTap: existing == null
-                        ? null
-                        : () => _showPhotoOptions(
-                              child,
-                              existing,
-                              isBelongings: false,
-                              hasPhoto: existing.photoPath != null,
-                            ),
+                  Expanded(
+                    child: _photoSlotWithLabel(
+                      key: Key('checkin-photo-${child.id}'),
+                      icon: Icons.camera_alt_outlined,
+                      label: 'Check-in photo',
+                      photoPath: existing?.photoPath,
+                      onTap: existing == null
+                          ? null
+                          : () => _showPhotoOptions(
+                                child,
+                                existing,
+                                isBelongings: false,
+                                hasPhoto: existing.photoPath != null,
+                              ),
+                    ),
                   ),
-                  _photoSlotWithLabel(
-                    key: Key('belongings-photo-${child.id}'),
-                    icon: Icons.checkroom_outlined,
-                    label: 'Belongings photo',
-                    photoPath: existing?.belongingsPhotoPath,
-                    onTap: existing == null
-                        ? null
-                        : () => _showPhotoOptions(
-                              child,
-                              existing,
-                              isBelongings: true,
-                              hasPhoto: existing.belongingsPhotoPath != null,
-                            ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _photoSlotWithLabel(
+                      key: Key('belongings-photo-${child.id}'),
+                      icon: Icons.checkroom_outlined,
+                      label: 'Belongings photo',
+                      photoPath: existing?.belongingsPhotoPath,
+                      onTap: existing == null
+                          ? null
+                          : () => _showPhotoOptions(
+                                child,
+                                existing,
+                                isBelongings: true,
+                                hasPhoto: existing.belongingsPhotoPath != null,
+                              ),
+                    ),
                   ),
                 ],
               ),
@@ -440,11 +455,18 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            _formatHeaderDate(_todayDate),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
+                          // Flexible + ellipsis: on a narrow screen this
+                          // shrinks/truncates first rather than forcing
+                          // the row to overflow past the search icon.
+                          Flexible(
+                            child: Text(
+                              _formatHeaderDate(_todayDate),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
                         ],
                       ),
