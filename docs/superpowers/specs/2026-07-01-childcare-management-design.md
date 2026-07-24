@@ -23,6 +23,7 @@ A cross-platform Flutter application for managing a small-to-medium childcare ce
 | Auth | Supabase Auth | Built-in email/password login, integrates with DB |
 | Database | Supabase (PostgreSQL) | SQL — familiar to anyone who knows MySQL |
 | File Storage | Supabase Storage | Daily report images, same project as DB |
+| Transactional email | Custom SMTP (e.g. Resend) — **not yet configured** | Required for reliable invite/recovery emails; see §6.6 note |
 | Push Notifications | OneSignal (Phase 2+) | Supabase does not include FCM; added later |
 | Hosting (web) | Supabase + any static host | DB and auth already on Supabase |
 
@@ -82,16 +83,23 @@ CREATE TABLE centers (
 ### `profiles` (extends Supabase's built-in `auth.users`)
 ```sql
 CREATE TABLE profiles (
-  id          UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  role        TEXT NOT NULL CHECK (role IN ('parent', 'teacher', 'director')),
-  name        TEXT NOT NULL,
-  phone       TEXT DEFAULT '',
-  center_id   UUID REFERENCES centers(id),
-  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  created_by  UUID REFERENCES auth.users(id),
-  updated_by  UUID REFERENCES auth.users(id)
+  id                UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  role              TEXT NOT NULL CHECK (role IN ('parent', 'teacher', 'director')),
+  name              TEXT NOT NULL,
+  phone             TEXT DEFAULT '',
+  center_id         UUID REFERENCES centers(id),
+  must_set_password BOOLEAN NOT NULL DEFAULT false,  -- true for invited accounts until they choose a password (§6.6a)
+  created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by        UUID REFERENCES auth.users(id),
+  updated_by        UUID REFERENCES auth.users(id)
 );
+
+-- Lets a user clear their own must_set_password flag without a broad
+-- profiles UPDATE policy (which could let them change their own role).
+CREATE OR REPLACE FUNCTION complete_password_setup() RETURNS void AS $$
+  UPDATE profiles SET must_set_password = false, updated_at = now() WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
 ```
 > Supabase Auth manages the email + password in `auth.users`. `profiles` holds everything else. The `id` in `profiles` is the same UUID as in `auth.users`.
 
@@ -227,6 +235,21 @@ CREATE POLICY "children_select" ON children FOR SELECT
     OR teacher_id = auth.uid()
     OR EXISTS (SELECT 1 FROM children_parents WHERE child_id = children.id AND parent_id = auth.uid())
   );
+-- children: only directors create/edit records (enrollment UI, §6.6)
+CREATE POLICY "children_insert" ON children FOR INSERT
+  WITH CHECK (current_role_name() = 'director');
+CREATE POLICY "children_update" ON children FOR UPDATE
+  USING (current_role_name() = 'director');
+
+-- children_parents: RLS must be enabled on this junction table (it wasn't
+-- originally). Directors manage links; a parent can read their own.
+ALTER TABLE children_parents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "children_parents_select" ON children_parents FOR SELECT
+  USING (current_role_name() = 'director' OR parent_id = auth.uid());
+CREATE POLICY "children_parents_insert" ON children_parents FOR INSERT
+  WITH CHECK (current_role_name() = 'director');
+CREATE POLICY "children_parents_delete" ON children_parents FOR DELETE
+  USING (current_role_name() = 'director');
 
 -- schedule_entries: director sees/edits everything; teachers see every
 -- teacher's schedule but can only create on their own, and can only
@@ -376,6 +399,7 @@ lib/
       schedule_service.dart
       attendance_service.dart
       photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
+      user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
@@ -383,6 +407,7 @@ lib/
   features/
     auth/
       login_screen.dart
+      set_password_screen.dart      -- invite completion + password recovery (§6.6a)
     parent/
       parent_shell.dart
       screens/
@@ -402,8 +427,10 @@ lib/
         director_attendance_screen.dart
         director_schedules_screen.dart  -- searchable teacher list -> PersonScheduleScreen
         person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child
-        manage_teachers_screen.dart     -- (not yet built — Teachers tab is still a placeholder)
-        manage_children_screen.dart     -- (not yet built)
+        people_screen.dart              -- Teachers | Children sub-tabs (§6.6)
+        manage_teachers_screen.dart     -- teacher list + invite-a-teacher
+        manage_children_screen.dart     -- child list + invite-a-parent
+        enroll_child_screen.dart        -- child record + first parent invite in one form
   shared/
     screens/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
@@ -411,9 +438,13 @@ lib/
       logout_button.dart
       attendance_status_chip.dart
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
+      person_invite_dialog.dart     -- shared name/email/phone dialog for teacher & parent invites
       schedule_agenda_view.dart     -- week/month toggle, colored event cards
       day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
       schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
+supabase/
+  functions/
+    create-user/index.ts            -- director-only account provisioning (§6.6a)
 ```
 
 ---
@@ -422,8 +453,8 @@ lib/
 
 ### 6.1 Authentication
 - Supabase Auth with email + password
-- On first login, Director manually creates teacher and parent accounts via the Supabase dashboard (no in-app admin UI yet — see §6.6)
-- Role is set in the `profiles` table by the Director, never self-assigned
+- Directors create teacher and parent accounts in-app via the People tab, which sends an email invite; the invitee sets their own password on first entry (§6.6a). (The very first director account is still seeded manually via the dashboard.)
+- Role is set in the `profiles` table by the Director (server-side, in the create-user Edge Function), never self-assigned
 - Session persists across app restarts (Supabase handles token refresh)
 
 ### 6.2 Schedules
@@ -462,11 +493,16 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 ### 6.6 Director / Admin Panel — partially built
 - ✅ View all attendance records, any date (Attendance tab)
 - ✅ View/edit any teacher's or child's schedule (Schedules tab, §6.2)
-- ⬜ Add / edit / deactivate teacher accounts — currently done manually via the Supabase dashboard (Teachers tab is still a placeholder)
-- ⬜ Enroll children, assign to rooms and primary teacher — currently done manually via SQL
-- ⬜ Create parent accounts and link to a child — currently done manually via SQL
+- ✅ **People tab** (Teachers | Children sub-tabs) for account provisioning:
+  - Invite a teacher by email
+  - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
+- ⬜ Edit / deactivate existing teacher/parent accounts (only create is built)
 - ⬜ View all lesson plans across the center (depends on §6.5)
 - ⬜ Manage center settings (center name, rooms)
+
+**How account provisioning works (§6.6a):** The Flutter app can never create accounts for other people directly — that needs Supabase's admin API and the service role key, which must stay server-side. So a director's invite calls the **`create-user` Edge Function** (`supabase/functions/create-user`): it verifies the caller is a director via their own JWT, then uses the service role key to `inviteUserByEmail` and insert the `profiles` row (with `must_set_password = true`). The invite email's link deep-links back into the app via a custom URL scheme (`com.example.test_flutter://login-callback/`, registered in AndroidManifest.xml + iOS Info.plist and allow-listed in the dashboard's Auth → Redirect URLs). On first entry the invited user lands on `SetPasswordScreen` (routed by `AuthGate` when `must_set_password`), sets a password, and the flag is cleared via the `complete_password_setup()` SECURITY DEFINER RPC (avoids granting a broad `profiles` UPDATE policy that could let users change their own role).
+
+> ⚠️ **Production requirement — custom SMTP not yet configured.** Invite and password-recovery emails currently go through Supabase's built-in email sender, which is a shared, heavily rate-limited service intended only for development (hitting "email rate limit exceeded" after a few test invites is expected). Before inviting real teachers/parents, a custom SMTP provider (e.g. Resend, SendGrid) **must** be configured in Dashboard → Project Settings → Authentication → SMTP Settings. Supabase generates the invite/recovery link and its token; the SMTP provider is what actually delivers the email reliably to real inboxes (analogous to why production PHP uses PHPMailer + a real mail service instead of the built-in `mail()`).
 
 ---
 
@@ -543,7 +579,8 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 1 | Auth + RBAC + navigation shell (Supabase) | ✅ Done |
 | 2 | Schedules (read-only agenda view) + Attendance (mark/view) | ✅ Done |
 | 3 | Schedule entries CRUD — teacher self-manage, director manage any, per-event creator/director edit permission, event colors, Director's searchable Schedules tab | ✅ Done |
-| 4 | Daily Reports (text + images) | ⬜ Not started |
-| 5 | Lesson Plans | ⬜ Not started |
-| 6 | Director account/enrollment management — Teachers tab, child enrollment, parent linking (currently all manual via Supabase dashboard/SQL) | ⬜ Not started |
-| 7 | Web build + polish | ⬜ Not started |
+| 4 | Director account/enrollment management — People tab: invite teachers, enroll children + invite parents, via a `create-user` Edge Function + invite/set-password deep-link flow (§6.6a) | ✅ Done (⚠️ needs custom SMTP before real use) |
+| 5 | Profile/settings (change password, profile picture) + Forgot Password on login | ⬜ Not started |
+| 6 | Daily Reports (text + images) | ⬜ Not started |
+| 7 | Lesson Plans | ⬜ Not started |
+| 8 | Web build + polish | ⬜ Not started |
