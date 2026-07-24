@@ -6,10 +6,14 @@ import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/auth/role_router.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.dart';
 
 class MockChildService extends Mock implements ChildService {}
+
+class MockTeacherService extends Mock implements TeacherService {}
 
 AppUser _user(String role) => AppUser(
   id: 'uid-1',
@@ -57,13 +61,23 @@ void main() {
   });
 
   testWidgets('routes director to DirectorShell', (tester) async {
+    final mockChildren = MockChildService();
+    final mockTeachers = MockTeacherService();
+    when(() => mockChildren.fetchAll()).thenAnswer((_) async => []);
+    when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
+
     await tester.pumpWidget(ProviderScope(
+      // DirectorShell's first tab (PeopleScreen -> ManageTeachersScreen)
+      // reads both services directly during build, same reasoning as the
+      // parent case above.
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('director'))),
+        childServiceProvider.overrideWithValue(mockChildren),
+        teacherServiceProvider.overrideWithValue(mockTeachers),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));
-    await tester.pump();
-    expect(find.text('Teachers — coming soon'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(ManageTeachersScreen), findsOneWidget);
   });
 }

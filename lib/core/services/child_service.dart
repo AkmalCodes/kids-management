@@ -42,6 +42,14 @@ class ChildService {
         .map((row) => Child.fromJson(row['children'] as Map<String, dynamic>))
         .toList();
   }
+
+  // Director-only per the children_insert RLS policy. Returns the saved
+  // row (with its generated id) so the caller can immediately use it --
+  // e.g. to link an invited parent to this child.
+  Future<Child> createChild(Child child) async {
+    final row = await _client.from('children').insert(child.toJson()).select().single();
+    return Child.fromJson(row);
+  }
 }
 
 final childServiceProvider = Provider<ChildService>(

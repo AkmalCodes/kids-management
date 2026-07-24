@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/features/director/director_shell.dart';
+
+class MockChildService extends Mock implements ChildService {}
+
+class MockTeacherService extends Mock implements TeacherService {}
 
 void main() {
   testWidgets('DirectorShell renders four tabs', (tester) async {
+    final mockChildren = MockChildService();
+    final mockTeachers = MockTeacherService();
+    when(() => mockChildren.fetchAll()).thenAnswer((_) async => []);
+    when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
+
     await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: DirectorShell())),
+      ProviderScope(
+        overrides: [
+          childServiceProvider.overrideWithValue(mockChildren),
+          teacherServiceProvider.overrideWithValue(mockTeachers),
+        ],
+        child: const MaterialApp(home: DirectorShell()),
+      ),
     );
-    expect(find.text('Teachers'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    expect(find.text('People'), findsOneWidget);
     expect(find.text('Schedules'), findsOneWidget);
     expect(find.text('Lesson Plans'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);

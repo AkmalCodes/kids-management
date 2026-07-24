@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../shared/widgets/logout_button.dart';
 import 'screens/director_attendance_screen.dart';
 import 'screens/director_schedules_screen.dart';
+import 'screens/people_screen.dart';
 
 class DirectorShell extends StatefulWidget {
   const DirectorShell({super.key});
@@ -14,7 +15,7 @@ class _DirectorShellState extends State<DirectorShell> {
   int _index = 0;
 
   static const _pages = [
-    Center(child: Text('Teachers — coming soon')),
+    PeopleScreen(),
     DirectorSchedulesScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
     DirectorAttendanceScreen(),
@@ -35,7 +36,7 @@ class _DirectorShellState extends State<DirectorShell> {
           NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
-            label: 'Teachers',
+            label: 'People',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_month_outlined),
