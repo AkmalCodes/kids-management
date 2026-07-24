@@ -379,7 +379,7 @@ lib/
       lesson_plan_service.dart      -- (not yet built)
       daily_report_service.dart     -- (not yet built)
     theme/
-      app_theme.dart                -- single seed color, cascades app-wide
+      app_theme.dart                -- single seed color + font (Comfortaa via google_fonts), cascades app-wide
   features/
     auth/
       login_screen.dart
@@ -443,6 +443,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleService`'s create/update)
 - Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day
 - Tapping a photo slot opens a menu: Take/Retake photo (camera), Choose from gallery, and — once a photo exists — Delete photo (removes both the Storage object and the column reference). Both slots are a fixed size regardless of whether they show the placeholder icon or an existing thumbnail, so the row's layout doesn't shift depending on photo state
+- The photo row's two halves are `Expanded` with an ellipsizing `Flexible` label (not sized to their own intrinsic content width) so the row can't overflow on a narrow screen; same fix applied to the header's date text next to "Attendance" — both surfaced after switching the app font to Comfortaa (see folder structure note on `app_theme.dart` below) rendered text wider than the previous default. Covered by a regression test that pumps the screen at a 320px-wide surface
 - Signed URLs (see below) are cached per photo path in a Riverpod `FutureProvider.family` (`signedPhotoUrlProvider`) for the app's session, so re-expanding a card reuses the already-fetched URL instead of re-hitting Storage
 - Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
