@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_screen.dart';
 import 'screens/child_attendance_screen.dart';
+import 'screens/child_reports_screen.dart';
 import 'screens/child_schedule_screen.dart';
 
 // StatefulWidget (not Riverpod) for the tab index: this is purely local UI
@@ -21,7 +22,7 @@ class _ParentShellState extends State<ParentShell> {
   static const _pages = [
     ChildScheduleScreen(),
     ChildAttendanceScreen(),
-    Center(child: Text('Reports — coming soon')),
+    ChildReportsScreen(),
     ProfileScreen(),
   ];
 
