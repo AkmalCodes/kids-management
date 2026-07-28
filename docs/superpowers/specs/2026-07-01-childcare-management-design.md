@@ -635,6 +635,20 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 3 | Schedule entries CRUD — teacher self-manage, director manage any, per-event creator/director edit permission, event colors, Director's searchable Schedules tab | ✅ Done |
 | 4 | Director account/enrollment management — People tab: invite teachers, enroll children + invite parents, via a `create-user` Edge Function + invite/set-password deep-link flow (§6.6a) | ✅ Done (⚠️ needs custom SMTP before real use) |
 | 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
+| 5.5 | Profile pictures shown as avatars everywhere (attendance cards, People lists, parent contacts) | ✅ Done |
 | 6 | Daily Reports (text + images) | ⬜ Not started |
 | 7 | Lesson Plans | ⬜ Not started |
-| 8 | Web build + polish | ⬜ Not started |
+| 8 | Play Store release prep (see §11) | ⬜ Not started |
+| 9 | Web build + polish | ⬜ Not started |
+
+## 11. Play Store release prep (not started)
+
+Tracked for later; none of this is code-complete yet. Blocking items are called out.
+
+- ⚠️ **Rename `applicationId`** from the placeholder `com.example.test_flutter` to a real reverse-domain id (e.g. `com.akmalcodes.childcaremanager`) — Google Play rejects `com.example`. **Coordinated change**: the auth deep-link scheme (`com.example.test_flutter://login-callback/`) is duplicated in `AndroidManifest.xml`, `ios/Runner/Info.plist`, the `create-user` Edge Function, `auth_service.dart`, and the Supabase dashboard **Redirect URLs** — all must move together or invites/password-reset break.
+- Set a real app **display name** ("Childcare Manager") and a **launcher icon** (e.g. via `flutter_launcher_icons`).
+- **Play App Signing**: create an upload keystore (`keytool`), keep the keystore + passwords backed up outside the repo, wire a release signing config.
+- Build: `flutter build appbundle --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` (anon key is safe to ship; RLS protects the data).
+- Play Console listing: store listing assets, content rating, **Data safety form + privacy policy URL** (we store emails and children's photos), target-audience = adults (users are teachers/parents/directors).
+- Distribution: **Internal testing track** is the portfolio path (shareable install link, minimal review). A full production launch of a real childcare app carries children's-data privacy weight (COPPA/GDPR-K) — use dummy data for the portfolio demo.
+- New personal developer accounts must run a closed test with a minimum number of testers (~12) for 14 days before production access (doesn't affect internal testing).
