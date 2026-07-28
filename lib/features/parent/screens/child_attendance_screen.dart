@@ -7,6 +7,7 @@ import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
+import 'attendance_detail_screen.dart';
 
 class ChildAttendanceScreen extends ConsumerWidget {
   const ChildAttendanceScreen({super.key});
@@ -75,11 +76,7 @@ class _ChildAttendanceSection extends ConsumerWidget {
             return Column(
               children: [
                 for (final record in records)
-                  ListTile(
-                    leading: _photoThumbnails(record),
-                    title: Text(record.date),
-                    trailing: AttendanceStatusChip(status: record.status),
-                  ),
+                  _AttendanceCard(record: record, childName: child.name),
               ],
             );
           },
@@ -87,17 +84,53 @@ class _ChildAttendanceSection extends ConsumerWidget {
       ],
     );
   }
+}
 
-  // Either or both may be absent since both photos are optional -- only
-  // shows a leading widget at all if there's something to show.
-  Widget? _photoThumbnails(Attendance record) {
+class _AttendanceCard extends StatelessWidget {
+  const _AttendanceCard({required this.record, required this.childName});
+
+  final Attendance record;
+  final String childName;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhotos = record.photoPath != null || record.belongingsPhotoPath != null;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: _photoThumbnails(),
+        title: Text(record.date),
+        subtitle: hasPhotos ? const Text('Tap to view photos') : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AttendanceStatusChip(status: record.status),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AttendanceDetailScreen(record: record, childName: childName),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Either or both may be absent since both photos are optional -- shows a
+  // person placeholder if neither exists.
+  Widget _photoThumbnails() {
     final thumbnails = [
       if (record.photoPath != null)
         SignedPhotoThumbnail(photoPath: record.photoPath!, radius: 16),
       if (record.belongingsPhotoPath != null)
         SignedPhotoThumbnail(photoPath: record.belongingsPhotoPath!, radius: 16),
     ];
-    if (thumbnails.isEmpty) return null;
+    if (thumbnails.isEmpty) {
+      return const CircleAvatar(radius: 16, child: Icon(Icons.event_note_outlined, size: 18));
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
