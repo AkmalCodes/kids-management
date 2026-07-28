@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
+import 'screens/teacher_reports_screen.dart';
 import 'screens/teacher_schedule_screen.dart';
 
 class TeacherShell extends StatefulWidget {
@@ -17,7 +18,7 @@ class _TeacherShellState extends State<TeacherShell> {
     TeacherScheduleScreen(),
     MarkAttendanceScreen(),
     Center(child: Text('Lesson Plans — coming soon')),
-    Center(child: Text('Reports — coming soon')),
+    TeacherReportsScreen(),
     ProfileScreen(),
   ];
 

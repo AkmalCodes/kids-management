@@ -5,7 +5,9 @@ class DailyReport {
   final String centerId;
   final String date; // YYYY-MM-DD
   final String text;
-  final List<String> imageUrls;
+  // Storage paths (private 'daily-report-images' bucket), not ready URLs --
+  // exchange for signed URLs to display, same pattern as attendance/avatars.
+  final List<String> imagePaths;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -18,7 +20,7 @@ class DailyReport {
     required this.centerId,
     required this.date,
     required this.text,
-    required this.imageUrls,
+    required this.imagePaths,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -32,7 +34,7 @@ class DailyReport {
     centerId: json['center_id'] as String,
     date: json['date'] as String,
     text: json['text'] as String? ?? '',
-    imageUrls: List<String>.from(json['image_urls'] as List),
+    imagePaths: List<String>.from(json['image_paths'] as List? ?? const []),
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,
@@ -45,7 +47,7 @@ class DailyReport {
     'center_id': centerId,
     'date': date,
     'text': text,
-    'image_urls': imageUrls,
+    'image_paths': imagePaths,
     'created_by': createdBy,
     'updated_by': updatedBy,
   };
