@@ -43,7 +43,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 |---|---|---|---|
 | Schedule | **ChildScheduleScreen** | `features/parent/screens/child_schedule_screen.dart` | Read-only agenda of the parent's child's schedule. |
 | Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | The child's attendance history, with any check-in/belongings photo thumbnails. |
-| Reports | — | *(placeholder text, not built)* | |
+| Reports | **ChildReportsScreen** | `features/parent/screens/child_reports_screen.dart` | Read-only feed of the child's daily reports (newest first): teacher's note + photo thumbnails. |
 | Profile | **ProfileScreen** | see *Profile* below | Shared across all roles. |
 
 ---
@@ -54,7 +54,9 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 |---|---|---|---|
 | Schedule | **TeacherScheduleScreen** | `features/teacher/screens/teacher_schedule_screen.dart` | The teacher's own weekly agenda; can browse others read-only, edit/manage own. Drills into the day view. |
 | Attendance | **MarkAttendanceScreen** | `features/teacher/screens/mark_attendance_screen.dart` | Today's class as a searchable list of **collapsible cards** (avatar, name, status chip, chevron). Expand to mark Present/Absent and optionally attach a check-in and/or belongings photo (take/gallery/delete). Shows today's date in the header. |
-| Lessons / Reports | — | *(placeholders, not built)* | |
+| Lessons | — | *(placeholder, not built)* | |
+| Reports | **TeacherReportsScreen** | `features/teacher/screens/teacher_reports_screen.dart` | The teacher's class as a list; tap a child → DailyReportEditScreen. |
+| (from a child row) | **DailyReportEditScreen** | `features/teacher/screens/daily_report_edit_screen.dart` | Write/edit today's daily report for one child: free text + photos (add/remove). Opens the existing report or a blank form. |
 | Profile | **ProfileScreen** | see *Profile* below | |
 
 ---

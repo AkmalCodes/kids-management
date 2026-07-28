@@ -196,6 +196,9 @@ Private bucket for **user** profile pictures, one file per user at `<user_id>/av
 ### Storage: `child-avatars` bucket
 Private bucket for **child** photos, one file per child at `<child_id>/avatar.jpg` (§6.6). Children have no auth account, so they can't use the user `avatars` bucket. Only directors insert/update; select is available to any director, the child's own teacher, or a linked parent. Displayed via `signedChildAvatarUrlProvider`.
 
+### Storage: `daily-report-images` bucket
+Private bucket for **daily-report** photos (§6.4), path `<child_id>/<date>/<n>.jpg` (multiple photos per report). The child's teacher inserts; select is available to that teacher, any director, or a linked parent (so parents see them in their feed). Displayed via `signedReportImageUrlProvider`.
+
 ### `lesson_plans`
 ```sql
 CREATE TABLE lesson_plans (
@@ -221,7 +224,7 @@ CREATE TABLE daily_reports (
   center_id   UUID REFERENCES centers(id) NOT NULL,
   date        DATE NOT NULL,
   text        TEXT DEFAULT '',
-  image_urls  JSONB DEFAULT '[]' NOT NULL,  -- array of Supabase Storage URLs; suggest max 5 (TBC)
+  image_paths JSONB DEFAULT '[]' NOT NULL,  -- array of storage paths in the daily-report-images bucket (signed on display)
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by  UUID REFERENCES auth.users(id),
@@ -429,8 +432,8 @@ lib/
       photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
       user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
       profile_service.dart          -- user avatar upload/signed-url + set/update RPCs + director edit (§6.7)
+      daily_report_service.dart     -- fetch/save reports + report-image upload/signed-url (§6.4)
       lesson_plan_service.dart      -- (not yet built)
-      daily_report_service.dart     -- (not yet built)
     theme/
       app_theme.dart                -- single seed color + font (Nunito via google_fonts) + tinted top/bottom bars, cascades app-wide
   features/
@@ -447,14 +450,15 @@ lib/
       screens/
         child_schedule_screen.dart
         child_attendance_screen.dart
-        daily_reports_screen.dart   -- (not yet built)
+        child_reports_screen.dart   -- parent's daily-report feed (§6.4)
     teacher/
       teacher_shell.dart
       screens/
         teacher_schedule_screen.dart
         mark_attendance_screen.dart
+        teacher_reports_screen.dart -- class list -> report editor (§6.4)
+        daily_report_edit_screen.dart -- write/edit one child's daily report (§6.4)
         lesson_plan_screen.dart     -- (not yet built)
-        daily_report_create_screen.dart -- (not yet built)
     director/
       director_shell.dart
       screens/
@@ -516,11 +520,11 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
 
-### 6.4 Daily Reports — not yet built
-- Teacher creates one report per child per day
-- Report contains free-text and images (uploaded to Supabase Storage; image limit per report to be confirmed — suggest starting with 5)
-- Parent sees all reports for their child, sorted by date (newest first)
-- Reports are read-only for parents
+### 6.4 Daily Reports — built (teacher write, parent read)
+- **Teacher** (Reports tab, `TeacherReportsScreen`): their class as a list; tap a child → `DailyReportEditScreen` to write today's report — free text + photos. One report per child per day, so it opens the existing one to edit or a blank form. Photos upload immediately to the `daily-report-images` bucket; text + image paths persist on Save (via `DailyReportService.saveReport`, insert-or-update on the child+date row).
+- **Parent** (Reports tab, `ChildReportsScreen`): for each linked child, a read-only feed of daily reports newest-first — the teacher's note + photo thumbnails (signed URLs).
+- **Director**: reads all via RLS, but no dedicated reports screen yet (⬜ could add a browse view later).
+- Data: `daily_reports` table (one row per child+date), image paths stored on the row, photos in the private `daily-report-images` bucket.
 
 ### 6.5 Lesson Plans — not yet built
 - Teacher writes a lesson plan per day (title + content)
@@ -568,7 +572,7 @@ Role Router
 │ PARENT                                       │
 │  Tab 1: Schedule (agenda: week/month toggle) │
 │  Tab 2: Attendance (per-child history)       │
-│  Tab 3: Reports — not yet built              │
+│  Tab 3: Reports (daily-report feed)          │
 │  Tab 4: Profile (avatar, password, sign out) │
 └─────────────────────────────────────────────┘
 
@@ -578,7 +582,7 @@ Role Router
 │          create/edit/delete own events)      │
 │  Tab 2: Attendance (today's class list)      │
 │  Tab 3: Lesson Plans — not yet built         │
-│  Tab 4: Reports — not yet built               │
+│  Tab 4: Reports (class list → report editor) │
 │  Tab 5: Profile (avatar, password, sign out) │
 └─────────────────────────────────────────────┘
 
@@ -636,7 +640,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 4 | Director account/enrollment management — People tab: invite teachers, enroll children + invite parents, via a `create-user` Edge Function + invite/set-password deep-link flow (§6.6a) | ✅ Done (⚠️ needs custom SMTP before real use) |
 | 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
 | 5.5 | Profile pictures shown as avatars everywhere (attendance cards, People lists, parent contacts) | ✅ Done |
-| 6 | Daily Reports (text + images) | ⬜ Not started |
+| 6 | Daily Reports (text + images) — teacher write, parent read (§6.4) | ✅ Done |
 | 7 | Lesson Plans | ⬜ Not started |
 | 8 | Play Store release prep (see §11) | ⬜ Not started |
 | 9 | Web build + polish | ⬜ Not started |
