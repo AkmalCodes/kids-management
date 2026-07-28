@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/app_user.dart';
+import '../../../core/services/profile_service.dart';
 import '../../../core/services/teacher_service.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import 'person_schedule_screen.dart';
 
 // Director's "Schedules" tab: search/pick a teacher, land on their agenda
@@ -103,7 +105,12 @@ class _TeacherList extends ConsumerWidget {
           itemBuilder: (context, i) {
             final teacher = teachers[i];
             return ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              leading: SignedAvatar(
+                urlProvider: teacher.avatarPath == null
+                    ? null
+                    : signedAvatarUrlProvider(teacher.avatarPath!),
+                radius: 20,
+              ),
               title: Text(teacher.name),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
@@ -113,6 +120,7 @@ class _TeacherList extends ConsumerWidget {
                     type: 'teacher',
                     refId: teacher.id,
                     centerId: teacher.centerId,
+                    avatarPath: teacher.avatarPath,
                   ),
                 ),
               ),
