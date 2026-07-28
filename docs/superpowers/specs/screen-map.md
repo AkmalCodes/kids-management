@@ -42,7 +42,8 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | Tab | Name | File | What's on it |
 |---|---|---|---|
 | Schedule | **ChildScheduleScreen** | `features/parent/screens/child_schedule_screen.dart` | Read-only agenda of the parent's child's schedule. |
-| Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | The child's attendance history, with any check-in/belongings photo thumbnails. |
+| Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | The child's attendance history as tappable **cards** (date, status, photo thumbnails). |
+| (from a card) | **AttendanceDetailScreen** | `features/parent/screens/attendance_detail_screen.dart` | One day's status + notes + the check-in and belongings photos shown large. |
 | Reports | **ChildReportsScreen** | `features/parent/screens/child_reports_screen.dart` | Read-only feed of the child's daily reports (newest first): teacher's note + photo thumbnails. |
 | Profile | **ProfileScreen** | see *Profile* below | Shared across all roles. |
 
