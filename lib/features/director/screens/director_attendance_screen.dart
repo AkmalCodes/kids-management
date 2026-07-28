@@ -5,6 +5,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
 class DirectorAttendanceScreen extends ConsumerStatefulWidget {
@@ -66,13 +67,15 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
     });
   }
 
-  Widget _avatar(Attendance? record) {
-    // Reuses today's check-in photo (if any) as a visual identifier,
-    // otherwise a placeholder icon -- matches the teacher screen.
-    if (record?.photoPath != null) {
-      return SignedPhotoThumbnail(photoPath: record!.photoPath!, radius: 16);
-    }
-    return const CircleAvatar(radius: 16, child: Icon(Icons.person_outline, size: 18));
+  // The child's profile picture (from ChildDetailScreen), or a placeholder
+  // icon -- matches the teacher screen. The day's check-in/belongings
+  // photos are shown in the expanded card, not here.
+  Widget _avatar(Child child) {
+    return SignedAvatar(
+      urlProvider:
+          child.avatarPath == null ? null : signedChildAvatarUrlProvider(child.avatarPath!),
+      radius: 16,
+    );
   }
 
   // A read-only photo slot for the expanded view (director doesn't capture
@@ -111,7 +114,7 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
               onTap: () => _toggleExpanded(child.id),
               child: Row(
                 children: [
-                  _avatar(record),
+                  _avatar(child),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(child.name, style: Theme.of(context).textTheme.titleMedium),

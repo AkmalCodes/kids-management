@@ -7,6 +7,7 @@ import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/photo_capture_service.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
 enum _PhotoAction { camera, gallery, delete }
@@ -316,14 +317,15 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     return '$dd/$mm/$yy ${_weekdayAbbreviations[date.weekday - 1]}';
   }
 
-  Widget _avatar(Attendance? existing) {
-    // Reuses today's check-in photo (once taken) as a visual identifier --
-    // there's no separate profile picture for a child yet, just a
-    // placeholder icon until one has been captured for the day.
-    if (existing?.photoPath != null) {
-      return SignedPhotoThumbnail(photoPath: existing!.photoPath!, radius: 16);
-    }
-    return const CircleAvatar(radius: 16, child: Icon(Icons.person_outline, size: 18));
+  // The child's profile picture (from ChildDetailScreen), or a placeholder
+  // icon. The day's check-in/belongings photos are separate and shown in
+  // the expanded card, not here.
+  Widget _avatar(Child child) {
+    return SignedAvatar(
+      urlProvider:
+          child.avatarPath == null ? null : signedChildAvatarUrlProvider(child.avatarPath!),
+      radius: 16,
+    );
   }
 
   Widget _childCard(BuildContext context, Child child, Attendance? existing) {
@@ -339,7 +341,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
               onTap: () => _toggleExpanded(child.id),
               child: Row(
                 children: [
-                  _avatar(existing),
+                  _avatar(child),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(child.name, style: Theme.of(context).textTheme.titleMedium),

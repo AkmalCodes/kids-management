@@ -5,6 +5,7 @@ import '../../../core/models/app_user.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/photo_capture_service.dart';
+import '../../../core/services/profile_service.dart';
 import '../../../core/services/teacher_service.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
@@ -245,7 +246,12 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                     for (final parent in parents)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                        leading: SignedAvatar(
+                          urlProvider: parent.avatarPath == null
+                              ? null
+                              : signedAvatarUrlProvider(parent.avatarPath!),
+                          radius: 20,
+                        ),
                         title: Text(parent.name),
                         subtitle: Text(
                           parent.email ?? 'No email on file',

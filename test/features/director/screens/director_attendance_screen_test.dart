@@ -116,14 +116,15 @@ void main() {
     await pumpScreen(tester);
     await tester.pump();
 
-    // Collapsed: only the leading avatar reuses the check-in photo.
-    expect(find.byType(SignedPhotoThumbnail), findsOneWidget);
+    // Collapsed: the leading avatar is the child's profile picture (absent
+    // here), not the check-in photo -- so no photo thumbnails yet.
+    expect(find.byType(SignedPhotoThumbnail), findsNothing);
 
     await tester.tap(find.text('Alice'));
     await tester.pump();
 
-    // Expanded adds the check-in and belongings photo slots.
-    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(3));
+    // Expanded shows the check-in and belongings photo slots.
+    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
     expect(find.text('Check-in photo'), findsOneWidget);
     expect(find.text('Belongings photo'), findsOneWidget);
   });

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/services/teacher_service.dart';
+import '../../../core/services/profile_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import '../../profile/person_detail_screen.dart';
 
 class ManageTeachersScreen extends ConsumerStatefulWidget {
@@ -77,7 +79,12 @@ class _ManageTeachersScreenState extends ConsumerState<ManageTeachersScreen> {
             itemBuilder: (context, i) {
               final teacher = teachers[i];
               return ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                leading: SignedAvatar(
+                  urlProvider: teacher.avatarPath == null
+                      ? null
+                      : signedAvatarUrlProvider(teacher.avatarPath!),
+                  radius: 20,
+                ),
                 title: Text(teacher.name),
                 subtitle: Text(teacher.phone.isEmpty ? 'No phone on file' : teacher.phone),
                 trailing: const Icon(Icons.chevron_right),

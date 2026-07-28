@@ -439,18 +439,18 @@ void main() {
     await pumpScreen(tester);
     await tester.pump();
 
-    // The collapsed card's leading avatar already reuses the check-in photo.
-    final avatar = tester.widget<SignedPhotoThumbnail>(find.byType(SignedPhotoThumbnail).first);
-    expect(avatar.photoPath, 'child-1/2026-07-23.jpg');
+    // Collapsed, the leading avatar is the child's profile picture (absent
+    // here), NOT the check-in photo -- so no check-in thumbnail yet.
+    expect(find.byType(SignedPhotoThumbnail), findsNothing);
 
-    // Expanding shows the same photo in the check-in slot instead of the
-    // capture icon -- the slot itself (found by key) still exists since
-    // it's the tap target for retake/gallery/delete, but its rendered
-    // content is a thumbnail now, not the placeholder icon.
+    // Expanding shows the check-in photo in its slot (a thumbnail replaces
+    // the capture icon), wired to the stored path.
     await tester.tap(find.text('Alice'));
     await tester.pump();
 
-    expect(find.byType(SignedPhotoThumbnail), findsNWidgets(2));
+    expect(find.byType(SignedPhotoThumbnail), findsOneWidget);
+    final thumb = tester.widget<SignedPhotoThumbnail>(find.byType(SignedPhotoThumbnail));
+    expect(thumb.photoPath, 'child-1/2026-07-23.jpg');
   });
 
   testWidgets('cards start collapsed showing only avatar, name, and status',

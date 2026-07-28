@@ -4,6 +4,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import 'child_detail_screen.dart';
 import 'enroll_child_screen.dart';
 
@@ -94,7 +95,12 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
             itemBuilder: (context, i) {
               final child = children[i];
               return ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.child_care_outlined)),
+                leading: SignedAvatar(
+                  urlProvider: child.avatarPath == null
+                      ? null
+                      : signedChildAvatarUrlProvider(child.avatarPath!),
+                  radius: 20,
+                ),
                 title: Text(child.name),
                 subtitle: Text(child.className.isEmpty ? 'No class on file' : child.className),
                 onTap: () => _openDetail(child),
