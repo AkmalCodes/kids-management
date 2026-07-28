@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
+import '../../../core/services/class_service.dart';
 import '../../../core/services/schedule_service.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 
@@ -47,8 +48,6 @@ class _ChildScheduleSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final entriesAsync = ref.watch(scheduleEntriesProvider((type: 'child', refId: child.id)));
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -56,20 +55,46 @@ class _ChildScheduleSection extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Text(child.name, style: Theme.of(context).textTheme.titleLarge),
         ),
-        entriesAsync.when(
+        _scheduleBody(context, ref),
+      ],
+    );
+  }
+
+  // The parent sees the schedule of the teacher assigned to their child's
+  // class: child -> class -> teacher -> that teacher's schedule entries.
+  Widget _scheduleBody(BuildContext context, WidgetRef ref) {
+    if (child.classId == null) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Not assigned to a class yet.'),
+      );
+    }
+    final classAsync = ref.watch(classGroupProvider(child.classId!));
+    return classAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e')),
+      data: (classGroup) {
+        final teacherId = classGroup?.teacherId;
+        if (teacherId == null) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No teacher assigned to this class yet.'),
+          );
+        }
+        final entriesAsync = ref.watch(scheduleEntriesProvider((type: 'teacher', refId: teacherId)));
+        return entriesAsync.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, _) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('Error: $e'),
-          ),
-          // editable defaults to false: parents never edit a child's
-          // schedule, only the director (per the RBAC design) or a teacher.
+          error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e')),
+          // editable defaults to false: parents only ever view.
           data: (entries) => ScheduleAgendaView(entries: entries, shrinkWrap: true),
-        ),
-      ],
+        );
+      },
     );
   }
 }

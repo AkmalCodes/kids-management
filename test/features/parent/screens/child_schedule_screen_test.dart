@@ -5,7 +5,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
+import 'package:test_flutter/core/models/class_group.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/schedule_service.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 
@@ -23,16 +25,28 @@ AppUser _parent() => AppUser(
   updatedBy: 'director-1',
 );
 
-Child _child(String id, String name) => Child(
-  id: id,
-  name: name,
+Child _child({String? classId}) => Child(
+  id: 'child-1',
+  name: 'Alice',
   dob: DateTime(2022, 1, 1),
   centerId: 'center-1',
   className: '',
   teacherId: 'teacher-1',
+  classId: classId,
   allergies: '',
   notes: '',
   enrolledAt: DateTime(2026),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
+ClassGroup _classGroup({String? teacherId = 'teacher-1'}) => ClassGroup(
+  id: 'class-1',
+  name: 'Sunflowers',
+  teacherId: teacherId,
+  centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'director-1',
@@ -67,14 +81,42 @@ void main() {
     expect(find.text('No children linked to your account yet.'), findsOneWidget);
   });
 
-  testWidgets('shows each linked child with their schedule', (tester) async {
+  testWidgets('prompts to assign a class when the child has none', (tester) async {
     when(() => mockChildren.fetchForParent('parent-1'))
-        .thenAnswer((_) async => [_child('child-1', 'Alice')]);
+        .thenAnswer((_) async => [_child(classId: null)]);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('Not assigned to a class yet.'), findsOneWidget);
+  });
+
+  testWidgets('notes when the class has no teacher assigned', (tester) async {
+    when(() => mockChildren.fetchForParent('parent-1'))
+        .thenAnswer((_) async => [_child(classId: 'class-1')]);
 
     await pumpScreen(
       tester,
       extra: [
-        scheduleEntriesProvider((type: 'child', refId: 'child-1'))
+        classGroupProvider('class-1').overrideWith((ref) async => _classGroup(teacherId: null)),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No teacher assigned to this class yet.'), findsOneWidget);
+  });
+
+  testWidgets("shows the class teacher's schedule for the child's class", (tester) async {
+    when(() => mockChildren.fetchForParent('parent-1'))
+        .thenAnswer((_) async => [_child(classId: 'class-1')]);
+
+    await pumpScreen(
+      tester,
+      extra: [
+        classGroupProvider('class-1').overrideWith((ref) async => _classGroup()),
+        // The parent sees the class teacher's schedule (type: teacher).
+        scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
             .overrideWith((ref) async => []),
       ],
     );

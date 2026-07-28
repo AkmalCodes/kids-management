@@ -9,6 +9,7 @@ void main() {
     'center_id': 'center-1',
     'class_name': 'Class A',
     'teacher_id': 'teacher-1',
+    'class_id': 'class-1',
     'allergies': 'Peanuts',
     'notes': 'n/a',
     'enrolled_at': '2026-01-01',
@@ -33,5 +34,22 @@ void main() {
     final updated = child.copyWith(clearTeacherId: true);
 
     expect(updated.teacherId, isNull);
+  });
+
+  test('parses class_id and round-trips it through toJson', () {
+    final child = Child.fromJson(sampleJson);
+    expect(child.classId, 'class-1');
+    expect(child.toJson()['class_id'], 'class-1');
+  });
+
+  test('classId is null when absent, and copyWith preserves/clears it', () {
+    final json = Map<String, dynamic>.from(sampleJson)..remove('class_id');
+    final child = Child.fromJson(json);
+    expect(child.classId, isNull);
+
+    final withClass = Child.fromJson(sampleJson);
+    // Not passing classId preserves it; clearClassId nulls it.
+    expect(withClass.copyWith(name: 'X').classId, 'class-1');
+    expect(withClass.copyWith(clearClassId: true).classId, isNull);
   });
 }

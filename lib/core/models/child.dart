@@ -3,8 +3,12 @@ class Child {
   final String name;
   final DateTime dob;
   final String centerId;
-  final String className; // the child's class/group (was "room")
+  final String className; // free-text class/group label (was "room")
   final String? teacherId;
+  // The class (classes table) this child belongs to; its assigned teacher
+  // drives what schedule the parent sees. Separate from teacherId, which
+  // still drives attendance/report visibility.
+  final String? classId;
   final String allergies;
   final String notes;
   // Storage path (private 'child-avatars' bucket) of the child's photo, or
@@ -23,6 +27,7 @@ class Child {
     required this.centerId,
     required this.className,
     required this.teacherId,
+    this.classId,
     required this.allergies,
     required this.notes,
     this.avatarPath,
@@ -40,6 +45,7 @@ class Child {
     centerId: json['center_id'] as String,
     className: json['class_name'] as String? ?? '',
     teacherId: json['teacher_id'] as String?,
+    classId: json['class_id'] as String?,
     allergies: json['allergies'] as String? ?? '',
     notes: json['notes'] as String? ?? '',
     avatarPath: json['avatar_path'] as String?,
@@ -56,6 +62,7 @@ class Child {
     'center_id': centerId,
     'class_name': className,
     'teacher_id': teacherId,
+    'class_id': classId,
     'allergies': allergies,
     'notes': notes,
     'avatar_path': avatarPath,
@@ -70,6 +77,8 @@ class Child {
     String? className,
     String? teacherId,
     bool clearTeacherId = false,
+    String? classId,
+    bool clearClassId = false,
     String? allergies,
     String? notes,
     String? avatarPath,
@@ -81,6 +90,7 @@ class Child {
     centerId: centerId,
     className: className ?? this.className,
     teacherId: clearTeacherId ? null : (teacherId ?? this.teacherId),
+    classId: clearClassId ? null : (classId ?? this.classId),
     allergies: allergies ?? this.allergies,
     notes: notes ?? this.notes,
     avatarPath: avatarPath ?? this.avatarPath,
