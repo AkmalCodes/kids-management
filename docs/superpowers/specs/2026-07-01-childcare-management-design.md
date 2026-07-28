@@ -125,8 +125,9 @@ CREATE TABLE children (
   name        TEXT NOT NULL,
   dob         DATE NOT NULL,  -- age is derived from this in the UI, not stored
   center_id   UUID REFERENCES centers(id) NOT NULL,
-  class_name  TEXT DEFAULT '',  -- the child's class/group (formerly "room_id")
-  teacher_id  UUID REFERENCES auth.users(id),  -- the child's class/primary teacher
+  class_name  TEXT DEFAULT '',  -- free-text label (formerly "room_id"); legacy, superseded by class_id
+  teacher_id  UUID REFERENCES auth.users(id),  -- drives attendance/report visibility (a teacher's own children)
+  class_id    UUID REFERENCES classes(id),  -- §6.8: the class the child is in; its teacher drives the parent's schedule view
   allergies   TEXT DEFAULT '',
   notes       TEXT DEFAULT '',
   avatar_path TEXT,  -- child photo in the private 'child-avatars' bucket (§6.6), null if unset
@@ -137,6 +138,21 @@ CREATE TABLE children (
   updated_by  UUID REFERENCES auth.users(id)
 );
 ```
+
+### `classes` (§6.8)
+```sql
+CREATE TABLE classes (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name        TEXT NOT NULL,
+  teacher_uid UUID REFERENCES auth.users(id),  -- the teacher assigned to this class
+  center_id   UUID REFERENCES centers(id) NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by  UUID REFERENCES auth.users(id),
+  updated_by  UUID REFERENCES auth.users(id)
+);
+```
+> **Additive design (decided, not the only option):** `class_id` was added *alongside* the existing `children.teacher_id` rather than replacing it — `teacher_id` still drives attendance/daily-report visibility (a teacher sees "their" children), while `class_id → classes.teacher_uid` drives what schedule a parent sees. There is deliberate redundancy (teacher_id, class_name, and class_id all touch "who teaches this child"); consolidating is a future decision. Class creation/assignment has no UI yet — done via SQL (a director class-management screen is a planned follow-up). RLS: directors manage classes; teachers see their own; a parent sees the class their child is in.
 
 ### `children_parents` (junction — one child can have up to 2 parents)
 ```sql
@@ -297,6 +313,13 @@ CREATE POLICY "schedule_entries_select" ON schedule_entries FOR SELECT
       SELECT 1 FROM children_parents
       WHERE children_parents.child_id = schedule_entries.ref_id AND children_parents.parent_id = auth.uid()
     ))
+    -- §6.8: a parent reads the schedule of the teacher assigned to their child's class
+    OR (type = 'teacher' AND EXISTS (
+      SELECT 1 FROM classes cl
+      JOIN children c ON c.class_id = cl.id
+      JOIN children_parents cp ON cp.child_id = c.id
+      WHERE cl.teacher_uid = schedule_entries.ref_id AND cp.parent_id = auth.uid()
+    ))
   );
 CREATE POLICY "schedule_entries_insert" ON schedule_entries FOR INSERT
   WITH CHECK (
@@ -424,9 +447,11 @@ lib/
       schedule.dart                 -- ScheduleEntry: one row per event, not a whole-week blob
       lesson_plan.dart              -- model exists; no service/UI yet
       daily_report.dart             -- model exists; no service/UI yet
+      class_group.dart              -- the `classes` table (named ClassGroup; `Class` is reserved) (§6.8)
     services/
       child_service.dart
       teacher_service.dart
+      class_service.dart            -- fetch classes + resolve a class's teacher (§6.8)
       schedule_service.dart
       attendance_service.dart
       photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
@@ -503,7 +528,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 
 - **Teacher**: manages their own schedule directly — tap a day to open its hourly timetable, tap an empty slot (or the floating **+** button) to add an event, tap an existing event to edit or delete it. Can also browse (read-only) every other teacher's schedule, for visibility into the team.
 - **Director**: full create/edit/delete rights on *any* teacher's or child's schedule, via a searchable teacher picker (Schedules tab) that lands on the same editable agenda/day view teachers use.
-- **Parent**: views their child's schedule, read-only.
+- **Parent**: read-only. Shows the schedule of the **teacher assigned to their child's class** (child → `class_id` → `classes.teacher_uid` → that teacher's `type='teacher'` entries), not a separate per-child schedule (§6.8). Falls back to "Not assigned to a class yet" / "No teacher assigned to this class yet".
 - **Edit/delete permission on a specific event**: only the person who created it, or any director — enforced by `schedule_entries` RLS, not just the UI (see §4).
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
@@ -556,6 +581,13 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 - **Sign out**.
 
 **Forgot password (§6.7a):** `LoginScreen` has a "Forgot password?" link → `ForgotPasswordScreen`, which calls `resetPasswordForEmail` with the same `com.example.test_flutter://login-callback/` deep-link `redirectTo`. Opening that link fires an `AuthChangeEvent.passwordRecovery` (exposed as `passwordRecoveryProvider`); `AuthGate` then shows `SetPasswordScreen` in recovery mode (`clearMustSetPasswordFlag: false`) regardless of the user's normal routing. Completing the password update fires `userUpdated`, which drops back out of recovery mode automatically.
+
+### 6.8 Classes — partially built (schema + parent-schedule link)
+A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
+- ✅ Schema: `classes` (id, name, teacher_uid, center_id) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
+- ✅ **Parent schedule** reads through the class: `ChildScheduleScreen` resolves child → `class_id` → `ClassGroup.teacherId` (via `ClassService` / `classGroupProvider`) → shows that teacher's `type='teacher'` schedule entries. A new `schedule_entries_select` clause lets a parent read those.
+- ⬜ **No class-management UI yet** — creating classes and assigning teachers/children is done via SQL. A director class-management screen (and deciding whether `class_id` should supersede `teacher_id`/`class_name`) is a planned follow-up.
+- 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
 
 ---
 
