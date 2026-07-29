@@ -6,6 +6,7 @@ import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/auth/role_router.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
@@ -14,6 +15,8 @@ import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.da
 class MockChildService extends Mock implements ChildService {}
 
 class MockTeacherService extends Mock implements TeacherService {}
+
+class MockClassService extends Mock implements ClassService {}
 
 AppUser _user(String role) => AppUser(
   id: 'uid-1',
@@ -50,9 +53,15 @@ void main() {
   });
 
   testWidgets('routes teacher to TeacherShell', (tester) async {
+    // TeacherShell's first tab (TeacherScheduleScreen) reads classService
+    // during build to resolve the teacher's class.
+    final mockClasses = MockClassService();
+    when(() => mockClasses.fetchForTeacher(any())).thenAnswer((_) async => []);
+
     await tester.pumpWidget(ProviderScope(
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('teacher'))),
+        classServiceProvider.overrideWithValue(mockClasses),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));

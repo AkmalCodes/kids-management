@@ -5,9 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/models/class_group.dart';
 import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/schedule_service.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 
@@ -36,17 +34,6 @@ Child _child({String? classId}) => Child(
   allergies: '',
   notes: '',
   enrolledAt: DateTime(2026),
-  createdAt: DateTime(2026),
-  updatedAt: DateTime(2026),
-  createdBy: 'director-1',
-  updatedBy: 'director-1',
-);
-
-ClassGroup _classGroup({String? teacherId = 'teacher-1'}) => ClassGroup(
-  id: 'class-1',
-  name: 'Sunflowers',
-  teacherId: teacherId,
-  centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'director-1',
@@ -92,31 +79,15 @@ void main() {
     expect(find.text('Not assigned to a class yet.'), findsOneWidget);
   });
 
-  testWidgets('notes when the class has no teacher assigned', (tester) async {
+  testWidgets("shows the child's class schedule", (tester) async {
     when(() => mockChildren.fetchForParent('parent-1'))
         .thenAnswer((_) async => [_child(classId: 'class-1')]);
 
     await pumpScreen(
       tester,
       extra: [
-        classGroupProvider('class-1').overrideWith((ref) async => _classGroup(teacherId: null)),
-      ],
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('No teacher assigned to this class yet.'), findsOneWidget);
-  });
-
-  testWidgets("shows the class teacher's schedule for the child's class", (tester) async {
-    when(() => mockChildren.fetchForParent('parent-1'))
-        .thenAnswer((_) async => [_child(classId: 'class-1')]);
-
-    await pumpScreen(
-      tester,
-      extra: [
-        classGroupProvider('class-1').overrideWith((ref) async => _classGroup()),
-        // The parent sees the class teacher's schedule (type: teacher).
-        scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
+        // Schedule belongs to the class (type: class).
+        scheduleEntriesProvider((type: 'class', refId: 'class-1'))
             .overrideWith((ref) async => []),
       ],
     );

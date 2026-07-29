@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/models/class_group.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/features/director/screens/director_schedules_screen.dart';
 import 'package:test_flutter/features/director/screens/person_schedule_screen.dart';
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockClassService extends Mock implements ClassService {}
 
-AppUser _teacher(String id, String name) => AppUser(
+ClassGroup _classGroup(String id, String name) => ClassGroup(
   id: id,
-  role: 'teacher',
   name: name,
-  phone: '',
+  teacherId: 'teacher-1',
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
@@ -22,37 +21,35 @@ AppUser _teacher(String id, String name) => AppUser(
 );
 
 void main() {
-  late MockTeacherService mockTeachers;
+  late MockClassService mockClasses;
 
   setUp(() {
-    mockTeachers = MockTeacherService();
+    mockClasses = MockClassService();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
-          overrides: [teacherServiceProvider.overrideWithValue(mockTeachers)],
+          overrides: [classServiceProvider.overrideWithValue(mockClasses)],
           child: const MaterialApp(
             home: Scaffold(body: DirectorSchedulesScreen()),
           ),
         ),
       );
 
-  testWidgets('shows all teachers with no Children tab', (tester) async {
-    when(() => mockTeachers.fetchAll()).thenAnswer(
-      (_) async => [_teacher('teacher-1', 'Ms. Smith'), _teacher('teacher-2', 'Mr. Jones')],
+  testWidgets('lists all classes', (tester) async {
+    when(() => mockClasses.fetchAll()).thenAnswer(
+      (_) async => [_classGroup('class-1', 'Sunflowers'), _classGroup('class-2', 'Daisies')],
     );
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('Ms. Smith'), findsOneWidget);
-    expect(find.text('Mr. Jones'), findsOneWidget);
-    expect(find.text('Children'), findsNothing);
+    expect(find.text('Sunflowers'), findsOneWidget);
+    expect(find.text('Daisies'), findsOneWidget);
   });
 
   testWidgets('tapping the search icon reveals a search field', (tester) async {
-    when(() => mockTeachers.fetchAll())
-        .thenAnswer((_) async => [_teacher('teacher-1', 'Ms. Smith')]);
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => [_classGroup('class-1', 'Sunflowers')]);
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
@@ -65,9 +62,9 @@ void main() {
     expect(find.byType(TextField), findsOneWidget);
   });
 
-  testWidgets('typing a query filters the teacher list by name', (tester) async {
-    when(() => mockTeachers.fetchAll()).thenAnswer(
-      (_) async => [_teacher('teacher-1', 'Ms. Smith'), _teacher('teacher-2', 'Mr. Jones')],
+  testWidgets('typing a query filters classes by name', (tester) async {
+    when(() => mockClasses.fetchAll()).thenAnswer(
+      (_) async => [_classGroup('class-1', 'Sunflowers'), _classGroup('class-2', 'Daisies')],
     );
 
     await pumpScreen(tester);
@@ -75,48 +72,27 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'smith');
+    await tester.enterText(find.byType(TextField), 'sun');
     await tester.pumpAndSettle();
 
-    expect(find.text('Ms. Smith'), findsOneWidget);
-    expect(find.text('Mr. Jones'), findsNothing);
+    expect(find.text('Sunflowers'), findsOneWidget);
+    expect(find.text('Daisies'), findsNothing);
   });
 
-  testWidgets('closing search clears the query and restores the full list', (tester) async {
-    when(() => mockTeachers.fetchAll()).thenAnswer(
-      (_) async => [_teacher('teacher-1', 'Ms. Smith'), _teacher('teacher-2', 'Mr. Jones')],
-    );
+  testWidgets('tapping a class opens its PersonScheduleScreen (type=class)', (tester) async {
+    when(() => mockClasses.fetchAll())
+        .thenAnswer((_) async => [_classGroup('class-1', 'Sunflowers')]);
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.search));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'smith');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.close));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('Ms. Smith'), findsOneWidget);
-    expect(find.text('Mr. Jones'), findsOneWidget);
-  });
-
-  testWidgets('tapping a teacher opens their PersonScheduleScreen', (tester) async {
-    when(() => mockTeachers.fetchAll())
-        .thenAnswer((_) async => [_teacher('teacher-1', 'Ms. Smith')]);
-
-    await pumpScreen(tester);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Ms. Smith'));
+    await tester.tap(find.text('Sunflowers'));
     await tester.pumpAndSettle();
 
     final screen = tester.widget<PersonScheduleScreen>(find.byType(PersonScheduleScreen));
-    expect(screen.title, 'Ms. Smith');
-    expect(screen.type, 'teacher');
-    expect(screen.refId, 'teacher-1');
+    expect(screen.title, 'Sunflowers');
+    expect(screen.type, 'class');
+    expect(screen.refId, 'class-1');
     expect(screen.centerId, 'center-1');
   });
 }

@@ -587,6 +587,7 @@ A `classes` table groups children under an assigned teacher, added **additively*
 - ✅ Schema: `classes` (id, name, teacher_uid, center_id) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Parent schedule** reads through the class: `ChildScheduleScreen` resolves child → `class_id` → `ClassGroup.teacherId` (via `ClassService` / `classGroupProvider`) → shows that teacher's `type='teacher'` schedule entries. A new `schedule_entries_select` clause lets a parent read those.
 - ⬜ **No class-management UI yet** — creating classes and assigning teachers/children is done via SQL. A director class-management screen (and deciding whether `class_id` should supersede `teacher_id`/`class_name`) is a planned follow-up.
+- 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
 
 ---

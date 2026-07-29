@@ -11,9 +11,18 @@ class ClassService {
   ClassService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  // For the director's "assign a class" dropdown.
+  // For the director's Schedules tab (pick a class to edit its schedule).
   Future<List<ClassGroup>> fetchAll() async {
     final rows = await _client.from('classes').select().order('name');
+    return (rows as List)
+        .map((row) => ClassGroup.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Classes this teacher is assigned to (their own schedule = their class's).
+  Future<List<ClassGroup>> fetchForTeacher(String teacherId) async {
+    final rows =
+        await _client.from('classes').select().eq('teacher_uid', teacherId).order('name');
     return (rows as List)
         .map((row) => ClassGroup.fromJson(row as Map<String, dynamic>))
         .toList();

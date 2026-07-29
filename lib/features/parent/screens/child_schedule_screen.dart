@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
-import '../../../core/services/class_service.dart';
 import '../../../core/services/schedule_service.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 
@@ -60,8 +59,8 @@ class _ChildScheduleSection extends ConsumerWidget {
     );
   }
 
-  // The parent sees the schedule of the teacher assigned to their child's
-  // class: child -> class -> teacher -> that teacher's schedule entries.
+  // The schedule belongs to the child's class (§6.8). Parent views it
+  // read-only: child -> class_id -> that class's schedule entries.
   Widget _scheduleBody(BuildContext context, WidgetRef ref) {
     if (child.classId == null) {
       return const Padding(
@@ -69,32 +68,15 @@ class _ChildScheduleSection extends ConsumerWidget {
         child: Text('Not assigned to a class yet.'),
       );
     }
-    final classAsync = ref.watch(classGroupProvider(child.classId!));
-    return classAsync.when(
+    final entriesAsync = ref.watch(scheduleEntriesProvider((type: 'class', refId: child.classId!)));
+    return entriesAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e')),
-      data: (classGroup) {
-        final teacherId = classGroup?.teacherId;
-        if (teacherId == null) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('No teacher assigned to this class yet.'),
-          );
-        }
-        final entriesAsync = ref.watch(scheduleEntriesProvider((type: 'teacher', refId: teacherId)));
-        return entriesAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e')),
-          // editable defaults to false: parents only ever view.
-          data: (entries) => ScheduleAgendaView(entries: entries, shrinkWrap: true),
-        );
-      },
+      // editable defaults to false: parents only ever view.
+      data: (entries) => ScheduleAgendaView(entries: entries, shrinkWrap: true),
     );
   }
 }

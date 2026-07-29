@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
+import 'package:test_flutter/core/models/class_group.dart';
 import 'package:test_flutter/core/models/schedule.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/schedule_service.dart';
 import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.dart';
+
+class MockClassService extends Mock implements ClassService {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -19,17 +24,53 @@ AppUser _teacher() => AppUser(
   updatedBy: 'director-1',
 );
 
+ClassGroup _classGroup() => ClassGroup(
+  id: 'class-1',
+  name: 'Sunflowers',
+  teacherId: 'teacher-1',
+  centerId: 'center-1',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
 void main() {
-  testWidgets('shows the agenda grid even when teacher has no schedule', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-          scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
-              .overrideWith((ref) async => []),
-        ],
-        child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),
-      ),
+  late MockClassService mockClasses;
+
+  setUp(() {
+    mockClasses = MockClassService();
+  });
+
+  Future<void> pumpScreen(WidgetTester tester, {List<Override> extra = const []}) =>
+      tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
+            classServiceProvider.overrideWithValue(mockClasses),
+            ...extra,
+          ],
+          child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),
+        ),
+      );
+
+  testWidgets('prompts when the teacher has no class', (tester) async {
+    when(() => mockClasses.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text("You're not assigned to a class yet."), findsOneWidget);
+  });
+
+  testWidgets("shows the class's agenda grid even when empty", (tester) async {
+    when(() => mockClasses.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_classGroup()]);
+
+    await pumpScreen(
+      tester,
+      extra: [
+        scheduleEntriesProvider((type: 'class', refId: 'class-1')).overrideWith((ref) async => []),
+      ],
     );
     await tester.pumpAndSettle();
 
@@ -37,12 +78,13 @@ void main() {
     expect(find.text('No events'), findsWidgets);
   });
 
-  testWidgets('shows schedule entries when present', (tester) async {
+  testWidgets("shows the class's schedule entries when present", (tester) async {
+    when(() => mockClasses.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_classGroup()]);
     final entries = [
       ScheduleEntry(
         id: 'entry-1',
-        type: 'teacher',
-        refId: 'teacher-1',
+        type: 'class',
+        refId: 'class-1',
         centerId: 'center-1',
         day: 'Monday',
         startTime: '08:00',
@@ -56,15 +98,12 @@ void main() {
       ),
     ];
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-          scheduleEntriesProvider((type: 'teacher', refId: 'teacher-1'))
-              .overrideWith((ref) async => entries),
-        ],
-        child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),
-      ),
+    await pumpScreen(
+      tester,
+      extra: [
+        scheduleEntriesProvider((type: 'class', refId: 'class-1'))
+            .overrideWith((ref) async => entries),
+      ],
     );
     await tester.pumpAndSettle();
 
