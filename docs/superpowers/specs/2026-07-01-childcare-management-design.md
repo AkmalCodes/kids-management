@@ -168,7 +168,7 @@ CREATE TABLE children_parents (
 ```sql
 CREATE TABLE schedule_entries (
   id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  type       TEXT NOT NULL CHECK (type IN ('child', 'teacher')),
+  type       TEXT NOT NULL CHECK (type IN ('child', 'teacher', 'class')),  -- 'class' is the live one (§6.8); teacher/child legacy
   ref_id     UUID NOT NULL,  -- child id or teacher user id this entry belongs to
   center_id  UUID REFERENCES centers(id) NOT NULL,
   day        TEXT NOT NULL CHECK (day IN ('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),
@@ -313,18 +313,24 @@ CREATE POLICY "schedule_entries_select" ON schedule_entries FOR SELECT
       SELECT 1 FROM children_parents
       WHERE children_parents.child_id = schedule_entries.ref_id AND children_parents.parent_id = auth.uid()
     ))
-    -- §6.8: a parent reads the schedule of the teacher assigned to their child's class
-    OR (type = 'teacher' AND EXISTS (
+    -- §6.8: class-owned schedules — the class's teacher, and parents of a child in it
+    OR (type = 'class' AND EXISTS (
+      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND classes.teacher_uid = auth.uid()
+    ))
+    OR (type = 'class' AND EXISTS (
       SELECT 1 FROM classes cl
       JOIN children c ON c.class_id = cl.id
       JOIN children_parents cp ON cp.child_id = c.id
-      WHERE cl.teacher_uid = schedule_entries.ref_id AND cp.parent_id = auth.uid()
+      WHERE cl.id = schedule_entries.ref_id AND cp.parent_id = auth.uid()
     ))
   );
 CREATE POLICY "schedule_entries_insert" ON schedule_entries FOR INSERT
   WITH CHECK (
     current_role_name() = 'director'
-    OR (current_role_name() = 'teacher' AND type = 'teacher' AND ref_id = auth.uid())
+    OR (current_role_name() = 'teacher' AND type = 'teacher' AND ref_id = auth.uid())  -- legacy
+    OR (type = 'class' AND EXISTS (
+      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND classes.teacher_uid = auth.uid()
+    ))
   );
 CREATE POLICY "schedule_entries_update" ON schedule_entries FOR UPDATE
   USING (current_role_name() = 'director' OR created_by = auth.uid());
@@ -526,9 +532,10 @@ supabase/
 ### 6.2 Schedules
 Recurring weekly pattern per person (day-of-week + time, no calendar date) — the same class shows up on every matching weekday, not a one-off dated event.
 
-- **Teacher**: manages their own schedule directly — tap a day to open its hourly timetable, tap an empty slot (or the floating **+** button) to add an event, tap an existing event to edit or delete it. Can also browse (read-only) every other teacher's schedule, for visibility into the team.
-- **Director**: full create/edit/delete rights on *any* teacher's or child's schedule, via a searchable teacher picker (Schedules tab) that lands on the same editable agenda/day view teachers use.
-- **Parent**: read-only. Shows the schedule of the **teacher assigned to their child's class** (child → `class_id` → `classes.teacher_uid` → that teacher's `type='teacher'` entries), not a separate per-child schedule (§6.8). Falls back to "Not assigned to a class yet" / "No teacher assigned to this class yet".
+- Schedules are **class-owned** (`type='class'`, `ref_id = class_id`) — §6.8, so a class's schedule is independent of how many teachers it has.
+- **Director**: Schedules tab is a searchable **class** list → lands on that class's editable agenda/day view (tap a day for the hourly timetable, tap a slot / **+** to add, tap an event to edit/delete).
+- **Teacher**: manages the schedule of the class they're assigned to (`ClassService.fetchForTeacher`), same editable view.
+- **Parent**: read-only view of their child's class schedule (child → `class_id` → `type='class'` entries); falls back to "Not assigned to a class yet".
 - **Edit/delete permission on a specific event**: only the person who created it, or any director — enforced by `schedule_entries` RLS, not just the UI (see §4).
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
@@ -585,7 +592,7 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 ### 6.8 Classes — partially built (schema + parent-schedule link)
 A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
 - ✅ Schema: `classes` (id, name, teacher_uid, center_id) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
-- ✅ **Parent schedule** reads through the class: `ChildScheduleScreen` resolves child → `class_id` → `ClassGroup.teacherId` (via `ClassService` / `classGroupProvider`) → shows that teacher's `type='teacher'` schedule entries. A new `schedule_entries_select` clause lets a parent read those.
+- ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
 - ⬜ **No class-management UI yet** — creating classes and assigning teachers/children is done via SQL. A director class-management screen (and deciding whether `class_id` should supersede `teacher_id`/`class_name`) is a planned follow-up.
 - 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.

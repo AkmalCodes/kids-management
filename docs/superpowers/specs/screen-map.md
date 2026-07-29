@@ -41,7 +41,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 
 | Tab | Name | File | What's on it |
 |---|---|---|---|
-| Schedule | **ChildScheduleScreen** | `features/parent/screens/child_schedule_screen.dart` | Read-only agenda of the parent's child's schedule. |
+| Schedule | **ChildScheduleScreen** | `features/parent/screens/child_schedule_screen.dart` | Read-only agenda of the parent's child's **class** schedule (child → class_id). |
 | Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | The child's attendance history as tappable **cards** (date, status, photo thumbnails). |
 | (from a card) | **AttendanceDetailScreen** | `features/parent/screens/attendance_detail_screen.dart` | One day's status + notes + the check-in and belongings photos shown large. |
 | Reports | **ChildReportsScreen** | `features/parent/screens/child_reports_screen.dart` | Read-only feed of the child's daily reports (newest first): teacher's note + photo thumbnails. |
@@ -53,7 +53,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 
 | Tab | Name | File | What's on it |
 |---|---|---|---|
-| Schedule | **TeacherScheduleScreen** | `features/teacher/screens/teacher_schedule_screen.dart` | The teacher's own weekly agenda; can browse others read-only, edit/manage own. Drills into the day view. |
+| Schedule | **TeacherScheduleScreen** | `features/teacher/screens/teacher_schedule_screen.dart` | Editable agenda of the class the teacher is assigned to. Drills into the day view. |
 | Attendance | **MarkAttendanceScreen** | `features/teacher/screens/mark_attendance_screen.dart` | Today's class as a searchable list of **collapsible cards** (avatar, name, status chip, chevron). Expand to mark Present/Absent and optionally attach a check-in and/or belongings photo (take/gallery/delete). Shows today's date in the header. |
 | Lessons | — | *(placeholder, not built)* | |
 | Reports | **TeacherReportsScreen** | `features/teacher/screens/teacher_reports_screen.dart` | The teacher's class as a list; tap a child → DailyReportEditScreen. |
@@ -72,8 +72,8 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | (from Children +) | **EnrollChildScreen** | `features/director/screens/enroll_child_screen.dart` | Create a child record + invite its first parent in one form. |
 | (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Director view/edit of one child: photo, name, DOB (age shown), class, class teacher, allergies, notes + a read-only **Parents** section (name + email). |
 | (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | View/edit a person's photo, name, phone. Reused for self-edit from the Profile tab and director-edits-other from People. |
-| Schedule | **DirectorSchedulesScreen** | `features/director/screens/director_schedules_screen.dart` | Searchable teacher list → PersonScheduleScreen. |
-| (from a teacher) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view for any teacher/child. |
+| Schedule | **DirectorSchedulesScreen** | `features/director/screens/director_schedules_screen.dart` | Searchable **class** list → PersonScheduleScreen for that class. |
+| (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
 | Lessons | — | *(placeholder, not built)* | |
 | Attendance | **DirectorAttendanceScreen** | `features/director/screens/director_attendance_screen.dart` | All children for a chosen date as **collapsible cards** (same style as the teacher screen, read-only); expand to see the day's photos. Date picker in the header. |
 | Profile | **ProfileScreen** | see *Profile* below | |
