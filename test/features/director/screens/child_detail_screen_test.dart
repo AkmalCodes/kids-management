@@ -89,19 +89,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('pre-fills the existing details and shows the age', (tester) async {
+  // The screen opens read-only; tap the AppBar edit icon to reveal inputs.
+  Future<void> enterEdit(WidgetTester tester) async {
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('opens read-only, then edit reveals the pre-filled details', (tester) async {
     await pumpScreen(tester);
 
+    // Read-only view: no inputs, no Save button. Age still shown.
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.text('Save changes'), findsNothing);
+    expect(find.textContaining('Age '), findsOneWidget);
+
+    await enterEdit(tester);
     expect(find.widgetWithText(TextFormField, 'Alice'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'Peanuts'), findsOneWidget);
-    // Born 2022-06-01; current test date is 2026, so age is 3 or 4.
-    expect(find.textContaining('Age '), findsOneWidget);
   });
 
   testWidgets('saving writes the edited fields via updateChild', (tester) async {
     when(() => mockChildren.updateChild(any())).thenAnswer((_) async => _child());
 
     await pumpScreen(tester);
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Alice'), 'Alice B');
     await tester.enterText(find.widgetWithText(TextFormField, 'Peanuts'), 'None');
@@ -119,6 +130,7 @@ void main() {
     when(() => mockChildren.updateChild(any())).thenThrow(Exception('rls denied'));
 
     await pumpScreen(tester);
+    await enterEdit(tester);
 
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
@@ -142,6 +154,7 @@ void main() {
         )).thenAnswer((_) async {});
 
     await pumpScreen(tester);
+    await enterEdit(tester);
 
     await tester.tap(find.text('Change photo'));
     await tester.pumpAndSettle();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
@@ -88,13 +89,25 @@ void main() {
     );
   }
 
-  testWidgets('pre-fills name, phone and shows the role', (tester) async {
+  // The screen opens read-only; tap the AppBar edit icon to reveal inputs.
+  Future<void> enterEdit(WidgetTester tester) async {
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('opens read-only with values shown, then edit reveals inputs', (tester) async {
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
+    // Read-only: values shown as text, no inputs, no Save button.
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.text('Save changes'), findsNothing);
+    expect(find.text('Ms. Smith'), findsWidgets); // AppBar title + name row
+    expect(find.text('Teacher'), findsOneWidget);
+
+    await enterEdit(tester);
     expect(find.widgetWithText(TextFormField, 'Ms. Smith'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '555-0100'), findsOneWidget);
-    expect(find.text('Teacher'), findsOneWidget);
   });
 
   testWidgets('saving writes the edited name and phone', (tester) async {
@@ -107,6 +120,7 @@ void main() {
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Ms. Smith'), 'Ms. Jones');
     await tester.enterText(find.widgetWithText(TextFormField, '555-0100'), '555-9999');
@@ -121,16 +135,41 @@ void main() {
         )).called(1);
   });
 
-  testWidgets('shows the read-only login email and pre-fills HR fields', (tester) async {
+  testWidgets('shows the read-only login email + HR values in view mode', (tester) async {
     await pumpScreen(tester, person: _teacherWithHr());
     await tester.pumpAndSettle();
 
+    // View mode: email + HR values render as text (not inputs).
     expect(find.text('smith@example.com'), findsOneWidget);
     expect(find.text('Login email'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, '1 Oak St'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'John Smith'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, '555-0199'), findsOneWidget);
-    expect(find.textContaining('Date of birth: 15/03/1990'), findsOneWidget);
+    expect(find.text('1 Oak St'), findsOneWidget);
+    expect(find.text('John Smith'), findsOneWidget);
+    expect(find.textContaining('15/03/1990'), findsOneWidget);
+  });
+
+  testWidgets('tapping the email row copies it to the clipboard', (tester) async {
+    // Capture what the app writes to the clipboard.
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null));
+
+    await pumpScreen(tester, person: _teacherWithHr());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('smith@example.com'));
+    await tester.pumpAndSettle();
+
+    expect(copied, 'smith@example.com');
+    expect(find.textContaining('Copied'), findsOneWidget);
   });
 
   testWidgets('saving writes the HR fields (address, dob, emergency contact)',
@@ -148,6 +187,7 @@ void main() {
 
     await pumpScreen(tester, person: _teacherWithHr());
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, '1 Oak St'), '2 Elm St');
     await tester.tap(find.text('Save changes'));
@@ -174,6 +214,7 @@ void main() {
     // Current user is the same person being edited.
     await pumpScreen(tester, currentUser: _teacher(), person: _teacher());
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Ms. Smith'), 'Ms. Jones');
     await tester.tap(find.text('Save changes'));
@@ -191,6 +232,7 @@ void main() {
   testWidgets('blocks saving with an empty name', (tester) async {
     await pumpScreen(tester);
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Ms. Smith'), '');
     await tester.tap(find.text('Save changes'));
@@ -215,6 +257,7 @@ void main() {
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
@@ -236,6 +279,7 @@ void main() {
 
     await pumpScreen(tester); // director editing teacher-1
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.tap(find.text('Change photo'));
     await tester.pumpAndSettle();
@@ -260,6 +304,7 @@ void main() {
 
     await pumpScreen(tester, currentUser: _teacher(), person: _teacher());
     await tester.pumpAndSettle();
+    await enterEdit(tester);
 
     await tester.tap(find.text('Change photo'));
     await tester.pumpAndSettle();

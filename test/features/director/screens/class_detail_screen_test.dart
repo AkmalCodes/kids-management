@@ -84,9 +84,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('pre-fills the class name', (tester) async {
+  // The screen opens read-only; tap the AppBar edit icon to reveal inputs.
+  Future<void> enterEdit(WidgetTester tester) async {
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('opens read-only, then edit reveals the pre-filled name', (tester) async {
     await pumpScreen(tester);
 
+    // Read-only: no input field yet, no Save button.
+    expect(find.byType(TextFormField), findsNothing);
+    expect(find.text('Save changes'), findsNothing);
+
+    await enterEdit(tester);
     expect(find.widgetWithText(TextFormField, 'Sunflowers'), findsOneWidget);
   });
 
@@ -99,6 +110,7 @@ void main() {
         )).thenAnswer((_) async => _class());
 
     await pumpScreen(tester);
+    await enterEdit(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Sunflowers'), 'Tulips');
     await tester.tap(find.text('Save changes'));
@@ -127,6 +139,7 @@ void main() {
         )).thenAnswer((_) async {});
 
     await pumpScreen(tester);
+    await enterEdit(tester);
 
     await tester.tap(find.text('Change photo'));
     await tester.pumpAndSettle();

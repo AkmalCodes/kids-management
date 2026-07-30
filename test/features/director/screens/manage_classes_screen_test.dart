@@ -147,8 +147,10 @@ void main() {
     await tester.tap(find.text('Sunflowers'));
     await tester.pumpAndSettle();
 
-    // Now on the full ClassDetailScreen (not a dialog).
+    // Now on the full ClassDetailScreen (not a dialog); it opens read-only.
     expect(find.byType(ClassDetailScreen), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.edit_outlined)); // enter edit mode
+    await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextFormField, 'Sunflowers'), 'Tulips');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();

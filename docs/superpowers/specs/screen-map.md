@@ -70,10 +70,10 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | People › Teachers | **ManageTeachersScreen** | `features/director/screens/manage_teachers_screen.dart` | Teacher list; **+** invites a teacher; tap a row → PersonDetailScreen. |
 | People › Children | **ManageChildrenScreen** | `features/director/screens/manage_children_screen.dart` | Child list; **+** opens EnrollChildScreen; per-row icon invites a parent; tap a row → ChildDetailScreen. |
 | People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (avatar + assigned teacher); **+** creates a class (dialog); tap a row → ClassDetailScreen. |
-| (from a class row) | **ClassDetailScreen** | `features/director/screens/class_detail_screen.dart` | Director view/edit of one class: photo (class-avatars), name, teacher. |
+| (from a class row) | **ClassDetailScreen** | `features/director/screens/class_detail_screen.dart` | Opens read-only (AppBar ✏️ toggles edit); photo (class-avatars, tap to zoom), name, teacher. |
 | (from Children +) | **EnrollChildScreen** | `features/director/screens/enroll_child_screen.dart` | Create a child record + invite its first parent in one form. |
-| (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Director view/edit of one child: photo, name, DOB (age shown), **class** (dropdown → class_id, drives the parent schedule), class teacher, allergies, notes + a read-only **Parents** section (name + email). |
-| (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | View/edit a person's photo, name, phone + HR/contact details (address, DOB, emergency contact) and a read-only login email. Reused for self-edit from the Profile tab and director-edits-other from People. |
+| (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Opens read-only (AppBar ✏️ toggles edit): photo (tap to zoom), name, DOB (age shown), **class** (dropdown → class_id, drives the parent schedule), class teacher, allergies, notes + a **Parents** section (name + tap-to-copy email). |
+| (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | Opens read-only (AppBar ✏️ toggles edit): photo (tap to zoom), name, phone + HR/contact details (address, DOB, emergency contact) and a read-only login email; email/phone tap-to-copy. Reused for self-edit (Profile tab) and director-edits-other (People). |
 | Schedule | **DirectorSchedulesScreen** | `features/director/screens/director_schedules_screen.dart` | Searchable **class** list → PersonScheduleScreen for that class. |
 | (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
 | Lessons | — | *(placeholder, not built)* | |
@@ -104,6 +104,8 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 | **ScheduleEntryFormDialog** | `shared/widgets/schedule_entry_form_dialog.dart` | Schedule create/edit | Dialog for an event's label, times, and color. |
 | **PersonInviteDialog** | `shared/widgets/person_invite_dialog.dart` | Manage Teachers/Children | Shared name/email/phone dialog for teacher & parent invites. |
 | **ClassFormDialog** | `shared/widgets/class_form_dialog.dart` | ManageClassesScreen | Create/edit-a-class dialog: name + teacher dropdown. |
+| **EditableField** | `shared/widgets/editable_field.dart` | Child/Class/Person detail | One field that cross-fades between a read-only row (optionally tap-to-copy) and a text input, driven by an `editing` flag. |
+| **AvatarWithPreview** | `shared/widgets/avatar_preview.dart` | Detail screens | Round avatar that opens a full-screen pinch-zoom photo preview when tapped. |
 | **SignedPhotoThumbnail** | `shared/widgets/signed_photo_thumbnail.dart` | Attendance screens | Round thumbnail from a private Storage path (attendance-photos), via signed URL. |
 | **SignedAvatar** | `shared/widgets/signed_avatar.dart` | Profile / detail screens | Round avatar from any bucket's signed-URL provider, with a placeholder. |
 | **AvatarSourceSheet** | `shared/widgets/avatar_source_sheet.dart` | Avatar edits | The take-photo / choose-from-gallery bottom sheet. |
