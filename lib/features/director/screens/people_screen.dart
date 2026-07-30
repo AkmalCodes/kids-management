@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'manage_children_screen.dart';
+import 'manage_classes_screen.dart';
 import 'manage_teachers_screen.dart';
 
 // Hosts both account/enrollment management screens under one nav
@@ -12,13 +13,14 @@ class PeopleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           const TabBar(
             tabs: [
               Tab(text: 'Teachers'),
               Tab(text: 'Children'),
+              Tab(text: 'Classes'),
             ],
           ),
           const Expanded(
@@ -26,6 +28,7 @@ class PeopleScreen extends StatelessWidget {
               children: [
                 ManageTeachersScreen(),
                 ManageChildrenScreen(),
+                ManageClassesScreen(),
               ],
             ),
           ),

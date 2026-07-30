@@ -66,11 +66,12 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 
 | Tab | Name | File | What's on it |
 |---|---|---|---|
-| People | **PeopleScreen** | `features/director/screens/people_screen.dart` | Wrapper with **Teachers \| Children** sub-tabs. |
+| People | **PeopleScreen** | `features/director/screens/people_screen.dart` | Wrapper with **Teachers \| Children \| Classes** sub-tabs. |
 | People › Teachers | **ManageTeachersScreen** | `features/director/screens/manage_teachers_screen.dart` | Teacher list; **+** invites a teacher; tap a row → PersonDetailScreen. |
 | People › Children | **ManageChildrenScreen** | `features/director/screens/manage_children_screen.dart` | Child list; **+** opens EnrollChildScreen; per-row icon invites a parent; tap a row → ChildDetailScreen. |
+| People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (with assigned teacher); **+** creates a class; tap a row → edit dialog (rename / reassign teacher). |
 | (from Children +) | **EnrollChildScreen** | `features/director/screens/enroll_child_screen.dart` | Create a child record + invite its first parent in one form. |
-| (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Director view/edit of one child: photo, name, DOB (age shown), class, class teacher, allergies, notes + a read-only **Parents** section (name + email). |
+| (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Director view/edit of one child: photo, name, DOB (age shown), **class** (dropdown → class_id, drives the parent schedule), class teacher, allergies, notes + a read-only **Parents** section (name + email). |
 | (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | View/edit a person's photo, name, phone. Reused for self-edit from the Profile tab and director-edits-other from People. |
 | Schedule | **DirectorSchedulesScreen** | `features/director/screens/director_schedules_screen.dart` | Searchable **class** list → PersonScheduleScreen for that class. |
 | (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
@@ -101,6 +102,7 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 | **DayTimetable** | `shared/widgets/day_timetable.dart` | DayScheduleScreen | The hour grid; tap-to-add/edit, fade-in on new entries. |
 | **ScheduleEntryFormDialog** | `shared/widgets/schedule_entry_form_dialog.dart` | Schedule create/edit | Dialog for an event's label, times, and color. |
 | **PersonInviteDialog** | `shared/widgets/person_invite_dialog.dart` | Manage Teachers/Children | Shared name/email/phone dialog for teacher & parent invites. |
+| **ClassFormDialog** | `shared/widgets/class_form_dialog.dart` | ManageClassesScreen | Create/edit-a-class dialog: name + teacher dropdown. |
 | **SignedPhotoThumbnail** | `shared/widgets/signed_photo_thumbnail.dart` | Attendance screens | Round thumbnail from a private Storage path (attendance-photos), via signed URL. |
 | **SignedAvatar** | `shared/widgets/signed_avatar.dart` | Profile / detail screens | Round avatar from any bucket's signed-URL provider, with a placeholder. |
 | **AvatarSourceSheet** | `shared/widgets/avatar_source_sheet.dart` | Avatar edits | The take-photo / choose-from-gallery bottom sheet. |
@@ -117,6 +119,7 @@ When we talk, these are the short names to use:
 - **"the director attendance screen"** = DirectorAttendanceScreen
 - **"the child detail screen"** = ChildDetailScreen
 - **"the person/profile detail screen"** = PersonDetailScreen
-- **"the People tab"** = PeopleScreen (Teachers/Children sub-tabs)
+- **"the People tab"** = PeopleScreen (Teachers/Children/Classes sub-tabs)
+- **"the manage classes screen"** = ManageClassesScreen (People › Classes)
 - **"the profile tab"** = ProfileScreen
 - **"the set-password screen"** = SetPasswordScreen (invite + recovery)

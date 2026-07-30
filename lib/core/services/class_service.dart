@@ -35,6 +35,37 @@ class ClassService {
     if (list.isEmpty) return null;
     return ClassGroup.fromJson(list.first as Map<String, dynamic>);
   }
+
+  // Director-only (classes_insert/update RLS). Return the saved row.
+  Future<ClassGroup> createClass({
+    required String name,
+    required String? teacherId,
+    required String centerId,
+    required String actorUid,
+  }) async {
+    final row = await _client.from('classes').insert({
+      'name': name,
+      'teacher_uid': teacherId,
+      'center_id': centerId,
+      'created_by': actorUid,
+      'updated_by': actorUid,
+    }).select().single();
+    return ClassGroup.fromJson(row);
+  }
+
+  Future<ClassGroup> updateClass({
+    required String id,
+    required String name,
+    required String? teacherId,
+    required String actorUid,
+  }) async {
+    final row = await _client.from('classes').update({
+      'name': name,
+      'teacher_uid': teacherId,
+      'updated_by': actorUid,
+    }).eq('id', id).select().single();
+    return ClassGroup.fromJson(row);
+  }
 }
 
 final classServiceProvider = Provider<ClassService>(

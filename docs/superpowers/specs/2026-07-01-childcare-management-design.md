@@ -494,11 +494,12 @@ lib/
       director_shell.dart
       screens/
         director_attendance_screen.dart
-        director_schedules_screen.dart  -- searchable teacher list -> PersonScheduleScreen
-        person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child
-        people_screen.dart              -- Teachers | Children sub-tabs (§6.6)
+        director_schedules_screen.dart  -- searchable class list -> PersonScheduleScreen (type='class') (§6.8)
+        person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child/class
+        people_screen.dart              -- Teachers | Children | Classes sub-tabs (§6.6)
         manage_teachers_screen.dart     -- teacher list (tap -> PersonDetailScreen) + invite-a-teacher
         manage_children_screen.dart     -- child list (tap -> ChildDetailScreen) + invite-a-parent
+        manage_classes_screen.dart      -- class list (tap -> edit dialog) + create-a-class (§6.8)
         enroll_child_screen.dart        -- child record + first parent invite in one form
         child_detail_screen.dart        -- director view/edit of one child + parent contacts (§6.6)
   shared/
@@ -511,6 +512,7 @@ lib/
       signed_avatar.dart            -- round avatar from any bucket's signed-URL provider, with placeholder (§6.6/§6.7)
       avatar_source_sheet.dart      -- shared take-photo/gallery bottom sheet for avatar edits
       person_invite_dialog.dart     -- shared name/email/phone dialog for teacher & parent invites
+      class_form_dialog.dart        -- shared create/edit-a-class dialog (name + teacher dropdown) (§6.8)
       schedule_agenda_view.dart     -- week/month toggle, colored event cards
       day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
       schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
@@ -566,11 +568,11 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 ### 6.6 Director / Admin Panel — partially built
 - ✅ View all attendance records, any date (Attendance tab)
 - ✅ View/edit any teacher's or child's schedule (Schedules tab, §6.2)
-- ✅ **People tab** (Teachers | Children sub-tabs) for account provisioning:
+- ✅ **People tab** (Teachers | Children | Classes sub-tabs) for account provisioning:
   - Invite a teacher by email
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
 - ✅ **Tap a row to view/edit details:**
-  - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), class, class teacher (dropdown), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
+  - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), **class** (a dropdown of real `classes` rows setting `class_id` — helper text "Drives the schedule the parent sees"; replaced the old free-text `class_name` field, which is now preserved untouched), class teacher (dropdown, sets `teacher_id`), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
   - A teacher/parent → `PersonDetailScreen`: edit photo, name and phone. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7). Email isn't shown (lives on `auth.users`, not readable cross-user from the client).
 - ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
 - ⬜ View all lesson plans across the center (depends on §6.5)
@@ -593,7 +595,8 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
 - ✅ Schema: `classes` (id, name, teacher_uid, center_id) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
-- ⬜ **No class-management UI yet** — creating classes and assigning teachers/children is done via SQL. A director class-management screen (and deciding whether `class_id` should supersede `teacher_id`/`class_name`) is a planned follow-up.
+- ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (with the assigned teacher's name), creates a class, and renames / reassigns its teacher — via the shared `showClassFormDialog` (name + teacher dropdown) and `ClassService.createClass` / `updateClass`. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
+- ⬜ Still SQL-only / undecided: deleting a class; whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
 - 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
 

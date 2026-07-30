@@ -6,6 +6,7 @@ import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/core/services/user_management_service.dart';
 import 'package:test_flutter/features/director/screens/child_detail_screen.dart';
@@ -15,6 +16,8 @@ import 'package:test_flutter/features/director/screens/manage_children_screen.da
 class MockChildService extends Mock implements ChildService {}
 
 class MockTeacherService extends Mock implements TeacherService {}
+
+class MockClassService extends Mock implements ClassService {}
 
 class MockUserManagementService extends Mock implements UserManagementService {}
 
@@ -49,15 +52,18 @@ Child _child(String id, String name, {String className = ''}) => Child(
 void main() {
   late MockChildService mockChildren;
   late MockTeacherService mockTeachers;
+  late MockClassService mockClasses;
   late MockUserManagementService mockUserManagement;
 
   setUp(() {
     mockChildren = MockChildService();
     mockTeachers = MockTeacherService();
+    mockClasses = MockClassService();
     mockUserManagement = MockUserManagementService();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
-    // ChildDetailScreen (opened by the tap-through test) loads parents in
-    // initState.
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
+    // ChildDetailScreen (opened by the tap-through test) loads parents +
+    // classes in initState.
     when(() => mockChildren.fetchParentsForChild(any())).thenAnswer((_) async => []);
   });
 
@@ -70,6 +76,7 @@ void main() {
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
           childServiceProvider.overrideWithValue(mockChildren),
           teacherServiceProvider.overrideWithValue(mockTeachers),
+          classServiceProvider.overrideWithValue(mockClasses),
           userManagementServiceProvider.overrideWithValue(mockUserManagement),
         ],
         child: const MaterialApp(home: ManageChildrenScreen()),

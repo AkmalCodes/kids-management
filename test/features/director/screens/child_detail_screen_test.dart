@@ -7,6 +7,7 @@ import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/photo_capture_service.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/features/director/screens/child_detail_screen.dart';
@@ -14,6 +15,8 @@ import 'package:test_flutter/features/director/screens/child_detail_screen.dart'
 class MockChildService extends Mock implements ChildService {}
 
 class MockTeacherService extends Mock implements TeacherService {}
+
+class MockClassService extends Mock implements ClassService {}
 
 class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
 
@@ -55,13 +58,16 @@ void main() {
 
   late MockChildService mockChildren;
   late MockTeacherService mockTeachers;
+  late MockClassService mockClasses;
   late MockPhotoCaptureService mockPhotoCapture;
 
   setUp(() {
     mockChildren = MockChildService();
     mockTeachers = MockTeacherService();
+    mockClasses = MockClassService();
     mockPhotoCapture = MockPhotoCaptureService();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
     when(() => mockChildren.fetchParentsForChild(any())).thenAnswer((_) async => []);
   });
 
@@ -74,6 +80,7 @@ void main() {
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
           childServiceProvider.overrideWithValue(mockChildren),
           teacherServiceProvider.overrideWithValue(mockTeachers),
+          classServiceProvider.overrideWithValue(mockClasses),
           photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
         ],
         child: MaterialApp(home: ChildDetailScreen(child: _child())),
@@ -86,7 +93,6 @@ void main() {
     await pumpScreen(tester);
 
     expect(find.widgetWithText(TextFormField, 'Alice'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Class A'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'Peanuts'), findsOneWidget);
     // Born 2022-06-01; current test date is 2026, so age is 3 or 4.
     expect(find.textContaining('Age '), findsOneWidget);
@@ -98,15 +104,14 @@ void main() {
     await pumpScreen(tester);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Alice'), 'Alice B');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Class A'), 'Class B');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Peanuts'), 'None');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
     final saved = verify(() => mockChildren.updateChild(captureAny())).captured.single as Child;
     expect(saved.id, 'child-1');
     expect(saved.name, 'Alice B');
-    expect(saved.className, 'Class B');
-    expect(saved.allergies, 'Peanuts');
+    expect(saved.allergies, 'None');
     expect(saved.updatedBy, 'director-1');
   });
 

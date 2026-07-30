@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/child.dart';
+import '../../../core/models/class_group.dart';
 import '../../../core/services/child_service.dart';
+import '../../../core/services/class_service.dart';
 import '../../../core/services/photo_capture_service.dart';
 import '../../../core/services/profile_service.dart';
 import '../../../core/services/teacher_service.dart';
@@ -26,14 +28,15 @@ class ChildDetailScreen extends ConsumerStatefulWidget {
 class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _classController;
   late final TextEditingController _allergiesController;
   late final TextEditingController _notesController;
 
   late DateTime _dob;
   late String? _teacherId;
+  late String? _classId;
   late String? _avatarPath;
   late Future<List<AppUser>> _teachersFuture;
+  late Future<List<ClassGroup>> _classesFuture;
   late Future<List<AppUser>> _parentsFuture;
   bool _saving = false;
 
@@ -42,14 +45,15 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     super.initState();
     final c = widget.child;
     _nameController = TextEditingController(text: c.name);
-    _classController = TextEditingController(text: c.className);
     _allergiesController = TextEditingController(text: c.allergies);
     _notesController = TextEditingController(text: c.notes);
     _parentsFuture = ref.read(childServiceProvider).fetchParentsForChild(c.id);
     _dob = c.dob;
     _teacherId = c.teacherId;
+    _classId = c.classId;
     _avatarPath = c.avatarPath;
     _teachersFuture = ref.read(teacherServiceProvider).fetchAll();
+    _classesFuture = ref.read(classServiceProvider).fetchAll();
   }
 
   // Immediate (independent of the Save button): pick -> upload -> write the
@@ -82,7 +86,6 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _classController.dispose();
     _allergiesController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -121,9 +124,10 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
             widget.child.copyWith(
               name: _nameController.text.trim(),
               dob: _dob,
-              className: _classController.text.trim(),
               teacherId: _teacherId,
               clearTeacherId: _teacherId == null,
+              classId: _classId,
+              clearClassId: _classId == null,
               allergies: _allergiesController.text.trim(),
               notes: _notesController.text.trim(),
               avatarPath: _avatarPath,
@@ -179,9 +183,25 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
               label: Text('Date of birth: ${_formatDate(_dob)}  •  Age $_ageYears'),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _classController,
-              decoration: const InputDecoration(labelText: 'Class'),
+            FutureBuilder<List<ClassGroup>>(
+              future: _classesFuture,
+              builder: (context, snapshot) {
+                final classes = snapshot.data ?? [];
+                final ids = classes.map((c) => c.id).toSet();
+                return DropdownButtonFormField<String?>(
+                  initialValue: (_classId != null && ids.contains(_classId)) ? _classId : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Class',
+                    helperText: 'Drives the schedule the parent sees',
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Unassigned')),
+                    for (final c in classes)
+                      DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  ],
+                  onChanged: (value) => setState(() => _classId = value),
+                );
+              },
             ),
             const SizedBox(height: 12),
             FutureBuilder<List<AppUser>>(
