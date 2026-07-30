@@ -134,10 +134,13 @@ $$ LANGUAGE sql SECURITY DEFINER;
 -- director always sees a correct address (auth.users isn't readable
 -- cross-user from the client). Fires on user creation and email change; a
 -- one-time backfill seeds existing rows (see §6.6b handoff).
-CREATE OR REPLACE FUNCTION sync_profile_email() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION sync_profile_email() RETURNS TRIGGER
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
   UPDATE profiles SET email = NEW.email, updated_at = now() WHERE id = NEW.id;
-  SELECT NEW;
-$$ LANGUAGE sql SECURITY DEFINER;
+  RETURN NEW;
+END;
+$$;
 
 CREATE TRIGGER on_auth_user_email_sync
   AFTER INSERT OR UPDATE OF email ON auth.users
