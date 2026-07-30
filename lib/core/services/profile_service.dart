@@ -51,31 +51,55 @@ class ProfileService {
   Future<String> getSignedAvatarUrl(String path) =>
       _client.storage.from('avatars').createSignedUrl(path, 3600);
 
-  // Director-only edit of another user's profile (name/phone), per the
-  // profiles_update_director RLS policy. A regular user can't use this --
-  // the policy checks the caller is a director. Returns the saved row.
+  // Director-only edit of another user's profile (name/phone + HR fields),
+  // per the profiles_update_director RLS policy. A regular user can't use
+  // this -- the policy checks the caller is a director. `dob` is an ISO date
+  // (yyyy-MM-dd) or null. Returns the saved row.
   Future<AppUser> updatePersonDetails({
     required String userId,
     required String name,
     required String phone,
+    String? address,
+    String? dob,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
     required String actorUid,
   }) async {
     final row = await _client.from('profiles').update({
       'name': name,
       'phone': phone,
+      'address': address,
+      'dob': dob,
+      'emergency_contact_name': emergencyContactName,
+      'emergency_contact_phone': emergencyContactPhone,
       'updated_by': actorUid,
     }).eq('id', userId).select().single();
     return AppUser.fromJson(row);
   }
 
-  // Any user editing their OWN name/phone, via a SECURITY DEFINER RPC that
-  // only ever touches auth.uid()'s row and only those two columns -- so it
-  // can't be used to change one's own role (same reasoning as
-  // set_avatar_path). Returns the updated profile.
-  Future<AppUser> updateOwnDetails({required String name, required String phone}) async {
+  // Any user editing their OWN name/phone + HR fields, via a SECURITY
+  // DEFINER RPC that only ever touches auth.uid()'s row and only these
+  // columns -- so it can't be used to change one's own role (same reasoning
+  // as set_avatar_path). `dob` is an ISO date (yyyy-MM-dd) or null. Returns
+  // the updated profile.
+  Future<AppUser> updateOwnDetails({
+    required String name,
+    required String phone,
+    String? address,
+    String? dob,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+  }) async {
     final row = await _client.rpc(
       'update_own_profile',
-      params: {'new_name': name, 'new_phone': phone},
+      params: {
+        'new_name': name,
+        'new_phone': phone,
+        'new_address': address,
+        'new_dob': dob,
+        'new_emergency_contact_name': emergencyContactName,
+        'new_emergency_contact_phone': emergencyContactPhone,
+      },
     );
     return AppUser.fromJson(row as Map<String, dynamic>);
   }

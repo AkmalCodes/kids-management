@@ -5,6 +5,10 @@ class ClassGroup {
   final String name;
   final String? teacherId; // teacher_uid: the teacher assigned to this class
   final String centerId;
+  // Class photo in the private 'class-avatars' bucket, null if unset. Not a
+  // ready URL — exchange for a signed URL to display (see
+  // ClassService.getSignedClassAvatarUrl).
+  final String? avatarPath;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -15,6 +19,7 @@ class ClassGroup {
     required this.name,
     required this.teacherId,
     required this.centerId,
+    this.avatarPath,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -26,6 +31,7 @@ class ClassGroup {
     name: json['name'] as String,
     teacherId: json['teacher_uid'] as String?,
     centerId: json['center_id'] as String,
+    avatarPath: json['avatar_path'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,

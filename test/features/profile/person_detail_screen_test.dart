@@ -37,6 +37,23 @@ AppUser _teacher() => AppUser(
   updatedBy: 'director-1',
 );
 
+AppUser _teacherWithHr() => AppUser(
+  id: 'teacher-1',
+  role: 'teacher',
+  name: 'Ms. Smith',
+  phone: '555-0100',
+  email: 'smith@example.com',
+  address: '1 Oak St',
+  dob: DateTime(1990, 3, 15),
+  emergencyContactName: 'John Smith',
+  emergencyContactPhone: '555-0199',
+  centerId: 'center-1',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(XFile(''));
@@ -54,16 +71,22 @@ void main() {
     WidgetTester tester, {
     AppUser? currentUser,
     AppUser? person,
-  }) => tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentUserProvider.overrideWith((ref) => Stream.value(currentUser ?? _director())),
-            profileServiceProvider.overrideWithValue(mockProfile),
-            photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
-          ],
-          child: MaterialApp(home: PersonDetailScreen(person: person ?? _teacher())),
-        ),
-      );
+  }) async {
+    // Tall surface so the whole form (now with HR fields) fits and the Save
+    // button is on-screen / tappable.
+    await tester.binding.setSurfaceSize(const Size(800, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => Stream.value(currentUser ?? _director())),
+          profileServiceProvider.overrideWithValue(mockProfile),
+          photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+        ],
+        child: MaterialApp(home: PersonDetailScreen(person: person ?? _teacher())),
+      ),
+    );
+  }
 
   testWidgets('pre-fills name, phone and shows the role', (tester) async {
     await pumpScreen(tester);
@@ -94,6 +117,50 @@ void main() {
           userId: 'teacher-1',
           name: 'Ms. Jones',
           phone: '555-9999',
+          actorUid: 'director-1',
+        )).called(1);
+  });
+
+  testWidgets('shows the read-only login email and pre-fills HR fields', (tester) async {
+    await pumpScreen(tester, person: _teacherWithHr());
+    await tester.pumpAndSettle();
+
+    expect(find.text('smith@example.com'), findsOneWidget);
+    expect(find.text('Login email'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '1 Oak St'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'John Smith'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '555-0199'), findsOneWidget);
+    expect(find.textContaining('Date of birth: 15/03/1990'), findsOneWidget);
+  });
+
+  testWidgets('saving writes the HR fields (address, dob, emergency contact)',
+      (tester) async {
+    when(() => mockProfile.updatePersonDetails(
+          userId: any(named: 'userId'),
+          name: any(named: 'name'),
+          phone: any(named: 'phone'),
+          address: any(named: 'address'),
+          dob: any(named: 'dob'),
+          emergencyContactName: any(named: 'emergencyContactName'),
+          emergencyContactPhone: any(named: 'emergencyContactPhone'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _teacherWithHr());
+
+    await pumpScreen(tester, person: _teacherWithHr());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextFormField, '1 Oak St'), '2 Elm St');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockProfile.updatePersonDetails(
+          userId: 'teacher-1',
+          name: 'Ms. Smith',
+          phone: '555-0100',
+          address: '2 Elm St',
+          dob: '1990-03-15',
+          emergencyContactName: 'John Smith',
+          emergencyContactPhone: '555-0199',
           actorUid: 'director-1',
         )).called(1);
   });

@@ -7,12 +7,13 @@ import '../../../core/services/profile_service.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 
-// View/edit of a teacher's/parent's profile (name, phone, avatar). Reached
-// two ways: a director tapping a person in People > Teachers, or any user
-// via "Profile details" on their own Profile tab. Editing yourself uses the
-// self-only paths; a director editing someone else uses the director paths.
-// Email lives on auth.users and isn't readable cross-user from the client,
-// so it isn't shown here.
+// View/edit of a teacher's/parent's profile (name, phone, avatar + HR
+// details: address, date of birth, emergency contact). Reached two ways: a
+// director tapping a person in People > Teachers, or any user via "Profile
+// details" on their own Profile tab. Editing yourself uses the self-only
+// paths; a director editing someone else uses the director paths.
+// Email is shown read-only -- it's the login identity (auth.users), kept in
+// profiles.email by a DB trigger; changing it is an auth flow, not done here.
 class PersonDetailScreen extends ConsumerStatefulWidget {
   const PersonDetailScreen({super.key, required this.person});
 
@@ -26,6 +27,10 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _emergencyNameController;
+  late final TextEditingController _emergencyPhoneController;
+  late DateTime? _dob;
   late String? _avatarPath;
   bool _saving = false;
 
@@ -34,6 +39,12 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.person.name);
     _phoneController = TextEditingController(text: widget.person.phone);
+    _addressController = TextEditingController(text: widget.person.address ?? '');
+    _emergencyNameController =
+        TextEditingController(text: widget.person.emergencyContactName ?? '');
+    _emergencyPhoneController =
+        TextEditingController(text: widget.person.emergencyContactPhone ?? '');
+    _dob = widget.person.dob;
     _avatarPath = widget.person.avatarPath;
   }
 
@@ -41,6 +52,9 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyPhoneController.dispose();
     super.dispose();
   }
 
@@ -88,15 +102,37 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     final service = ref.read(profileServiceProvider);
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
+    // Trim to null so empty fields clear the column rather than storing ''.
+    String? orNull(String v) => v.trim().isEmpty ? null : v.trim();
+    final address = orNull(_addressController.text);
+    final emergencyName = orNull(_emergencyNameController.text);
+    final emergencyPhone = orNull(_emergencyPhoneController.text);
+    // Postgres date column wants an ISO yyyy-MM-dd string (date only).
+    final dob = _dob == null
+        ? null
+        : '${_dob!.year.toString().padLeft(4, '0')}-'
+            '${_dob!.month.toString().padLeft(2, '0')}-'
+            '${_dob!.day.toString().padLeft(2, '0')}';
     try {
       // Editing yourself goes through the self-only RPC (works for any
       // role); editing someone else uses the director-only policy.
       final updated = user.id == widget.person.id
-          ? await service.updateOwnDetails(name: name, phone: phone)
+          ? await service.updateOwnDetails(
+              name: name,
+              phone: phone,
+              address: address,
+              dob: dob,
+              emergencyContactName: emergencyName,
+              emergencyContactPhone: emergencyPhone,
+            )
           : await service.updatePersonDetails(
               userId: widget.person.id,
               name: name,
               phone: phone,
+              address: address,
+              dob: dob,
+              emergencyContactName: emergencyName,
+              emergencyContactPhone: emergencyPhone,
               actorUid: user.id,
             );
       if (!mounted) return;
@@ -112,10 +148,25 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     }
   }
 
+  String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dob ?? DateTime(now.year - 30),
+      firstDate: DateTime(now.year - 100),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _dob = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final roleLabel =
         widget.person.role[0].toUpperCase() + widget.person.role.substring(1);
+    final email = widget.person.email;
     return Scaffold(
       appBar: AppBar(title: Text(widget.person.name)),
       body: Form(
@@ -125,6 +176,7 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
           children: [
             Center(
               child: SignedAvatar(
+                radius: 56,
                 urlProvider: _avatarPath == null ? null : signedAvatarUrlProvider(_avatarPath!),
               ),
             ),
@@ -137,6 +189,14 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
             ),
             Center(child: Chip(label: Text(roleLabel), side: BorderSide.none)),
             const SizedBox(height: 24),
+            // Email is read-only -- it's the login identity (auth.users).
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.email_outlined),
+              title: Text(email ?? 'No email on file'),
+              subtitle: const Text('Login email'),
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
@@ -147,6 +207,31 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'Phone'),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: _pickDob,
+              icon: const Icon(Icons.cake_outlined),
+              label: Text(
+                _dob == null ? 'Date of birth: not set' : 'Date of birth: ${_formatDate(_dob!)}',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _addressController,
+              decoration: const InputDecoration(labelText: 'Address'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emergencyNameController,
+              decoration: const InputDecoration(labelText: 'Emergency contact name'),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _emergencyPhoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Emergency contact phone'),
             ),
             const SizedBox(height: 24),
             FilledButton(

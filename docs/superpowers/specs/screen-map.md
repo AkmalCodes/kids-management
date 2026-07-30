@@ -69,10 +69,11 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | People | **PeopleScreen** | `features/director/screens/people_screen.dart` | Wrapper with **Teachers \| Children \| Classes** sub-tabs. |
 | People › Teachers | **ManageTeachersScreen** | `features/director/screens/manage_teachers_screen.dart` | Teacher list; **+** invites a teacher; tap a row → PersonDetailScreen. |
 | People › Children | **ManageChildrenScreen** | `features/director/screens/manage_children_screen.dart` | Child list; **+** opens EnrollChildScreen; per-row icon invites a parent; tap a row → ChildDetailScreen. |
-| People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (with assigned teacher); **+** creates a class; tap a row → edit dialog (rename / reassign teacher). |
+| People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (avatar + assigned teacher); **+** creates a class (dialog); tap a row → ClassDetailScreen. |
+| (from a class row) | **ClassDetailScreen** | `features/director/screens/class_detail_screen.dart` | Director view/edit of one class: photo (class-avatars), name, teacher. |
 | (from Children +) | **EnrollChildScreen** | `features/director/screens/enroll_child_screen.dart` | Create a child record + invite its first parent in one form. |
 | (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Director view/edit of one child: photo, name, DOB (age shown), **class** (dropdown → class_id, drives the parent schedule), class teacher, allergies, notes + a read-only **Parents** section (name + email). |
-| (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | View/edit a person's photo, name, phone. Reused for self-edit from the Profile tab and director-edits-other from People. |
+| (from a teacher row / Profile) | **PersonDetailScreen** | `features/profile/person_detail_screen.dart` | View/edit a person's photo, name, phone + HR/contact details (address, DOB, emergency contact) and a read-only login email. Reused for self-edit from the Profile tab and director-edits-other from People. |
 | Schedule | **DirectorSchedulesScreen** | `features/director/screens/director_schedules_screen.dart` | Searchable **class** list → PersonScheduleScreen for that class. |
 | (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
 | Lessons | — | *(placeholder, not built)* | |

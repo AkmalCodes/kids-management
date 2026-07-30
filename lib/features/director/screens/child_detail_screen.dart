@@ -159,6 +159,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
           children: [
             Center(
               child: SignedAvatar(
+                radius: 56,
                 urlProvider:
                     _avatarPath == null ? null : signedChildAvatarUrlProvider(_avatarPath!),
               ),

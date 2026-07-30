@@ -90,7 +90,12 @@ CREATE TABLE profiles (
   center_id         UUID REFERENCES centers(id),
   must_set_password BOOLEAN NOT NULL DEFAULT false,  -- true for invited accounts until they choose a password (§6.6a)
   avatar_path       TEXT,  -- profile picture in the private 'avatars' bucket (§6.7), null if unset
-  email             TEXT,  -- denormalized copy of auth.users.email (§6.6) so directors can display it; auth.users isn't readable cross-user from the client
+  email             TEXT,  -- copy of auth.users.email (§6.6) so directors can display it; auth.users isn't readable cross-user from the client. Kept current by the sync_profile_email trigger below.
+  -- HR / contact details (§6.6b), all optional; editable by the user (self) or a director:
+  address                  TEXT,
+  dob                      DATE,
+  emergency_contact_name   TEXT,
+  emergency_contact_phone  TEXT,
   created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by        UUID REFERENCES auth.users(id),
@@ -108,13 +113,35 @@ CREATE OR REPLACE FUNCTION set_avatar_path(new_path TEXT) RETURNS void AS $$
   UPDATE profiles SET avatar_path = new_path, updated_at = now() WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER;
 
--- Self-edit of own name/phone (any role), from the Profile tab's "Profile
--- details" screen. Directors editing OTHERS go through profiles_update_director.
-CREATE OR REPLACE FUNCTION update_own_profile(new_name TEXT, new_phone TEXT)
+-- Self-edit of own name/phone + HR fields (any role), from the Profile tab's
+-- "Profile details" screen. Directors editing OTHERS go through
+-- profiles_update_director. Adding params changes the signature, so the
+-- migration DROPs the old (text,text) version first (see §6.6b handoff).
+-- Never touches `role`, so a user still can't self-escalate.
+CREATE OR REPLACE FUNCTION update_own_profile(
+  new_name TEXT, new_phone TEXT, new_address TEXT DEFAULT NULL,
+  new_dob DATE DEFAULT NULL, new_emergency_contact_name TEXT DEFAULT NULL,
+  new_emergency_contact_phone TEXT DEFAULT NULL)
 RETURNS profiles AS $$
-  UPDATE profiles SET name = new_name, phone = new_phone, updated_at = now()
+  UPDATE profiles SET
+    name = new_name, phone = new_phone, address = new_address, dob = new_dob,
+    emergency_contact_name = new_emergency_contact_name,
+    emergency_contact_phone = new_emergency_contact_phone, updated_at = now()
   WHERE id = auth.uid() RETURNING *;
 $$ LANGUAGE sql SECURITY DEFINER;
+
+-- Keep profiles.email in step with the login email (auth.users.email), so a
+-- director always sees a correct address (auth.users isn't readable
+-- cross-user from the client). Fires on user creation and email change; a
+-- one-time backfill seeds existing rows (see §6.6b handoff).
+CREATE OR REPLACE FUNCTION sync_profile_email() RETURNS TRIGGER AS $$
+  UPDATE profiles SET email = NEW.email, updated_at = now() WHERE id = NEW.id;
+  SELECT NEW;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_email_sync
+  AFTER INSERT OR UPDATE OF email ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION sync_profile_email();
 ```
 > Supabase Auth manages the email + password in `auth.users`. `profiles` holds everything else. The `id` in `profiles` is the same UUID as in `auth.users`.
 
@@ -146,6 +173,7 @@ CREATE TABLE classes (
   name        TEXT NOT NULL,
   teacher_uid UUID REFERENCES auth.users(id),  -- the teacher assigned to this class
   center_id   UUID REFERENCES centers(id) NOT NULL,
+  avatar_path TEXT,  -- class photo in the private 'class-avatars' bucket (§6.8), null if unset
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by  UUID REFERENCES auth.users(id),
@@ -211,6 +239,9 @@ Private bucket for **user** profile pictures, one file per user at `<user_id>/av
 
 ### Storage: `child-avatars` bucket
 Private bucket for **child** photos, one file per child at `<child_id>/avatar.jpg` (§6.6). Children have no auth account, so they can't use the user `avatars` bucket. Only directors insert/update; select is available to any director, the child's own teacher, or a linked parent. Displayed via `signedChildAvatarUrlProvider`.
+
+### Storage: `class-avatars` bucket
+Private bucket for **class** photos, one file per class at `<class_id>/avatar.jpg` (§6.8). Mirrors the child-avatars pattern: only directors insert/update/select. Displayed via `signedClassAvatarUrlProvider`. Shown on the director's Classes list + ClassDetailScreen.
 
 ### Storage: `daily-report-images` bucket
 Private bucket for **daily-report** photos (§6.4), path `<child_id>/<date>/<n>.jpg` (multiple photos per report). The child's teacher inserts; select is available to that teacher, any director, or a linked parent (so parents see them in their feed). Displayed via `signedReportImageUrlProvider`.
@@ -499,7 +530,8 @@ lib/
         people_screen.dart              -- Teachers | Children | Classes sub-tabs (§6.6)
         manage_teachers_screen.dart     -- teacher list (tap -> PersonDetailScreen) + invite-a-teacher
         manage_children_screen.dart     -- child list (tap -> ChildDetailScreen) + invite-a-parent
-        manage_classes_screen.dart      -- class list (tap -> edit dialog) + create-a-class (§6.8)
+        manage_classes_screen.dart      -- class list (tap -> ClassDetailScreen) + create-a-class dialog (§6.8)
+        class_detail_screen.dart        -- director view/edit of one class: photo, name, teacher (§6.8)
         enroll_child_screen.dart        -- child record + first parent invite in one form
         child_detail_screen.dart        -- director view/edit of one child + parent contacts (§6.6)
   shared/
@@ -573,7 +605,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
 - ✅ **Tap a row to view/edit details:**
   - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), **class** (a dropdown of real `classes` rows setting `class_id` — helper text "Drives the schedule the parent sees"; replaced the old free-text `class_name` field, which is now preserved untouched), class teacher (dropdown, sets `teacher_id`), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
-  - A teacher/parent → `PersonDetailScreen`: edit photo, name and phone. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7). Email isn't shown (lives on `auth.users`, not readable cross-user from the client).
+  - A teacher/parent → `PersonDetailScreen`: edit photo, name, phone, and **HR/contact details** (address, date of birth, emergency contact name/phone — §6.6b), plus a **read-only login email**. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7).
 - ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
 - ⬜ View all lesson plans across the center (depends on §6.5)
 - ⬜ Manage center settings (center name, rooms)
@@ -581,6 +613,8 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 **How account provisioning works (§6.6a):** The Flutter app can never create accounts for other people directly — that needs Supabase's admin API and the service role key, which must stay server-side. So a director's invite calls the **`create-user` Edge Function** (`supabase/functions/create-user`): it verifies the caller is a director via their own JWT, then uses the service role key to `inviteUserByEmail` and insert the `profiles` row (with `must_set_password = true`). The invite email's link deep-links back into the app via a custom URL scheme (`com.example.test_flutter://login-callback/`, registered in AndroidManifest.xml + iOS Info.plist and allow-listed in the dashboard's Auth → Redirect URLs). On first entry the invited user lands on `SetPasswordScreen` (routed by `AuthGate` when `must_set_password`), sets a password, and the flag is cleared via the `complete_password_setup()` SECURITY DEFINER RPC (avoids granting a broad `profiles` UPDATE policy that could let users change their own role).
 
 > ⚠️ **Production requirement — custom SMTP not yet configured.** Invite and password-recovery emails currently go through Supabase's built-in email sender, which is a shared, heavily rate-limited service intended only for development (hitting "email rate limit exceeded" after a few test invites is expected). Before inviting real teachers/parents, a custom SMTP provider (e.g. Resend, SendGrid) **must** be configured in Dashboard → Project Settings → Authentication → SMTP Settings. Supabase generates the invite/recovery link and its token; the SMTP provider is what actually delivers the email reliably to real inboxes (analogous to why production PHP uses PHPMailer + a real mail service instead of the built-in `mail()`).
+
+**HR / contact details (§6.6b — built):** every profile carries optional HR fields — `address`, `dob`, `emergency_contact_name`, `emergency_contact_phone` — editable on `PersonDetailScreen` by the person themselves (self path, `update_own_profile`) or a director (director path, `updatePersonDetails`). Same fields for all roles. The **login email is shown read-only** — it's the auth identity, not editable here; `profiles.email` is kept equal to `auth.users.email` by the `sync_profile_email` trigger (+ a one-time backfill), so the parent-contacts list on `ChildDetailScreen` and the email row here are always correct rather than depending on the invite-time copy.
 
 ### 6.7 Profile / Account settings — all roles
 Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, name, email (read from the auth session, not the profiles row), and role, with actions to:
@@ -593,9 +627,9 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 
 ### 6.8 Classes — partially built (schema + parent-schedule link)
 A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
-- ✅ Schema: `classes` (id, name, teacher_uid, center_id) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
+- ✅ Schema: `classes` (id, name, teacher_uid, center_id, avatar_path) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
-- ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (with the assigned teacher's name), creates a class, and renames / reassigns its teacher — via the shared `showClassFormDialog` (name + teacher dropdown) and `ClassService.createClass` / `updateClass`. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
+- ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (avatar + assigned teacher's name), and creates a class via the shared `showClassFormDialog` (name + teacher dropdown). **Tapping a class opens `ClassDetailScreen`** (a full screen like children/teachers, not a dialog): edit the **class photo** (class-avatars bucket), name, and teacher, via `ClassService.updateClass` / `uploadClassAvatar` / `setClassAvatarPath`. Create stays a dialog because there's no `class_id` to key the photo path until the row exists — add a picture by opening the new class afterwards. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
 - ⬜ Still SQL-only / undecided: deleting a class; whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
 - 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.

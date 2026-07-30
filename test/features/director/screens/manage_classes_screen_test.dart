@@ -7,6 +7,7 @@ import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/class_group.dart';
 import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/features/director/screens/class_detail_screen.dart';
 import 'package:test_flutter/features/director/screens/manage_classes_screen.dart';
 
 class MockClassService extends Mock implements ClassService {}
@@ -130,7 +131,7 @@ void main() {
     verify(() => mockClasses.fetchAll()).called(greaterThanOrEqualTo(2));
   });
 
-  testWidgets('tapping a class opens the edit dialog and calls updateClass',
+  testWidgets('tapping a class opens the detail screen and saves via updateClass',
       (tester) async {
     when(() => mockClasses.fetchAll())
         .thenAnswer((_) async => [_class('class-1', 'Sunflowers')]);
@@ -146,8 +147,10 @@ void main() {
     await tester.tap(find.text('Sunflowers'));
     await tester.pumpAndSettle();
 
+    // Now on the full ClassDetailScreen (not a dialog).
+    expect(find.byType(ClassDetailScreen), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextFormField, 'Sunflowers'), 'Tulips');
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
     verify(() => mockClasses.updateClass(

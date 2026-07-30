@@ -8,6 +8,12 @@ class AppUser {
   // from the client). Set by the create-user Edge Function; may be null on
   // accounts created before the column existed until backfilled.
   final String? email;
+  // HR / contact details (all nullable — optional, editable by the user or a
+  // director). address + emergency contact are plain text; dob is a date.
+  final String? address;
+  final DateTime? dob;
+  final String? emergencyContactName;
+  final String? emergencyContactPhone;
   final String? centerId;
   // Set true when a director invites this account; forces a set-password
   // screen on first entry, then cleared. Existing accounts default false.
@@ -27,6 +33,10 @@ class AppUser {
     required this.name,
     required this.phone,
     this.email,
+    this.address,
+    this.dob,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
     required this.centerId,
     this.mustSetPassword = false,
     this.avatarPath,
@@ -42,6 +52,10 @@ class AppUser {
     name: json['name'] as String,
     phone: json['phone'] as String? ?? '',
     email: json['email'] as String?,
+    address: json['address'] as String?,
+    dob: json['dob'] == null ? null : DateTime.parse(json['dob'] as String),
+    emergencyContactName: json['emergency_contact_name'] as String?,
+    emergencyContactPhone: json['emergency_contact_phone'] as String?,
     centerId: json['center_id'] as String?,
     mustSetPassword: json['must_set_password'] as bool? ?? false,
     avatarPath: json['avatar_path'] as String?,
