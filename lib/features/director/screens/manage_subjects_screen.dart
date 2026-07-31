@@ -86,6 +86,15 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
       body: FutureBuilder<List<Subject>>(
         future: _future,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Could not load subjects:\n${snapshot.error}',
+                    textAlign: TextAlign.center),
+              ),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

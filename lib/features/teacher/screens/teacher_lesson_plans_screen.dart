@@ -61,6 +61,17 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
       body: FutureBuilder<_PlansData>(
         future: _future,
         builder: (context, snapshot) {
+          // Surface load errors instead of spinning forever (e.g. the
+          // subjects/lesson_plans migration hasn't been run yet).
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Could not load lesson plans:\n${snapshot.error}',
+                    textAlign: TextAlign.center),
+              ),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

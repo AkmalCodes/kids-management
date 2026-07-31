@@ -82,6 +82,15 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
     return FutureBuilder<_LessonsData>(
       future: _future,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Could not load lesson plans:\n${snapshot.error}',
+                  textAlign: TextAlign.center),
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
