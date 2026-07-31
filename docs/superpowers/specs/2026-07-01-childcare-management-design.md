@@ -538,6 +538,8 @@ lib/
         enroll_child_screen.dart        -- child record + first parent invite in one form
         child_detail_screen.dart        -- director view/edit of one child + parent contacts (§6.6)
   shared/
+    util/
+      date_display.dart             -- weekdayName + isoWithWeekday: prefix an ISO date with its weekday (attendance/report displays; not birthdates)
     screens/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
     widgets/

@@ -4,6 +4,7 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
+import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
@@ -162,7 +163,8 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
           child: Row(
             children: [
               Expanded(
-                child: Text(_dateString, style: Theme.of(context).textTheme.titleMedium),
+                child: Text(isoWithWeekday(_dateString),
+                    style: Theme.of(context).textTheme.titleMedium),
               ),
               TextButton.icon(
                 onPressed: _pickDate,

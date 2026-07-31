@@ -5,6 +5,7 @@ import '../../../core/models/child.dart';
 import '../../../core/models/daily_report.dart';
 import '../../../core/services/daily_report_service.dart';
 import '../../../core/services/photo_capture_service.dart';
+import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 
 // Teacher writes/edits the daily report for one child on one day (today).
@@ -122,7 +123,7 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(_today, style: Theme.of(context).textTheme.titleMedium),
+              Text(isoWithWeekday(_today), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               TextField(
                 controller: _textController,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/attendance.dart';
+import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 
@@ -15,7 +16,7 @@ class AttendanceDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('$childName — ${record.date}')),
+      appBar: AppBar(title: Text('$childName — ${isoWithWeekday(record.date)}')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

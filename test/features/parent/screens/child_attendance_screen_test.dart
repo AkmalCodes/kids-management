@@ -10,6 +10,7 @@ import 'package:test_flutter/core/models/attendance.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/attendance_service.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/shared/util/date_display.dart';
 import 'package:test_flutter/features/parent/screens/attendance_detail_screen.dart';
 import 'package:test_flutter/features/parent/screens/child_attendance_screen.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
@@ -101,7 +102,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alice'), findsOneWidget);
-    expect(find.text('2026-07-17'), findsOneWidget);
+    expect(find.text(isoWithWeekday('2026-07-17')), findsOneWidget);
     expect(find.text('Present'), findsOneWidget);
   });
 

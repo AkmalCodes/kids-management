@@ -10,6 +10,7 @@ import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/models/daily_report.dart';
 import 'package:test_flutter/core/services/child_service.dart';
 import 'package:test_flutter/core/services/daily_report_service.dart';
+import 'package:test_flutter/shared/util/date_display.dart';
 import 'package:test_flutter/features/parent/screens/child_reports_screen.dart';
 
 class MockChildService extends Mock implements ChildService {}
@@ -111,9 +112,9 @@ void main() {
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    expect(find.text('2026-07-28'), findsOneWidget);
+    expect(find.text(isoWithWeekday('2026-07-28')), findsOneWidget);
     expect(find.text('Painted a rainbow.'), findsOneWidget);
-    expect(find.text('2026-07-27'), findsOneWidget);
+    expect(find.text(isoWithWeekday('2026-07-27')), findsOneWidget);
     expect(find.text('Nap was good.'), findsOneWidget);
   });
 

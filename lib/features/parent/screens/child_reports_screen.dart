@@ -5,6 +5,7 @@ import '../../../core/models/child.dart';
 import '../../../core/models/daily_report.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/daily_report_service.dart';
+import '../../../shared/util/date_display.dart';
 
 // Parent's Reports tab: for each linked child, a feed of their daily
 // reports (newest first) — the teacher's note plus any photos. Read-only.
@@ -95,7 +96,7 @@ class _ReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(report.date, style: Theme.of(context).textTheme.titleMedium),
+            Text(isoWithWeekday(report.date), style: Theme.of(context).textTheme.titleMedium),
             if (report.text.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(report.text),

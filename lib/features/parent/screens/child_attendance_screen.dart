@@ -5,6 +5,7 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
+import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 import 'attendance_detail_screen.dart';
@@ -100,7 +101,7 @@ class _AttendanceCard extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: _photoThumbnails(),
-        title: Text(record.date),
+        title: Text(isoWithWeekday(record.date)),
         subtitle: hasPhotos ? const Text('Tap to view photos') : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
