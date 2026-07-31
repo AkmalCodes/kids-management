@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
+import 'screens/teacher_lesson_plans_screen.dart';
 import 'screens/teacher_reports_screen.dart';
 import 'screens/teacher_schedule_screen.dart';
 
@@ -17,7 +18,7 @@ class _TeacherShellState extends State<TeacherShell> {
   static const _pages = [
     TeacherScheduleScreen(),
     MarkAttendanceScreen(),
-    Center(child: Text('Lesson Plans — coming soon')),
+    TeacherLessonPlansScreen(),
     TeacherReportsScreen(),
     ProfileScreen(),
   ];

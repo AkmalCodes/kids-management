@@ -249,19 +249,39 @@ Private bucket for **class** photos, one file per class at `<class_id>/avatar.jp
 ### Storage: `daily-report-images` bucket
 Private bucket for **daily-report** photos (§6.4), path `<child_id>/<date>/<n>.jpg` (multiple photos per report). The child's teacher inserts; select is available to that teacher, any director, or a linked parent (so parents see them in their feed). Displayed via `signedReportImageUrlProvider`.
 
-### `lesson_plans`
+### `subjects` (§6.5 — center-defined lesson categories)
 ```sql
-CREATE TABLE lesson_plans (
+CREATE TABLE subjects (
   id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  teacher_id UUID REFERENCES auth.users(id) NOT NULL,
   center_id  UUID REFERENCES centers(id) NOT NULL,
-  title      TEXT NOT NULL,
-  date       DATE NOT NULL,
-  content    TEXT DEFAULT '',
+  name       TEXT NOT NULL,
+  color      TEXT,  -- optional hex for chips
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id)
+);
+```
+
+### `lesson_plans` (§6.5)
+```sql
+CREATE TABLE lesson_plans (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  teacher_id  UUID REFERENCES auth.users(id) NOT NULL,
+  center_id   UUID REFERENCES centers(id) NOT NULL,
+  title       TEXT NOT NULL,
+  date        DATE NOT NULL,
+  content     TEXT DEFAULT '',
+  subject_id  UUID REFERENCES subjects(id) ON DELETE SET NULL,  -- categorization; un-tagged if the subject is deleted
+  class_id    UUID REFERENCES classes(id),  -- which class this plan is for (used by the later schedule-integration increment)
+  status      TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','approved','rejected')),  -- approval workflow
+  reviewed_by UUID REFERENCES auth.users(id),  -- director who approved/rejected
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,  -- reviewer's note / rejection reason
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by  UUID REFERENCES auth.users(id),
+  updated_by  UUID REFERENCES auth.users(id)
 );
 ```
 
@@ -427,13 +447,39 @@ USING (
   )
 );
 
--- lesson_plans: teachers write their own; directors read all
+-- subjects: any authenticated user reads (they show on plans + the schedule);
+-- only directors write.
+ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "subjects_select" ON subjects FOR SELECT USING (true);
+CREATE POLICY "subjects_insert" ON subjects FOR INSERT
+  WITH CHECK (current_role_name() = 'director');
+CREATE POLICY "subjects_update" ON subjects FOR UPDATE
+  USING (current_role_name() = 'director');
+CREATE POLICY "subjects_delete" ON subjects FOR DELETE
+  USING (current_role_name() = 'director');
+
+-- lesson_plans: teacher sees/creates own; director sees all. UPDATE is split
+-- into two policies so approval can't be forged (§6.5):
+--   • a teacher may edit their OWN plan but only to a draft/submitted status
+--     (WITH CHECK) — so a teacher can never self-approve;
+--   • a director may set ANY status on ANY plan.
+-- DELETE: teacher own, or director.
 CREATE POLICY "lesson_plans_select" ON lesson_plans FOR SELECT
   USING (teacher_id = auth.uid() OR current_role_name() = 'director');
 CREATE POLICY "lesson_plans_insert" ON lesson_plans FOR INSERT
-  WITH CHECK (current_role_name() = 'teacher');
-CREATE POLICY "lesson_plans_update" ON lesson_plans FOR UPDATE
-  USING (current_role_name() = 'teacher' AND teacher_id = auth.uid());
+  WITH CHECK (current_role_name() = 'teacher' AND teacher_id = auth.uid());
+CREATE POLICY "lesson_plans_update_teacher" ON lesson_plans FOR UPDATE
+  USING (current_role_name() = 'teacher' AND teacher_id = auth.uid())
+  WITH CHECK (
+    current_role_name() = 'teacher'
+    AND teacher_id = auth.uid()
+    AND status IN ('draft', 'submitted')
+  );
+CREATE POLICY "lesson_plans_update_director" ON lesson_plans FOR UPDATE
+  USING (current_role_name() = 'director')
+  WITH CHECK (current_role_name() = 'director');
+CREATE POLICY "lesson_plans_delete" ON lesson_plans FOR DELETE
+  USING (current_role_name() = 'director' OR teacher_id = auth.uid());
 
 -- daily_reports: teachers write; parents read their child's
 CREATE POLICY "daily_reports_select" ON daily_reports FOR SELECT
@@ -485,8 +531,9 @@ lib/
       child.dart
       attendance.dart
       schedule.dart                 -- ScheduleEntry: one row per event, not a whole-week blob
-      lesson_plan.dart              -- model exists; no service/UI yet
-      daily_report.dart             -- model exists; no service/UI yet
+      lesson_plan.dart              -- LessonPlan + LessonPlanStatus enum (§6.5)
+      subject.dart                  -- center-defined lesson subject/category (§6.5)
+      daily_report.dart
       class_group.dart              -- the `classes` table (named ClassGroup; `Class` is reserved) (§6.8)
     services/
       child_service.dart
@@ -498,7 +545,8 @@ lib/
       user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
       profile_service.dart          -- user avatar upload/signed-url + set/update RPCs + director edit (§6.7)
       daily_report_service.dart     -- fetch/save reports + report-image upload/signed-url (§6.4)
-      lesson_plan_service.dart      -- (not yet built)
+      lesson_plan_service.dart      -- lesson plan CRUD + submit/review (approval) (§6.5)
+      subject_service.dart          -- center subjects CRUD (§6.5)
     theme/
       app_theme.dart                -- single seed color + font (Nunito via google_fonts) + tinted top/bottom bars, cascades app-wide
   features/
@@ -523,7 +571,7 @@ lib/
         mark_attendance_screen.dart
         teacher_reports_screen.dart -- class list -> report editor (§6.4)
         daily_report_edit_screen.dart -- write/edit one child's daily report (§6.4)
-        lesson_plan_screen.dart     -- (not yet built)
+        teacher_lesson_plans_screen.dart -- teacher's own lesson plans list + create (§6.5)
     director/
       director_shell.dart
       screens/
@@ -537,6 +585,10 @@ lib/
         class_detail_screen.dart        -- director view/edit of one class: photo, name, teacher (§6.8)
         enroll_child_screen.dart        -- child record + first parent invite in one form
         child_detail_screen.dart        -- director view/edit of one child + parent contacts (§6.6)
+        director_lessons_screen.dart    -- browse/filter all lesson plans, approve/reject (§6.5)
+        manage_subjects_screen.dart     -- director-managed subjects list (§6.5)
+    shared_lessons/
+      lesson_plan_edit_screen.dart      -- shared teacher/director lesson-plan editor + submit/review/delete (§6.5)
   shared/
     util/
       date_display.dart             -- weekdayName + isoWithWeekday: prefix an ISO date with its weekday (attendance/report displays; not birthdates)
@@ -545,6 +597,7 @@ lib/
     widgets/
       logout_button.dart
       attendance_status_chip.dart
+      lesson_plan_status_chip.dart  -- draft/submitted/approved/rejected chip (§6.5)
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
       signed_avatar.dart            -- round avatar from any bucket's signed-URL provider, with placeholder (§6.6/§6.7)
       avatar_source_sheet.dart      -- shared take-photo/gallery bottom sheet for avatar edits
@@ -599,10 +652,14 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - **Director**: reads all via RLS, but no dedicated reports screen yet (⬜ could add a browse view later).
 - Data: `daily_reports` table (one row per child+date), image paths stored on the row, photos in the private `daily-report-images` bucket.
 
-### 6.5 Lesson Plans — not yet built
-- Teacher writes a lesson plan per day (title + content)
-- Director can browse all teachers' lesson plans, filtered by teacher or date
-- Lesson plans are read-only for the Director
+### 6.5 Lesson Plans — built (Increment 1 of the "full vision")
+Teacher-authored plans with a **subject** categorization and a **director approval workflow**. Visible to teachers + directors only (not parents).
+- **Subjects** — a center-defined list (`subjects` table) the director manages (`ManageSubjectsScreen`, reached from the director Lessons tab). Teachers tag a plan with one. Any authenticated user can read subjects (they'll surface on the schedule in a later increment); only directors write them.
+- **Teacher** (`TeacherLessonPlansScreen`, Lessons tab): lists own plans (newest first) with a status chip; **+** writes a new one. `LessonPlanEditScreen`: title, date, subject, optional class, content. Editable while **draft/rejected**; **Submit for approval** flips it to *submitted* (then read-only to the teacher); Delete (own).
+- **Director** (`DirectorLessonsScreen`, Lessons tab): browses **all** plans, filters by teacher + status, opens one to **Approve / Reject** (with an optional note) and can edit/delete any.
+- **Approval states:** `draft → submitted → approved | rejected` (`LessonPlanStatus`). A rejected plan shows the reviewer's note and becomes editable again.
+- **Security (enforced at the DB, not just UI):** two UPDATE policies — a teacher may only set `draft`/`submitted` on their **own** plan (so a teacher **cannot self-approve**); a director may set any status on any plan. See §4 RLS.
+- 🔭 **Later increments (designed separately):** surface the plan's subject on the **dated** schedule day-view (schedule is a recurring weekly pattern, so this needs a dated link + a parent-visibility decision); then a dashboard + notifications for approval events.
 
 ### 6.6 Director / Admin Panel — partially built
 - ✅ View all attendance records, any date (Attendance tab)
@@ -727,7 +784,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
 | 5.5 | Profile pictures shown as avatars everywhere (attendance cards, People lists, parent contacts) | ✅ Done |
 | 6 | Daily Reports (text + images) — teacher write, parent read (§6.4) | ✅ Done |
-| 7 | Lesson Plans | ⬜ Not started |
+| 7 | Lesson Plans — Increment 1: subjects + CRUD + approval workflow (teacher/director) | ✅ Done. Increments 2 (schedule integration) + 3 (dashboard/notifications) still to design |
 | 8 | Play Store release prep (see §11) | ⬜ Not started |
 | 9 | Web build + polish | ⬜ Not started |
 

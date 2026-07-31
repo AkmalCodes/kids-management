@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_screen.dart';
 import 'screens/director_attendance_screen.dart';
+import 'screens/director_lessons_screen.dart';
 import 'screens/director_schedules_screen.dart';
 import 'screens/people_screen.dart';
 
@@ -17,7 +18,7 @@ class _DirectorShellState extends State<DirectorShell> {
   static const _pages = [
     PeopleScreen(),
     DirectorSchedulesScreen(),
-    Center(child: Text('Lesson Plans — coming soon')),
+    DirectorLessonsScreen(),
     DirectorAttendanceScreen(),
     ProfileScreen(),
   ];
