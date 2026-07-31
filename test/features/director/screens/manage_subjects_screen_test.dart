@@ -58,14 +58,20 @@ void main() {
     expect(find.text('No subjects yet.'), findsOneWidget);
   });
 
-  testWidgets('creating a subject calls createSubject and refreshes', (tester) async {
-    when(() => mockSubjects.fetchAll()).thenAnswer((_) async => []);
+  testWidgets('creating a subject calls createSubject and refreshes the list', (tester) async {
+    // Empty first load; after create, the refresh returns the new subject.
+    var created = false;
+    when(() => mockSubjects.fetchAll())
+        .thenAnswer((_) async => created ? [_subject('sub-1', 'Art')] : <Subject>[]);
     when(() => mockSubjects.createSubject(
           name: any(named: 'name'),
           color: any(named: 'color'),
           centerId: any(named: 'centerId'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async => _subject('sub-1', 'Art'));
+        )).thenAnswer((_) async {
+      created = true;
+      return _subject('sub-1', 'Art');
+    });
 
     await pumpScreen(tester);
 
@@ -80,5 +86,8 @@ void main() {
           centerId: 'center-1',
           actorUid: 'director-1',
         )).called(1);
+    // The refresh (a setState) must not error, and the new subject shows.
+    expect(find.textContaining('Could not save'), findsNothing);
+    expect(find.text('Art'), findsOneWidget);
   });
 }

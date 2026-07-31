@@ -44,7 +44,13 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
     );
   }
 
-  void _refresh() => setState(() => _future = _load());
+  // Block body, not `() =>`: an arrow would return the Future from the
+  // assignment and setState rejects a callback that returns a Future.
+  void _refresh() {
+    setState(() {
+      _future = _load();
+    });
+  }
 
   Future<void> _open({LessonPlan? plan}) async {
     final changed = await Navigator.of(context).push<bool>(

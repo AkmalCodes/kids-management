@@ -23,7 +23,13 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
     _future = ref.read(subjectServiceProvider).fetchAll();
   }
 
-  void _refresh() => setState(() => _future = ref.read(subjectServiceProvider).fetchAll());
+  // Block body, not `() =>`: an arrow would return the Future from the
+  // assignment and setState rejects a callback that returns a Future.
+  void _refresh() {
+    setState(() {
+      _future = ref.read(subjectServiceProvider).fetchAll();
+    });
+  }
 
   Future<void> _create() async {
     final user = await ref.read(currentUserProvider.future);
