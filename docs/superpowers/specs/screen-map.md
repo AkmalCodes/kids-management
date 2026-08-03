@@ -100,7 +100,7 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 
 | Name | File | Used by | What it is |
 |---|---|---|---|
-| **DayScheduleScreen** | `shared/screens/day_schedule_screen.dart` | Schedule flows | Hourly view for a single day; owns create/edit/delete of schedule entries. |
+| **DayScheduleScreen** | `shared/screens/day_schedule_screen.dart` | Schedule flows | Hourly view for a single day; owns create/edit/delete of schedule entries. For a **class** day it also shows a **Planned lessons** section — the subject+title of that class's approved lesson plans for the date (via `class_day_lessons`, §6.5). |
 | **ScheduleAgendaView** | `shared/widgets/schedule_agenda_view.dart` | Schedule screens | Week/month toggle with colored event cards; tap a day to drill in. |
 | **DayTimetable** | `shared/widgets/day_timetable.dart` | DayScheduleScreen | The hour grid; tap-to-add/edit, fade-in on new entries. |
 | **ScheduleEntryFormDialog** | `shared/widgets/schedule_entry_form_dialog.dart` | Schedule create/edit | Dialog for an event's label, times, and color. |

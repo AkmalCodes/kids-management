@@ -5,11 +5,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/schedule.dart';
+import 'package:test_flutter/core/services/lesson_plan_service.dart';
 import 'package:test_flutter/core/services/schedule_service.dart';
 import 'package:test_flutter/shared/screens/day_schedule_screen.dart';
 import 'package:test_flutter/shared/widgets/day_timetable.dart';
 
 class MockScheduleService extends Mock implements ScheduleService {}
+
+class MockLessonPlanService extends Mock implements LessonPlanService {}
 
 AppUser _teacher(String id) => AppUser(
   id: id,
@@ -103,6 +106,45 @@ void main() {
   testWidgets('read-only shows no add button', (tester) async {
     await pumpScreen(tester, entries: const [], viewerId: 'teacher-1');
     expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets('a class day view shows the approved planned lessons', (tester) async {
+    final mockPlans = MockLessonPlanService();
+    when(() => mockPlans.fetchApprovedLessonsForClassDay(
+          classId: any(named: 'classId'),
+          date: any(named: 'date'),
+        )).thenAnswer(
+      (_) async => const [PlannedLesson(title: 'Watercolours', subject: 'Art')],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => Stream.value(_teacher('parent-1'))),
+          scheduleServiceProvider.overrideWithValue(mockService),
+          lessonPlanServiceProvider.overrideWithValue(mockPlans),
+        ],
+        child: MaterialApp(
+          home: DayScheduleScreen(
+            date: _monday,
+            entries: const [],
+            type: 'class',
+            refId: 'class-1',
+            centerId: 'center-1',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Planned lessons'), findsOneWidget);
+    expect(find.text('Watercolours'), findsOneWidget);
+    expect(find.text('Art'), findsOneWidget);
+    // Class id + date are passed through to the RPC-backed lookup.
+    verify(() => mockPlans.fetchApprovedLessonsForClassDay(
+          classId: 'class-1',
+          date: '2026-07-13',
+        )).called(1);
   });
 
   testWidgets(

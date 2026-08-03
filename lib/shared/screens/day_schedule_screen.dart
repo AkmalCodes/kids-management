@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/models/schedule.dart';
+import '../../core/services/lesson_plan_service.dart';
 import '../../core/services/schedule_service.dart';
 import '../widgets/day_timetable.dart';
 import '../widgets/schedule_entry_form_dialog.dart';
@@ -46,11 +47,21 @@ class DayScheduleScreen extends ConsumerStatefulWidget {
 class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
   late List<ScheduleEntry> _entries;
   String? _newEntryId;
+  // Only for a class's schedule (§6.5 increment 2): the approved lesson
+  // subjects/titles planned for this class on this date. Null for
+  // teacher/child schedules, which have no lesson plans.
+  Future<List<PlannedLesson>>? _plannedFuture;
 
   @override
   void initState() {
     super.initState();
     _entries = widget.entries;
+    if (widget.type == 'class' && widget.refId != null) {
+      _plannedFuture = ref.read(lessonPlanServiceProvider).fetchApprovedLessonsForClassDay(
+            classId: widget.refId!,
+            date: widget.date.toIso8601String().substring(0, 10),
+          );
+    }
   }
 
   String get _dayName => DayScheduleScreen._weekdayNames[widget.date.weekday - 1];
@@ -165,16 +176,27 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: showEmptyMessage
-          ? const Center(child: Text('No events on this day.'))
-          : SingleChildScrollView(
-              child: DayTimetable(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Class schedules also show the day's approved lesson plans.
+            if (_plannedFuture != null) _PlannedLessons(future: _plannedFuture!),
+            if (showEmptyMessage)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: Text('No events on this day.')),
+              )
+            else
+              DayTimetable(
                 entries: _entries,
                 onAddEntry: widget.editable ? _addEntry : null,
                 onTapEntry: widget.editable ? _tapEntry : null,
                 newEntryId: _newEntryId,
               ),
-            ),
+          ],
+        ),
+      ),
       // Tapping the empty grid also adds an event, but that gesture has no
       // visual hint — this button is the discoverable way to do it.
       floatingActionButton: widget.editable
@@ -184,6 +206,45 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
               child: const Icon(Icons.add),
             )
           : null,
+    );
+  }
+}
+
+// The approved lesson plans planned for this class on this date. Supplementary
+// to the timetable, so it stays quiet: nothing while loading, on error, or
+// when there's nothing planned.
+class _PlannedLessons extends StatelessWidget {
+  const _PlannedLessons({required this.future});
+
+  final Future<List<PlannedLesson>> future;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<PlannedLesson>>(
+      future: future,
+      builder: (context, snapshot) {
+        final lessons = snapshot.data;
+        if (lessons == null || lessons.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Planned lessons', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              for (final lesson in lessons)
+                Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: Text(lesson.title),
+                    subtitle: lesson.subject == null ? null : Text(lesson.subject!),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

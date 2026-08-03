@@ -115,6 +115,36 @@ class LessonPlanService {
   Future<void> deletePlan(String id) async {
     await _client.from('lesson_plans').delete().eq('id', id);
   }
+
+  // What's planned for a class on a given date, for the schedule day view
+  // (§6.5 increment 2). Goes through the `class_day_lessons` SECURITY DEFINER
+  // function, which returns only the title + subject (never the content) of
+  // APPROVED plans, and only to a viewer connected to that class (director,
+  // the class's teacher, or a parent of a child in it) -- so a parent can see
+  // the subject on the schedule without the plans themselves being readable.
+  Future<List<PlannedLesson>> fetchApprovedLessonsForClassDay({
+    required String classId,
+    required String date, // YYYY-MM-DD
+  }) async {
+    final rows = await _client.rpc('class_day_lessons', params: {
+      'p_class_id': classId,
+      'p_date': date,
+    });
+    return (rows as List)
+        .map((r) => PlannedLesson(
+              title: (r as Map)['title'] as String,
+              subject: r['subject_name'] as String?,
+            ))
+        .toList();
+  }
+}
+
+// A read-only "what's planned" row surfaced on the schedule day view -- just
+// the lesson's title + subject, no content.
+class PlannedLesson {
+  const PlannedLesson({required this.title, required this.subject});
+  final String title;
+  final String? subject;
 }
 
 final lessonPlanServiceProvider = Provider<LessonPlanService>(

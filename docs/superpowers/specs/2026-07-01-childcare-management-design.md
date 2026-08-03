@@ -481,6 +481,32 @@ CREATE POLICY "lesson_plans_update_director" ON lesson_plans FOR UPDATE
 CREATE POLICY "lesson_plans_delete" ON lesson_plans FOR DELETE
   USING (current_role_name() = 'director' OR teacher_id = auth.uid());
 
+-- §6.5 increment 2: expose only the title + subject of a class's APPROVED
+-- plans for a date, to a viewer connected to that class (director, the
+-- class's teacher, or a parent of a child in it). SECURITY DEFINER so it can
+-- read lesson_plans (which parents/other teachers can't SELECT directly) --
+-- but it never returns `content`, and the connection check gates every row.
+CREATE OR REPLACE FUNCTION class_day_lessons(p_class_id UUID, p_date DATE)
+RETURNS TABLE (title TEXT, subject_name TEXT)
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT lp.title, s.name
+  FROM lesson_plans lp
+  LEFT JOIN subjects s ON s.id = lp.subject_id
+  WHERE lp.class_id = p_class_id
+    AND lp.date = p_date
+    AND lp.status = 'approved'
+    AND (
+      current_role_name() = 'director'
+      OR EXISTS (SELECT 1 FROM classes c WHERE c.id = p_class_id AND c.teacher_uid = auth.uid())
+      OR EXISTS (
+        SELECT 1 FROM children ch
+        JOIN children_parents cp ON cp.child_id = ch.id
+        WHERE ch.class_id = p_class_id AND cp.parent_id = auth.uid()
+      )
+    )
+  ORDER BY lp.title;
+$$;
+
 -- daily_reports: teachers write; parents read their child's
 CREATE POLICY "daily_reports_select" ON daily_reports FOR SELECT
   USING (
@@ -659,7 +685,8 @@ Teacher-authored plans with a **subject** categorization and a **director approv
 - **Director** (`DirectorLessonsScreen`, Lessons tab): browses **all** plans, filters by teacher + status, opens one to **Approve / Reject** (with an optional note) and can edit/delete any.
 - **Approval states:** `draft → submitted → approved | rejected` (`LessonPlanStatus`). A rejected plan shows the reviewer's note and becomes editable again.
 - **Security (enforced at the DB, not just UI):** two UPDATE policies — a teacher may only set `draft`/`submitted` on their **own** plan (so a teacher **cannot self-approve**); a director may set any status on any plan. See §4 RLS.
-- 🔭 **Later increments (designed separately):** surface the plan's subject on the **dated** schedule day-view (schedule is a recurring weekly pattern, so this needs a dated link + a parent-visibility decision); then a dashboard + notifications for approval events.
+- ✅ **Increment 2 — subject on the schedule:** the schedule **day view** (`DayScheduleScreen`, dated) shows a **"Planned lessons"** section for a class: the **subject + title** of that class's **approved** plans on that date. Because the schedule is a recurring weekly pattern (no dates), this lives on the dated day view, not the weekly agenda. Visibility is via the **`class_day_lessons(class_id, date)` SECURITY DEFINER function** (§4), which returns only title+subject (never `content`) of approved plans, and only to a viewer connected to the class (director, the class's teacher, or a parent of a child in it). So a parent sees *what's planned* without the lesson_plans rows themselves being readable. Returned as `PlannedLesson` (title + subject).
+- 🔭 **Increment 3 (still to design):** a dashboard + notifications for approval events.
 
 ### 6.6 Director / Admin Panel — partially built
 - ✅ View all attendance records, any date (Attendance tab)
@@ -784,7 +811,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
 | 5.5 | Profile pictures shown as avatars everywhere (attendance cards, People lists, parent contacts) | ✅ Done |
 | 6 | Daily Reports (text + images) — teacher write, parent read (§6.4) | ✅ Done |
-| 7 | Lesson Plans — Increment 1: subjects + CRUD + approval workflow (teacher/director) | ✅ Done. Increments 2 (schedule integration) + 3 (dashboard/notifications) still to design |
+| 7 | Lesson Plans — Increment 1 (subjects + CRUD + approval) + Increment 2 (approved subject/title on the schedule day view, via `class_day_lessons`) | ✅ Done. Increment 3 (dashboard/notifications) still to design |
 | 8 | Play Store release prep (see §11) | ⬜ Not started |
 | 9 | Web build + polish | ⬜ Not started |
 
