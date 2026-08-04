@@ -8,14 +8,16 @@ import '../../../core/services/photo_capture_service.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 
-// Teacher writes/edits the daily report for one child on one day (today).
-// One report per child per day: opens the existing one if present, else a
-// blank form. Photos are uploaded to the report bucket as they're added and
-// the text + image paths are persisted on Save.
+// Teacher writes/edits the daily report for one child on one day. One report
+// per child per day: opens the existing one if present, else a blank form.
+// `date` (YYYY-MM-DD) defaults to today; the Reports tab passes the day the
+// teacher selected in its filter. Photos upload as added; text + image paths
+// persist on Save.
 class DailyReportEditScreen extends ConsumerStatefulWidget {
-  const DailyReportEditScreen({super.key, required this.child});
+  const DailyReportEditScreen({super.key, required this.child, this.date});
 
   final Child child;
+  final String? date;
 
   @override
   ConsumerState<DailyReportEditScreen> createState() => _DailyReportEditScreenState();
@@ -23,7 +25,8 @@ class DailyReportEditScreen extends ConsumerStatefulWidget {
 
 class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
   final _textController = TextEditingController();
-  final _today = DateTime.now().toIso8601String().substring(0, 10);
+  late final String _today =
+      widget.date ?? DateTime.now().toIso8601String().substring(0, 10);
 
   late Future<DailyReport?> _existingFuture;
   DailyReport? _existing;
