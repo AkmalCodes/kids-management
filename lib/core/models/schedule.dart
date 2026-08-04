@@ -14,6 +14,9 @@ class ScheduleEntry {
   final String endTime;
   final String label;
   final String color; // bare 6-digit hex, e.g. '26A69A' — see displayColor
+  // Optional approved lesson plan attached to this event (§6.5). Its subject
+  // shows on the event; tapping opens the plan. null = no plan attached.
+  final String? lessonPlanId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -29,6 +32,7 @@ class ScheduleEntry {
     required this.endTime,
     required this.label,
     required this.color,
+    this.lessonPlanId,
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
@@ -45,6 +49,7 @@ class ScheduleEntry {
     endTime: json['end_time'] as String,
     label: json['label'] as String,
     color: json['color'] as String? ?? defaultScheduleColorHex,
+    lessonPlanId: json['lesson_plan_id'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
     createdBy: json['created_by'] as String?,
@@ -60,6 +65,7 @@ class ScheduleEntry {
     'end_time': endTime,
     'label': label,
     'color': color,
+    'lesson_plan_id': lessonPlanId,
     'created_by': createdBy,
     'updated_by': updatedBy,
   };

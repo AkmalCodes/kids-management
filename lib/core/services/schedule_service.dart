@@ -37,6 +37,7 @@ class ScheduleService {
     required String endTime,
     required String label,
     required String color,
+    String? lessonPlanId,
     required String actorUid,
   }) async {
     final row = await _client.from('schedule_entries').insert({
@@ -48,6 +49,7 @@ class ScheduleService {
       'end_time': endTime,
       'label': label,
       'color': color,
+      'lesson_plan_id': lessonPlanId,
       'created_by': actorUid,
       'updated_by': actorUid,
     }).select().single();
@@ -63,6 +65,7 @@ class ScheduleService {
     required String endTime,
     required String label,
     required String color,
+    String? lessonPlanId,
     required String actorUid,
   }) async {
     final row = await _client.from('schedule_entries').update({
@@ -71,6 +74,7 @@ class ScheduleService {
       'end_time': endTime,
       'label': label,
       'color': color,
+      'lesson_plan_id': lessonPlanId,
       'updated_by': actorUid,
     }).eq('id', id).select().single();
     return ScheduleEntry.fromJson(row);

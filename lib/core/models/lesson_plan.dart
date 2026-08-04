@@ -23,7 +23,6 @@ class LessonPlan {
   final String teacherId;
   final String centerId;
   final String title;
-  final String date; // YYYY-MM-DD
   final String content;
   final String? subjectId; // subjects.id (categorization), nullable
   final String? classId; // classes.id this plan is for, nullable
@@ -41,7 +40,6 @@ class LessonPlan {
     required this.teacherId,
     required this.centerId,
     required this.title,
-    required this.date,
     required this.content,
     this.subjectId,
     this.classId,
@@ -60,7 +58,6 @@ class LessonPlan {
     teacherId: json['teacher_id'] as String,
     centerId: json['center_id'] as String,
     title: json['title'] as String,
-    date: json['date'] as String,
     content: json['content'] as String? ?? '',
     subjectId: json['subject_id'] as String?,
     classId: json['class_id'] as String?,

@@ -16,12 +16,17 @@ class DayTimetable extends StatelessWidget {
     required this.entries,
     this.onAddEntry,
     this.onTapEntry,
+    this.subjectForEntry,
     this.newEntryId,
   });
 
   final List<ScheduleEntry> entries;
   final void Function(int hour)? onAddEntry;
   final void Function(ScheduleEntry entry)? onTapEntry;
+
+  // Resolves the subject label to show on an event (from its attached lesson
+  // plan), or null. Optional so non-class schedules pass nothing.
+  final String? Function(ScheduleEntry entry)? subjectForEntry;
 
   // If set, only the block whose id matches fades in — every other block
   // renders immediately, so editing/deleting an entry doesn't cause the
@@ -107,7 +112,11 @@ class DayTimetable extends StatelessWidget {
                           child: Divider(height: 1, color: gridLineColor),
                         ),
                       for (final entry in entries)
-                        _EntryBlock(entry: entry, isNew: entry.id == newEntryId),
+                        _EntryBlock(
+                          entry: entry,
+                          subject: subjectForEntry?.call(entry),
+                          isNew: entry.id == newEntryId,
+                        ),
                     ],
                   ),
                 ),
@@ -121,9 +130,10 @@ class DayTimetable extends StatelessWidget {
 }
 
 class _EntryBlock extends StatelessWidget {
-  const _EntryBlock({required this.entry, this.isNew = false});
+  const _EntryBlock({required this.entry, this.subject, this.isNew = false});
 
   final ScheduleEntry entry;
+  final String? subject;
   final bool isNew;
 
   @override
@@ -155,8 +165,25 @@ class _EntryBlock extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          // Hide the time line on very short blocks where it can't fit.
-          if (height >= 40)
+          // The attached lesson plan's subject, if any (needs a little room).
+          if (subject != null && height >= 40)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.menu_book_outlined, size: 12, color: Colors.white70),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    subject!,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          // Hide the time line on shorter blocks where it can't fit.
+          if (height >= 58)
             Text(
               '${entry.startTime} – ${entry.endTime}',
               style: const TextStyle(fontSize: 11, color: Colors.white70),

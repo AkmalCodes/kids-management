@@ -10,23 +10,32 @@ class ScheduleEntrySaved extends ScheduleEntryFormResult {
     required this.endTime,
     required this.label,
     required this.color,
+    this.lessonPlanId,
   });
   final String startTime;
   final String endTime;
   final String label;
   final String color;
+  // The approved lesson plan attached to this event, or null for none.
+  final String? lessonPlanId;
 }
 
 class ScheduleEntryDeleted extends ScheduleEntryFormResult {}
 
+// One attachable lesson plan, pre-labelled by the caller (title · subject) so
+// this dialog stays decoupled from the subjects list.
+typedef LessonPlanOption = ({String id, String label});
+
 // Pass `existing` to edit/delete a real entry, or omit it to add a new one
 // (optionally pre-filled via initialStartTime/initialEndTime — e.g. the
-// hour the user tapped in DayTimetable). Returns null if the user cancels.
+// hour the user tapped in DayTimetable). `lessonPlans` are the approved plans
+// attachable to this event (empty hides the picker). Returns null on cancel.
 Future<ScheduleEntryFormResult?> showScheduleEntryFormDialog(
   BuildContext context, {
   ScheduleEntry? existing,
   String? initialStartTime,
   String? initialEndTime,
+  List<LessonPlanOption> lessonPlans = const [],
 }) {
   return showDialog<ScheduleEntryFormResult>(
     context: context,
@@ -34,6 +43,7 @@ Future<ScheduleEntryFormResult?> showScheduleEntryFormDialog(
       existing: existing,
       initialStartTime: initialStartTime,
       initialEndTime: initialEndTime,
+      lessonPlans: lessonPlans,
     ),
   );
 }
@@ -43,11 +53,13 @@ class _ScheduleEntryFormDialog extends StatefulWidget {
     this.existing,
     this.initialStartTime,
     this.initialEndTime,
+    this.lessonPlans = const [],
   });
 
   final ScheduleEntry? existing;
   final String? initialStartTime;
   final String? initialEndTime;
+  final List<LessonPlanOption> lessonPlans;
 
   @override
   State<_ScheduleEntryFormDialog> createState() => _ScheduleEntryFormDialogState();
@@ -59,6 +71,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late String _selectedColor;
+  String? _lessonPlanId;
 
   static TimeOfDay _parseTime(String hhmm) {
     final parts = hhmm.split(':');
@@ -83,6 +96,9 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         ? _parseTime(existing.endTime)
         : _parseTime(widget.initialEndTime ?? '09:00');
     _selectedColor = existing?.color ?? defaultScheduleColorHex;
+    // Keep the current attachment only if it's among the offered plans.
+    final planIds = widget.lessonPlans.map((p) => p.id).toSet();
+    _lessonPlanId = planIds.contains(existing?.lessonPlanId) ? existing!.lessonPlanId : null;
   }
 
   @override
@@ -109,6 +125,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         endTime: _formatTime(_endTime),
         label: _labelController.text.trim(),
         color: _selectedColor,
+        lessonPlanId: _lessonPlanId,
       ),
     );
   }
@@ -142,6 +159,22 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               icon: const Icon(Icons.schedule),
               label: Text('End: ${_formatTime(_endTime)}'),
             ),
+            // Attach an approved lesson plan (only shown if any exist for the
+            // class); its subject then appears on the event.
+            if (widget.lessonPlans.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                isExpanded: true,
+                initialValue: _lessonPlanId,
+                decoration: const InputDecoration(labelText: 'Lesson plan'),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('None')),
+                  for (final plan in widget.lessonPlans)
+                    DropdownMenuItem(value: plan.id, child: Text(plan.label)),
+                ],
+                onChanged: (v) => setState(() => _lessonPlanId = v),
+              ),
+            ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 10,

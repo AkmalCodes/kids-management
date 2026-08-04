@@ -36,9 +36,9 @@ class LessonPlanService {
   }
 
   // Teacher creates a plan (always starts as a draft). RLS insert = teacher.
+  // Plans are reusable (no date) -- they're attached to schedule events.
   Future<LessonPlan> createPlan({
     required String title,
-    required String date,
     required String content,
     String? subjectId,
     String? classId,
@@ -48,7 +48,6 @@ class LessonPlanService {
   }) async {
     final row = await _client.from('lesson_plans').insert({
       'title': title,
-      'date': date,
       'content': content,
       'subject_id': subjectId,
       'class_id': classId,
@@ -61,12 +60,11 @@ class LessonPlanService {
     return LessonPlan.fromJson(row);
   }
 
-  // Edit the content fields (title/date/subject/class/content). Leaves the
-  // status untouched -- transitions go through submit()/review().
+  // Edit the content fields (title/subject/class/content). Leaves the status
+  // untouched -- transitions go through submit()/review().
   Future<LessonPlan> updatePlan({
     required String id,
     required String title,
-    required String date,
     required String content,
     String? subjectId,
     String? classId,
@@ -74,7 +72,6 @@ class LessonPlanService {
   }) async {
     final row = await _client.from('lesson_plans').update({
       'title': title,
-      'date': date,
       'content': content,
       'subject_id': subjectId,
       'class_id': classId,
@@ -116,35 +113,31 @@ class LessonPlanService {
     await _client.from('lesson_plans').delete().eq('id', id);
   }
 
-  // What's planned for a class on a given date, for the schedule day view
-  // (§6.5 increment 2). Goes through the `class_day_lessons` SECURITY DEFINER
-  // function, which returns only the title + subject (never the content) of
-  // APPROVED plans, and only to a viewer connected to that class (director,
-  // the class's teacher, or a parent of a child in it) -- so a parent can see
-  // the subject on the schedule without the plans themselves being readable.
-  Future<List<PlannedLesson>> fetchApprovedLessonsForClassDay({
-    required String classId,
-    required String date, // YYYY-MM-DD
-  }) async {
-    final rows = await _client.rpc('class_day_lessons', params: {
-      'p_class_id': classId,
-      'p_date': date,
-    });
+  // The approved plans for a class, for the schedule event's lesson-plan
+  // picker and for resolving the subject shown on an event (§6.5 increment
+  // 2). RLS lets the class's teacher, a parent of a child in the class, and
+  // the director read approved plans -- so parents can open the attached
+  // plan from the schedule.
+  Future<List<LessonPlan>> fetchApprovedForClass(String classId) async {
+    final rows = await _client
+        .from('lesson_plans')
+        .select()
+        .eq('class_id', classId)
+        .eq('status', LessonPlanStatus.approved.db)
+        .order('title');
     return (rows as List)
-        .map((r) => PlannedLesson(
-              title: (r as Map)['title'] as String,
-              subject: r['subject_name'] as String?,
-            ))
+        .map((row) => LessonPlan.fromJson(row as Map<String, dynamic>))
         .toList();
   }
-}
 
-// A read-only "what's planned" row surfaced on the schedule day view -- just
-// the lesson's title + subject, no content.
-class PlannedLesson {
-  const PlannedLesson({required this.title, required this.subject});
-  final String title;
-  final String? subject;
+  // One plan by id (for opening an attached plan). Returns null if the caller
+  // can't see it under RLS.
+  Future<LessonPlan?> getPlan(String id) async {
+    final rows = await _client.from('lesson_plans').select().eq('id', id).limit(1);
+    final list = rows as List;
+    if (list.isEmpty) return null;
+    return LessonPlan.fromJson(list.first as Map<String, dynamic>);
+  }
 }
 
 final lessonPlanServiceProvider = Provider<LessonPlanService>(

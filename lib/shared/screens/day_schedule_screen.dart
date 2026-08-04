@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/models/lesson_plan.dart';
 import '../../core/models/schedule.dart';
 import '../../core/services/lesson_plan_service.dart';
 import '../../core/services/schedule_service.dart';
+import '../../core/services/subject_service.dart';
+import '../../features/shared_lessons/lesson_plan_view_screen.dart';
 import '../widgets/day_timetable.dart';
 import '../widgets/schedule_entry_form_dialog.dart';
 
@@ -47,22 +50,55 @@ class DayScheduleScreen extends ConsumerStatefulWidget {
 class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
   late List<ScheduleEntry> _entries;
   String? _newEntryId;
-  // Only for a class's schedule (§6.5 increment 2): the approved lesson
-  // subjects/titles planned for this class on this date. Null for
-  // teacher/child schedules, which have no lesson plans.
-  Future<List<PlannedLesson>>? _plannedFuture;
+  // For a class schedule (§6.5): the class's approved lesson plans, used to
+  // (a) offer them in the event dialog's picker, (b) show the attached plan's
+  // subject on an event, (c) open the plan when an event is tapped.
+  final Map<String, LessonPlan> _planById = {};
+  final Map<String, String?> _subjectByPlanId = {}; // plan id -> subject name
+  List<LessonPlanOption> _planOptions = [];
 
   @override
   void initState() {
     super.initState();
     _entries = widget.entries;
     if (widget.type == 'class' && widget.refId != null) {
-      _plannedFuture = ref.read(lessonPlanServiceProvider).fetchApprovedLessonsForClassDay(
-            classId: widget.refId!,
-            date: widget.date.toIso8601String().substring(0, 10),
-          );
+      _loadPlans(widget.refId!);
     }
   }
+
+  Future<void> _loadPlans(String classId) async {
+    try {
+      final plans = await ref.read(lessonPlanServiceProvider).fetchApprovedForClass(classId);
+      final subjects = await ref.read(subjectServiceProvider).fetchAll();
+      final subjectNameById = {for (final s in subjects) s.id: s.name};
+      if (!mounted) return;
+      setState(() {
+        _planById
+          ..clear()
+          ..addEntries(plans.map((p) => MapEntry(p.id, p)));
+        _subjectByPlanId
+          ..clear()
+          ..addEntries(plans.map(
+              (p) => MapEntry(p.id, p.subjectId == null ? null : subjectNameById[p.subjectId])));
+        _planOptions = [
+          for (final p in plans)
+            (
+              id: p.id,
+              label: _subjectByPlanId[p.id] == null
+                  ? p.title
+                  : '${p.title} · ${_subjectByPlanId[p.id]}',
+            ),
+        ];
+      });
+    } catch (_) {
+      // Non-fatal: the schedule still works without the plan picker.
+    }
+  }
+
+  // The subject to show on an event (null if it has no attached plan / the
+  // plan has no subject).
+  String? _subjectForEntry(ScheduleEntry entry) =>
+      entry.lessonPlanId == null ? null : _subjectByPlanId[entry.lessonPlanId];
 
   String get _dayName => DayScheduleScreen._weekdayNames[widget.date.weekday - 1];
 
@@ -100,6 +136,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
       context,
       initialStartTime: startTime,
       initialEndTime: endTime,
+      lessonPlans: _planOptions,
     );
     if (result is! ScheduleEntrySaved) return;
 
@@ -112,6 +149,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: result.endTime,
           label: result.label,
           color: result.color,
+          lessonPlanId: result.lessonPlanId,
           actorUid: user.id,
         );
     if (!mounted) return;
@@ -123,23 +161,58 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     _invalidateAgendaCache();
   }
 
+  // Opens the lesson plan attached to an event (read-only), if any.
+  Future<void> _openPlan(ScheduleEntry entry) async {
+    final id = entry.lessonPlanId;
+    if (id == null) return;
+    // Prefer the already-loaded plan; fall back to a fetch (e.g. it isn't in
+    // the approved set we cached).
+    final plan = _planById[id] ?? await ref.read(lessonPlanServiceProvider).getPlan(id);
+    if (plan == null || !mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LessonPlanViewScreen(
+          plan: plan,
+          subjectName: _subjectByPlanId[id],
+        ),
+      ),
+    );
+  }
+
   Future<void> _tapEntry(ScheduleEntry entry) async {
     final user = await ref.read(currentUserProvider.future);
     if (user == null || !mounted) return;
 
-    if (!entry.canBeEditedBy(uid: user.id, role: user.role)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Only the creator or a director can edit this event.')),
-      );
+    // Read-only viewers (or anyone who can't edit this event) instead open
+    // the attached lesson plan, if there is one.
+    final canEdit = widget.editable && entry.canBeEditedBy(uid: user.id, role: user.role);
+    if (!canEdit) {
+      if (entry.lessonPlanId != null) {
+        await _openPlan(entry);
+      } else if (widget.editable) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Only the creator or a director can edit this event.')),
+        );
+      }
       return;
     }
 
-    final result = await showScheduleEntryFormDialog(context, existing: entry);
+    final result = await showScheduleEntryFormDialog(
+      context,
+      existing: entry,
+      lessonPlans: _planOptions,
+    );
     if (result == null) return;
 
     final service = ref.read(scheduleServiceProvider);
     switch (result) {
-      case ScheduleEntrySaved(:final startTime, :final endTime, :final label, :final color):
+      case ScheduleEntrySaved(
+          :final startTime,
+          :final endTime,
+          :final label,
+          :final color,
+          :final lessonPlanId
+        ):
         final updated = await service.updateEntry(
           id: entry.id,
           day: entry.day,
@@ -147,6 +220,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: endTime,
           label: label,
           color: color,
+          lessonPlanId: lessonPlanId,
           actorUid: user.id,
         );
         if (!mounted) return;
@@ -176,27 +250,19 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Class schedules also show the day's approved lesson plans.
-            if (_plannedFuture != null) _PlannedLessons(future: _plannedFuture!),
-            if (showEmptyMessage)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: Text('No events on this day.')),
-              )
-            else
-              DayTimetable(
+      body: showEmptyMessage
+          ? const Center(child: Text('No events on this day.'))
+          : SingleChildScrollView(
+              // onTapEntry is always wired: an editable owner edits; everyone
+              // else opens the event's attached lesson plan (if any).
+              child: DayTimetable(
                 entries: _entries,
                 onAddEntry: widget.editable ? _addEntry : null,
-                onTapEntry: widget.editable ? _tapEntry : null,
+                onTapEntry: _tapEntry,
+                subjectForEntry: _subjectForEntry,
                 newEntryId: _newEntryId,
               ),
-          ],
-        ),
-      ),
+            ),
       // Tapping the empty grid also adds an event, but that gesture has no
       // visual hint — this button is the discoverable way to do it.
       floatingActionButton: widget.editable
@@ -206,45 +272,6 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
               child: const Icon(Icons.add),
             )
           : null,
-    );
-  }
-}
-
-// The approved lesson plans planned for this class on this date. Supplementary
-// to the timetable, so it stays quiet: nothing while loading, on error, or
-// when there's nothing planned.
-class _PlannedLessons extends StatelessWidget {
-  const _PlannedLessons({required this.future});
-
-  final Future<List<PlannedLesson>> future;
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<PlannedLesson>>(
-      future: future,
-      builder: (context, snapshot) {
-        final lessons = snapshot.data;
-        if (lessons == null || lessons.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Planned lessons', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 4),
-              for (final lesson in lessons)
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    leading: const Icon(Icons.menu_book_outlined),
-                    title: Text(lesson.title),
-                    subtitle: lesson.subject == null ? null : Text(lesson.subject!),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

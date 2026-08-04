@@ -32,7 +32,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  late String _date; // YYYY-MM-DD
   late String? _subjectId;
   late String? _classId;
   late LessonPlanStatus _status;
@@ -56,7 +55,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     final p = widget.plan;
     _titleController = TextEditingController(text: p?.title ?? '');
     _contentController = TextEditingController(text: p?.content ?? '');
-    _date = p?.date ?? DateTime.now().toIso8601String().substring(0, 10);
     _subjectId = p?.subjectId;
     _classId = p?.classId;
     _status = p?.status ?? LessonPlanStatus.draft;
@@ -69,25 +67,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
-  }
-
-  String _formatDate(String iso) {
-    final d = DateTime.tryParse(iso);
-    if (d == null) return iso;
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  }
-
-  Future<void> _pickDate() async {
-    final current = DateTime.tryParse(_date) ?? DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(DateTime.now().year - 1),
-      lastDate: DateTime(DateTime.now().year + 2),
-    );
-    if (picked != null) {
-      setState(() => _date = picked.toIso8601String().substring(0, 10));
-    }
   }
 
   // Runs an action with the saving spinner + standard error snackbar, and
@@ -116,7 +95,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
         if (user.centerId == null) return;
         await service.createPlan(
           title: _titleController.text.trim(),
-          date: _date,
           content: _contentController.text.trim(),
           subjectId: _subjectId,
           classId: _classId,
@@ -128,7 +106,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
         await service.updatePlan(
           id: widget.plan!.id,
           title: _titleController.text.trim(),
-          date: _date,
           content: _contentController.text.trim(),
           subjectId: _subjectId,
           classId: _classId,
@@ -149,7 +126,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
       await service.updatePlan(
         id: widget.plan!.id,
         title: _titleController.text.trim(),
-        date: _date,
         content: _contentController.text.trim(),
         subjectId: _subjectId,
         classId: _classId,
@@ -269,18 +245,6 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
               editing: editable,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a title' : null,
             ),
-            // Date: picker when editable, plain row otherwise.
-            if (editable)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _pickDate,
-                  icon: const Icon(Icons.event_outlined),
-                  label: Text('Date: ${_formatDate(_date)}'),
-                ),
-              )
-            else
-              _readOnlyRow('Date', _formatDate(_date)),
             // Subject: dropdown when editable, resolved name otherwise.
             FutureBuilder<List<Subject>>(
               future: _subjectsFuture,

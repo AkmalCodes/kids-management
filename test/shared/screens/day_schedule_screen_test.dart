@@ -4,15 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/auth/auth_service.dart';
 import 'package:test_flutter/core/models/app_user.dart';
+import 'package:test_flutter/core/models/lesson_plan.dart';
 import 'package:test_flutter/core/models/schedule.dart';
+import 'package:test_flutter/core/models/subject.dart';
 import 'package:test_flutter/core/services/lesson_plan_service.dart';
 import 'package:test_flutter/core/services/schedule_service.dart';
+import 'package:test_flutter/core/services/subject_service.dart';
+import 'package:test_flutter/features/shared_lessons/lesson_plan_view_screen.dart';
 import 'package:test_flutter/shared/screens/day_schedule_screen.dart';
 import 'package:test_flutter/shared/widgets/day_timetable.dart';
 
 class MockScheduleService extends Mock implements ScheduleService {}
 
 class MockLessonPlanService extends Mock implements LessonPlanService {}
+
+class MockSubjectService extends Mock implements SubjectService {}
 
 AppUser _teacher(String id) => AppUser(
   id: id,
@@ -108,13 +114,54 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('a class day view shows the approved planned lessons', (tester) async {
+  testWidgets('a class event with an attached plan shows its subject and opens it',
+      (tester) async {
     final mockPlans = MockLessonPlanService();
-    when(() => mockPlans.fetchApprovedLessonsForClassDay(
-          classId: any(named: 'classId'),
-          date: any(named: 'date'),
-        )).thenAnswer(
-      (_) async => const [PlannedLesson(title: 'Watercolours', subject: 'Art')],
+    final mockSubjects = MockSubjectService();
+    final plan = LessonPlan(
+      id: 'lp-1',
+      teacherId: 'teacher-1',
+      centerId: 'center-1',
+      title: 'Watercolours',
+      content: 'Paint a rainbow',
+      subjectId: 'sub-1',
+      classId: 'class-1',
+      status: LessonPlanStatus.approved,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+    when(() => mockPlans.fetchApprovedForClass(any())).thenAnswer((_) async => [plan]);
+    when(() => mockSubjects.fetchAll()).thenAnswer(
+      (_) async => [
+        Subject(
+          id: 'sub-1',
+          centerId: 'center-1',
+          name: 'Art',
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+          createdBy: 'director-1',
+          updatedBy: 'director-1',
+        ),
+      ],
+    );
+
+    final entry = ScheduleEntry(
+      id: 'ev-1',
+      type: 'class',
+      refId: 'class-1',
+      centerId: 'center-1',
+      day: 'Monday',
+      startTime: '08:00',
+      endTime: '09:00',
+      label: 'Story time',
+      color: '26A69A',
+      lessonPlanId: 'lp-1',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
     );
 
     await tester.pumpWidget(
@@ -123,11 +170,12 @@ void main() {
           currentUserProvider.overrideWith((ref) => Stream.value(_teacher('parent-1'))),
           scheduleServiceProvider.overrideWithValue(mockService),
           lessonPlanServiceProvider.overrideWithValue(mockPlans),
+          subjectServiceProvider.overrideWithValue(mockSubjects),
         ],
         child: MaterialApp(
           home: DayScheduleScreen(
             date: _monday,
-            entries: const [],
+            entries: [entry],
             type: 'class',
             refId: 'class-1',
             centerId: 'center-1',
@@ -137,14 +185,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Planned lessons'), findsOneWidget);
-    expect(find.text('Watercolours'), findsOneWidget);
+    // The event shows the attached plan's subject.
     expect(find.text('Art'), findsOneWidget);
-    // Class id + date are passed through to the RPC-backed lookup.
-    verify(() => mockPlans.fetchApprovedLessonsForClassDay(
-          classId: 'class-1',
-          date: '2026-07-13',
-        )).called(1);
+    // Tapping the event (read-only viewer) opens the plan read-only.
+    await tester.tap(find.byKey(const Key('entry-block-ev-1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(LessonPlanViewScreen), findsOneWidget);
+    expect(find.text('Paint a rainbow'), findsOneWidget);
   });
 
   testWidgets(

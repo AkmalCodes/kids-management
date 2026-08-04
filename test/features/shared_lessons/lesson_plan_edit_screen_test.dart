@@ -33,7 +33,6 @@ LessonPlan _plan(LessonPlanStatus status) => LessonPlan(
   teacherId: 'teacher-1',
   centerId: 'center-1',
   title: 'Colours',
-  date: '2026-08-03',
   content: 'Watercolours',
   status: status,
   createdAt: DateTime(2026),
@@ -75,7 +74,6 @@ void main() {
   testWidgets('teacher creating a plan calls createPlan', (tester) async {
     when(() => mockPlans.createPlan(
           title: any(named: 'title'),
-          date: any(named: 'date'),
           content: any(named: 'content'),
           subjectId: any(named: 'subjectId'),
           classId: any(named: 'classId'),
@@ -94,7 +92,6 @@ void main() {
 
     verify(() => mockPlans.createPlan(
           title: 'Numbers',
-          date: any(named: 'date'),
           content: any(named: 'content'),
           subjectId: null,
           classId: null,
@@ -108,7 +105,6 @@ void main() {
     when(() => mockPlans.updatePlan(
           id: any(named: 'id'),
           title: any(named: 'title'),
-          date: any(named: 'date'),
           content: any(named: 'content'),
           subjectId: any(named: 'subjectId'),
           classId: any(named: 'classId'),

@@ -34,7 +34,6 @@ LessonPlan _plan(String id, String title, LessonPlanStatus status) => LessonPlan
   teacherId: 'teacher-1',
   centerId: 'center-1',
   title: title,
-  date: '2026-08-03',
   content: '',
   status: status,
   createdAt: DateTime(2026),
