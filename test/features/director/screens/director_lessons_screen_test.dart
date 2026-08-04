@@ -12,6 +12,7 @@ import 'package:test_flutter/core/services/teacher_service.dart';
 import 'package:test_flutter/features/director/screens/director_lessons_screen.dart';
 import 'package:test_flutter/features/director/screens/manage_subjects_screen.dart';
 import 'package:test_flutter/features/shared_lessons/lesson_plan_edit_screen.dart';
+import 'package:test_flutter/shared/widgets/lesson_plan_status_chip.dart';
 
 class MockLessonPlanService extends Mock implements LessonPlanService {}
 
@@ -105,7 +106,12 @@ void main() {
 
     expect(find.text('Colours'), findsOneWidget);
     expect(find.textContaining('Ms. Smith'), findsOneWidget);
-    expect(find.text('Awaiting approval'), findsOneWidget);
+    // The row's status chip (the filter dropdown also shows this label now).
+    expect(
+      find.descendant(
+          of: find.byType(LessonPlanStatusChip), matching: find.text('Awaiting approval')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tapping a plan opens the editor as director', (tester) async {

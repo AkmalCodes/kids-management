@@ -77,6 +77,29 @@ void main() {
     expect(find.text('31'), findsOneWidget);
   });
 
+  testWidgets('next/prev move the week; month view moves by month', (tester) async {
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: const [], anchorDate: _anchor)),
+    );
+
+    // Week view: next advances Jul 13–19 -> Jul 20–26.
+    await tester.tap(find.byTooltip('Next week'));
+    await tester.pumpAndSettle();
+    expect(find.text('20'), findsOneWidget); // Monday of the next week
+
+    // Back to the original week.
+    await tester.tap(find.byTooltip('Previous week'));
+    await tester.pumpAndSettle();
+    expect(find.text('13'), findsOneWidget);
+
+    // Month view: next month -> August 2026.
+    await tester.tap(find.byTooltip('Month view'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Next month'));
+    await tester.pumpAndSettle();
+    expect(find.text('August 2026'), findsOneWidget);
+  });
+
   testWidgets('tapping a day row opens that day timetable page', (tester) async {
     await tester.pumpWidget(
       _wrap(ScheduleAgendaView(entries: _entries, anchorDate: _anchor)),

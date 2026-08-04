@@ -33,7 +33,9 @@ class _LessonsData {
 class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
   late Future<_LessonsData> _future;
   String? _teacherFilter; // null = all teachers
-  LessonPlanStatus? _statusFilter; // null = all statuses
+  // Directors land on the review queue (plans awaiting approval); they can
+  // switch the filter to see approved/rejected history.
+  LessonPlanStatus? _statusFilter = LessonPlanStatus.submitted;
 
   @override
   void initState() {

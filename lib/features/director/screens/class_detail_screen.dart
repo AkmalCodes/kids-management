@@ -197,6 +197,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
                 // loads / if they aren't in the fetched set.
                 final ids = teachers.map((t) => t.id).toSet();
                 return DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue:
                       (_teacherId != null && ids.contains(_teacherId)) ? _teacherId : null,
                   decoration: const InputDecoration(labelText: 'Teacher'),

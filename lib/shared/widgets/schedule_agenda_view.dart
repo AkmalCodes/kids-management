@@ -47,6 +47,15 @@ class ScheduleAgendaView extends StatefulWidget {
 
 class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
   bool _monthView = false;
+  // The period being shown. Starts at the injected/real "today" and the
+  // prev/next arrows move it by a week (week view) or a month (month view).
+  late DateTime _anchor;
+
+  @override
+  void initState() {
+    super.initState();
+    _anchor = widget.anchorDate ?? DateTime.now();
+  }
 
   static const _weekdayFull = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -61,7 +70,17 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
-  DateTime get _anchor => widget.anchorDate ?? DateTime.now();
+  // Move the shown period back/forward: a week in week view, a month in
+  // month view. Month view pins to the 1st so month length never truncates.
+  void _shift(int direction) {
+    setState(() {
+      if (_monthView) {
+        _anchor = DateTime(_anchor.year, _anchor.month + direction, 1);
+      } else {
+        _anchor = _anchor.add(Duration(days: 7 * direction));
+      }
+    });
+  }
 
   List<DateTime> get _visibleDates {
     final anchor = _anchor;
@@ -122,14 +141,25 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
       child: Row(
         children: [
+          IconButton(
+            tooltip: _monthView ? 'Previous month' : 'Previous week',
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () => _shift(-1),
+          ),
           Expanded(
             child: Text(
               _headerLabel,
+              textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
+          ),
+          IconButton(
+            tooltip: _monthView ? 'Next month' : 'Next week',
+            icon: const Icon(Icons.chevron_right),
+            onPressed: () => _shift(1),
           ),
           IconButton(
             tooltip: _monthView ? 'Week view' : 'Month view',
