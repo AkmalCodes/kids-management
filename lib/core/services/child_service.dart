@@ -99,6 +99,13 @@ class ChildService {
   // section. Done as two queries because children_parents.parent_id points
   // at auth.users (not profiles), so Postgrest can't embed profiles across
   // it directly -- fetch the ids, then the profile rows.
+  // Director-only delete. Goes through the `delete_child` SECURITY DEFINER
+  // function, which removes the child's dependent rows (parent links,
+  // attendance, daily reports, schedule entries) before the child row, and
+  // checks the caller is a director. Storage photos are left orphaned in
+  // their buckets (cleanup deferred).
+  Future<void> deleteChild(String id) => _client.rpc('delete_child', params: {'p_child_id': id});
+
   Future<List<AppUser>> fetchParentsForChild(String childId) async {
     final links = await _client
         .from('children_parents')

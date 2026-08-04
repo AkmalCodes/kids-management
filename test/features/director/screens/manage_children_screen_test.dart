@@ -104,6 +104,24 @@ void main() {
     expect(find.text('Class A'), findsOneWidget);
   });
 
+  testWidgets('long-pressing a child then Delete calls deleteChild', (tester) async {
+    when(() => mockChildren.fetchAll())
+        .thenAnswer((_) async => [_child('child-1', 'Alice')]);
+    when(() => mockChildren.deleteChild(any())).thenAnswer((_) async {});
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('Alice'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockChildren.deleteChild('child-1')).called(1);
+  });
+
   testWidgets('inviting a parent for an existing child calls the service', (tester) async {
     when(() => mockChildren.fetchAll()).thenAnswer((_) async => [_child('child-1', 'Alice')]);
     when(() => mockUserManagement.inviteParent(

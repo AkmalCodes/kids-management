@@ -5,6 +5,7 @@ import '../../../core/models/lesson_plan.dart';
 import '../../../core/services/lesson_plan_service.dart';
 import '../../../core/services/subject_service.dart';
 import '../../../shared/widgets/lesson_plan_status_chip.dart';
+import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
 
 // Teacher's Lessons tab: their own lesson plans (newest first) with the
@@ -60,6 +61,19 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
     if (changed == true && mounted) _refresh();
   }
 
+  Future<void> _delete(LessonPlan plan) async {
+    if (!await confirmDelete(context, message: 'Delete lesson plan "${plan.title}"?')) return;
+    try {
+      await ref.read(lessonPlanServiceProvider).deletePlan(plan.id);
+      if (mounted) _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -99,6 +113,12 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
                   subtitle: subject == null ? null : Text(subject),
                   trailing: LessonPlanStatusChip(status: plan.status),
                   onTap: () => _open(plan: plan),
+                  onLongPress: () => showRowActionsSheet(
+                    context,
+                    title: plan.title,
+                    onEdit: () => _open(plan: plan),
+                    onDelete: () => _delete(plan),
+                  ),
                 ),
               );
             },

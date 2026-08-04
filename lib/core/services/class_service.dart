@@ -96,6 +96,12 @@ class ClassService {
 
   Future<String> getSignedClassAvatarUrl(String path) =>
       _client.storage.from('class-avatars').createSignedUrl(path, 3600);
+
+  // Director-only delete. Goes through the `delete_class` SECURITY DEFINER
+  // function, which un-assigns the class from its children + lesson plans and
+  // clears its schedule entries before removing the row -- so foreign keys
+  // don't block it. The function itself checks the caller is a director.
+  Future<void> deleteClass(String id) => _client.rpc('delete_class', params: {'p_class_id': id});
 }
 
 final classServiceProvider = Provider<ClassService>(

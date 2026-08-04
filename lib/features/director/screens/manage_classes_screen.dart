@@ -5,6 +5,7 @@ import '../../../core/models/class_group.dart';
 import '../../../core/services/class_service.dart';
 import '../../../core/services/teacher_service.dart';
 import '../../../shared/widgets/class_form_dialog.dart';
+import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'class_detail_screen.dart';
 
@@ -81,6 +82,24 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
     }
   }
 
+  Future<void> _delete(ClassGroup classGroup) async {
+    if (!await confirmDelete(context,
+        message: 'Delete "${classGroup.name}"? Children in it become unassigned.')) {
+      return;
+    }
+    try {
+      await ref.read(classServiceProvider).deleteClass(classGroup.id);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,6 +132,12 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
                 subtitle: Text(teacherName),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _edit(classGroup),
+                onLongPress: () => showRowActionsSheet(
+                  context,
+                  title: classGroup.name,
+                  onEdit: () => _edit(classGroup),
+                  onDelete: () => _delete(classGroup),
+                ),
               );
             },
           );

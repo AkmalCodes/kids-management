@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/models/subject.dart';
 import '../../../core/services/subject_service.dart';
+import '../../../shared/widgets/row_actions_sheet.dart';
 
 // Director-managed list of lesson subjects (Art, Numeracy, …). Teachers tag
 // lesson plans with these, and they surface on the schedule (later). Create,
@@ -74,6 +75,19 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
     }
   }
 
+  Future<void> _deleteSubject(Subject subject) async {
+    if (!await confirmDelete(context, message: 'Delete subject "${subject.name}"?')) return;
+    try {
+      await ref.read(subjectServiceProvider).deleteSubject(subject.id);
+      if (mounted) _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+      }
+    }
+  }
+
   // Returns (name: entered) on save, (delete: true) on delete, or null on cancel.
   Future<({String? name, bool delete})?> _showSubjectDialog({
     required String title,
@@ -118,6 +132,12 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
                 title: Text(subject.name),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _edit(subject),
+                onLongPress: () => showRowActionsSheet(
+                  context,
+                  title: subject.name,
+                  onEdit: () => _edit(subject),
+                  onDelete: () => _deleteSubject(subject),
+                ),
               );
             },
           );

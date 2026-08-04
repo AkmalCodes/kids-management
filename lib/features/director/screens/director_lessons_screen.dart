@@ -5,6 +5,7 @@ import '../../../core/services/lesson_plan_service.dart';
 import '../../../core/services/subject_service.dart';
 import '../../../core/services/teacher_service.dart';
 import '../../../shared/widgets/lesson_plan_status_chip.dart';
+import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
 import 'manage_subjects_screen.dart';
 
@@ -70,6 +71,19 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
     if (changed == true && mounted) _refresh();
   }
 
+  Future<void> _delete(LessonPlan plan) async {
+    if (!await confirmDelete(context, message: 'Delete lesson plan "${plan.title}"?')) return;
+    try {
+      await ref.read(lessonPlanServiceProvider).deletePlan(plan.id);
+      if (mounted) _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+      }
+    }
+  }
+
   Future<void> _openSubjects() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ManageSubjectsScreen()),
@@ -133,6 +147,12 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
                             ),
                             trailing: LessonPlanStatusChip(status: plan.status),
                             onTap: () => _open(plan),
+                            onLongPress: () => showRowActionsSheet(
+                              context,
+                              title: plan.title,
+                              onEdit: () => _open(plan),
+                              onDelete: () => _delete(plan),
+                            ),
                           ),
                         );
                       },

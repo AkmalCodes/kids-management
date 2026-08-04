@@ -4,6 +4,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/user_management_service.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
+import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'child_detail_screen.dart';
 import 'enroll_child_screen.dart';
@@ -64,6 +65,24 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
     }
   }
 
+  Future<void> _delete(Child child) async {
+    if (!await confirmDelete(context,
+        message: 'Delete ${child.name}? This also removes their attendance and reports.')) {
+      return;
+    }
+    try {
+      await ref.read(childServiceProvider).deleteChild(child.id);
+      if (!mounted) return;
+      setState(() {
+        _future = _load();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not delete: $e')));
+    }
+  }
+
   Future<void> _openDetail(Child child) async {
     final updated = await Navigator.of(context).push<Child>(
       MaterialPageRoute(builder: (_) => ChildDetailScreen(child: child)),
@@ -104,6 +123,12 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
                 title: Text(child.name),
                 subtitle: Text(child.className.isEmpty ? 'No class on file' : child.className),
                 onTap: () => _openDetail(child),
+                onLongPress: () => showRowActionsSheet(
+                  context,
+                  title: child.name,
+                  onEdit: () => _openDetail(child),
+                  onDelete: () => _delete(child),
+                ),
                 trailing: IconButton(
                   icon: const Icon(Icons.person_add_alt_1_outlined),
                   tooltip: 'Invite a parent',

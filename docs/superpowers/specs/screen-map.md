@@ -58,7 +58,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | Lessons | **TeacherLessonPlansScreen** | `features/teacher/screens/teacher_lesson_plans_screen.dart` | The teacher's own lesson plans (date · subject · status chip); **+** → LessonPlanEditScreen; tap → edit/submit/delete. |
 | (from a plan / +) | **LessonPlanEditScreen** | `features/shared_lessons/lesson_plan_edit_screen.dart` | Title, subject, class, content (reusable — no date). Teacher: edit while draft/rejected, **Submit for approval**, delete. Director: edit + **Approve/Reject** any. |
 | (from a schedule event) | **LessonPlanViewScreen** | `features/shared_lessons/lesson_plan_view_screen.dart` | Read-only plan (subject/title/content) opened by tapping a schedule event that has an approved plan attached. |
-| Reports | **TeacherReportsScreen** | `features/teacher/screens/teacher_reports_screen.dart` | The teacher's class as a list; tap a child → DailyReportEditScreen. |
+| Reports | **TeacherReportsScreen** | `features/teacher/screens/teacher_reports_screen.dart` | The teacher's class as carded rows, with a **day selector** (‹ › + date picker) and a collapsible **student-name search**; tap a child → DailyReportEditScreen for the selected day. |
 | (from a child row) | **DailyReportEditScreen** | `features/teacher/screens/daily_report_edit_screen.dart` | Write/edit today's daily report for one child: free text + photos (add/remove). Opens the existing report or a blank form. |
 | Profile | **ProfileScreen** | see *Profile* below | |
 
@@ -70,8 +70,8 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 |---|---|---|---|
 | People | **PeopleScreen** | `features/director/screens/people_screen.dart` | Wrapper with **Teachers \| Children \| Classes** sub-tabs. |
 | People › Teachers | **ManageTeachersScreen** | `features/director/screens/manage_teachers_screen.dart` | Teacher list; **+** invites a teacher; tap a row → PersonDetailScreen. |
-| People › Children | **ManageChildrenScreen** | `features/director/screens/manage_children_screen.dart` | Child list; **+** opens EnrollChildScreen; per-row icon invites a parent; tap a row → ChildDetailScreen. |
-| People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (avatar + assigned teacher); **+** creates a class (dialog); tap a row → ClassDetailScreen. |
+| People › Children | **ManageChildrenScreen** | `features/director/screens/manage_children_screen.dart` | Child list; **+** opens EnrollChildScreen; per-row icon invites a parent; tap a row → ChildDetailScreen; **long-press → Edit/Delete**. |
+| People › Classes | **ManageClassesScreen** | `features/director/screens/manage_classes_screen.dart` | Class list (avatar + assigned teacher); **+** creates a class (dialog); tap a row → ClassDetailScreen; **long-press → Edit/Delete**. |
 | (from a class row) | **ClassDetailScreen** | `features/director/screens/class_detail_screen.dart` | Opens read-only (AppBar ✏️ toggles edit); photo (class-avatars, tap to zoom), name, teacher. |
 | (from Children +) | **EnrollChildScreen** | `features/director/screens/enroll_child_screen.dart` | Create a child record + invite its first parent in one form. |
 | (from a child row) | **ChildDetailScreen** | `features/director/screens/child_detail_screen.dart` | Opens read-only (AppBar ✏️ toggles edit): photo (tap to zoom), name, DOB (age shown), **class** (dropdown → class_id, drives the parent schedule), class teacher, allergies, notes + a **Parents** section (name + tap-to-copy email). |

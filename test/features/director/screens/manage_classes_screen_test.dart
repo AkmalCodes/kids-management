@@ -162,4 +162,22 @@ void main() {
           actorUid: 'director-1',
         )).called(1);
   });
+
+  testWidgets('long-pressing a class then Delete calls deleteClass', (tester) async {
+    when(() => mockClasses.fetchAll())
+        .thenAnswer((_) async => [_class('class-1', 'Sunflowers')]);
+    when(() => mockClasses.deleteClass(any())).thenAnswer((_) async {});
+
+    await pumpScreen(tester);
+
+    await tester.longPress(find.text('Sunflowers'));
+    await tester.pumpAndSettle();
+    // Bottom sheet -> Delete -> confirm dialog -> Delete.
+    await tester.tap(find.widgetWithText(ListTile, 'Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockClasses.deleteClass('class-1')).called(1);
+  });
 }

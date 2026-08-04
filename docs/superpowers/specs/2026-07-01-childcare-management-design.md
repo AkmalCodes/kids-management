@@ -495,6 +495,33 @@ CREATE POLICY "lesson_plans_update_director" ON lesson_plans FOR UPDATE
 CREATE POLICY "lesson_plans_delete" ON lesson_plans FOR DELETE
   USING (current_role_name() = 'director' OR teacher_id = auth.uid());
 
+-- Director-only cascading deletes done as SECURITY DEFINER functions (so they
+-- can clear dependent rows across tables without a delete policy on each),
+-- each gated on the caller being a director. Used by the long-press Delete on
+-- the People > Classes / Children lists.
+CREATE OR REPLACE FUNCTION delete_class(p_class_id UUID) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF current_role_name() <> 'director' THEN RAISE EXCEPTION 'not authorized'; END IF;
+  UPDATE children SET class_id = NULL WHERE class_id = p_class_id;        -- un-assign children
+  UPDATE lesson_plans SET class_id = NULL WHERE class_id = p_class_id;    -- detach plans
+  DELETE FROM schedule_entries WHERE type = 'class' AND ref_id = p_class_id;  -- its schedule
+  DELETE FROM classes WHERE id = p_class_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION delete_child(p_child_id UUID) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF current_role_name() <> 'director' THEN RAISE EXCEPTION 'not authorized'; END IF;
+  DELETE FROM children_parents WHERE child_id = p_child_id;
+  DELETE FROM attendance WHERE child_id = p_child_id;
+  DELETE FROM daily_reports WHERE child_id = p_child_id;
+  DELETE FROM schedule_entries WHERE type = 'child' AND ref_id = p_child_id;
+  DELETE FROM children WHERE id = p_child_id;  -- storage photos are left orphaned (deferred cleanup)
+END;
+$$;
+
 -- daily_reports: teachers write; parents read their child's
 CREATE POLICY "daily_reports_select" ON daily_reports FOR SELECT
   USING (
@@ -611,6 +638,8 @@ lib/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
     widgets/
       logout_button.dart
+      app_bottom_nav.dart           -- floating (inset + rounded) NavigationBar used by every shell
+      row_actions_sheet.dart        -- long-press Edit/Delete bottom sheet + confirmDelete (§6.6)
       attendance_status_chip.dart
       lesson_plan_status_chip.dart  -- draft/submitted/approved/rejected chip (§6.5)
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
@@ -688,7 +717,8 @@ Teacher-authored plans with a **subject** categorization and a **director approv
 - ✅ **Tap a row to view/edit details:**
   - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), **class** (a dropdown of real `classes` rows setting `class_id` — helper text "Drives the schedule the parent sees"; replaced the old free-text `class_name` field, which is now preserved untouched), class teacher (dropdown, sets `teacher_id`), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
   - A teacher/parent → `PersonDetailScreen`: edit photo, name, phone, and **HR/contact details** (address, date of birth, emergency contact name/phone — §6.6b), plus a **read-only login email**. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7).
-- ⬜ Deactivate/delete existing accounts (create + edit are built; deletion is still manual via the dashboard)
+- ✅ **Delete records via long-press:** on the People (Classes, Children), and the Lessons (teacher + director) and Subjects lists, **long-pressing a row** opens a bottom-sheet with **Edit / Delete** (`showRowActionsSheet`; Delete asks `confirmDelete` first). Deleting a **class** (`delete_class`) un-assigns its children/plans + clears its schedule; deleting a **child** (`delete_child`) removes its parent links, attendance, and daily reports — both are director-only SECURITY DEFINER functions (§4). Lesson plans / subjects delete via their own service calls.
+- ⬜ Deactivate/delete **accounts** (teacher/parent) still needs an Edge Function (auth.users deletion is server-side) — not built; the long-press menu isn't offered on the Teachers list yet.
 - ⬜ View all lesson plans across the center (depends on §6.5)
 - ⬜ Manage center settings (center name, rooms)
 
@@ -714,7 +744,7 @@ A `classes` table groups children under an assigned teacher, added **additively*
 - ✅ Schema: `classes` (id, name, teacher_uid, center_id, avatar_path) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
 - ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (avatar + assigned teacher's name), and creates a class via the shared `showClassFormDialog` (name + teacher dropdown). **Tapping a class opens `ClassDetailScreen`** (a full screen like children/teachers, not a dialog): edit the **class photo** (class-avatars bucket), name, and teacher, via `ClassService.updateClass` / `uploadClassAvatar` / `setClassAvatarPath`. Create stays a dialog because there's no `class_id` to key the photo path until the row exists — add a picture by opening the new class afterwards. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
-- ⬜ Still SQL-only / undecided: deleting a class; whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
+- ✅ **Deleting a class** is built (long-press a class → Delete, via the `delete_class` function, §6.6). Undecided: whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
 - 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
 
