@@ -13,13 +13,14 @@ class LessonPlanService {
   LessonPlanService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  // A teacher's own plans, newest first.
+  // A teacher's own plans, newest first. (Ordered by created_at now that
+  // plans have no date -- they're reusable.)
   Future<List<LessonPlan>> fetchForTeacher(String teacherId) async {
     final rows = await _client
         .from('lesson_plans')
         .select()
         .eq('teacher_id', teacherId)
-        .order('date', ascending: false);
+        .order('created_at', ascending: false);
     return (rows as List)
         .map((row) => LessonPlan.fromJson(row as Map<String, dynamic>))
         .toList();
@@ -29,7 +30,7 @@ class LessonPlanService {
   // for a director.
   Future<List<LessonPlan>> fetchAll() async {
     final rows =
-        await _client.from('lesson_plans').select().order('date', ascending: false);
+        await _client.from('lesson_plans').select().order('created_at', ascending: false);
     return (rows as List)
         .map((row) => LessonPlan.fromJson(row as Map<String, dynamic>))
         .toList();
