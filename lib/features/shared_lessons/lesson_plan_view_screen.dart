@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/models/lesson_plan.dart';
-import '../../shared/widgets/lesson_plan_status_chip.dart';
 
 // Read-only view of an (approved) lesson plan, opened by tapping a schedule
-// event that has one attached (§6.5). Shows the subject, title and content --
-// no editing here; that's the teacher/director LessonPlanEditScreen.
+// event that has one attached (§6.5). For a viewer here only the subject (the
+// heading, e.g. "Maths") and the content matter -- the approval status isn't
+// shown. No editing; that's the teacher/director LessonPlanEditScreen.
 class LessonPlanViewScreen extends StatelessWidget {
   const LessonPlanViewScreen({super.key, required this.plan, this.subjectName});
 
@@ -14,27 +14,15 @@ class LessonPlanViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // The subject is the headline (falls back to the plan title if untagged).
+    final heading = subjectName ?? plan.title;
     return Scaffold(
-      appBar: AppBar(title: Text(plan.title)),
+      appBar: AppBar(title: Text(heading)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              LessonPlanStatusChip(status: plan.status),
-              if (subjectName != null) ...[
-                const SizedBox(width: 8),
-                Chip(
-                  avatar: const Icon(Icons.category_outlined, size: 18),
-                  label: Text(subjectName!),
-                  side: BorderSide.none,
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text('Content', style: theme.textTheme.labelMedium?.copyWith(color: theme.hintColor)),
-          const SizedBox(height: 4),
+          Text(heading, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 12),
           Text(
             plan.content.isEmpty ? 'No content.' : plan.content,
             style: plan.content.isEmpty

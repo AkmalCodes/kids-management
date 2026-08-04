@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/widgets/app_bottom_nav.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/teacher_lesson_plans_screen.dart';
@@ -30,7 +31,7 @@ class _TeacherShellState extends State<TeacherShell> {
         title: const Text('Childcare Manager'),
       ),
       body: _pages[_index],
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: AppBottomNav(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [

@@ -92,11 +92,14 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
               final subject = plan.subjectId == null
                   ? null
                   : data.subjectsById[plan.subjectId];
-              return ListTile(
-                title: Text(plan.title),
-                subtitle: subject == null ? null : Text(subject),
-                trailing: LessonPlanStatusChip(status: plan.status),
-                onTap: () => _open(plan: plan),
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: ListTile(
+                  title: Text(plan.title),
+                  subtitle: subject == null ? null : Text(subject),
+                  trailing: LessonPlanStatusChip(status: plan.status),
+                  onTap: () => _open(plan: plan),
+                ),
               );
             },
           );

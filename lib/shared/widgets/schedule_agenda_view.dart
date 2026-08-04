@@ -173,7 +173,8 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
     );
 
     final list = ListView.builder(
-      padding: const EdgeInsets.all(8),
+      // Inset from the screen edges so the schedule doesn't touch the sides.
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shrinkWrap: widget.shrinkWrap,
       physics: widget.physics ??
           (widget.shrinkWrap ? const NeverScrollableScrollPhysics() : null),

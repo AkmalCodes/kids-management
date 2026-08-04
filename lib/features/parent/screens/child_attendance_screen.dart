@@ -7,6 +7,7 @@ import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 import 'attendance_detail_screen.dart';
 
@@ -56,7 +57,18 @@ class _ChildAttendanceSection extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+          child: Row(
+            children: [
+              SignedAvatar(
+                urlProvider: child.avatarPath == null
+                    ? null
+                    : signedChildAvatarUrlProvider(child.avatarPath!),
+                radius: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
         ),
         FutureBuilder<List<Attendance>>(
           future: ref.read(attendanceServiceProvider).fetchForChild(child.id),

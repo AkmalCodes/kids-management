@@ -5,6 +5,7 @@ import '../../../core/models/child.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/schedule_service.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 
 class ChildScheduleScreen extends ConsumerWidget {
   const ChildScheduleScreen({super.key});
@@ -52,7 +53,18 @@ class _ChildScheduleSection extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+          child: Row(
+            children: [
+              SignedAvatar(
+                urlProvider: child.avatarPath == null
+                    ? null
+                    : signedChildAvatarUrlProvider(child.avatarPath!),
+                radius: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
         ),
         _scheduleBody(context, ref),
       ],

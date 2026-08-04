@@ -154,40 +154,59 @@ class _EntryBlock extends StatelessWidget {
         color: entry.displayColor,
         borderRadius: BorderRadius.circular(8),
       ),
-      alignment: Alignment.topLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            entry.label,
-            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          // The attached lesson plan's subject, if any (needs a little room).
-          if (subject != null && height >= 40)
-            Row(
+          // Left: event title + time.
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.menu_book_outlined, size: 12, color: Colors.white70),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    subject!,
-                    style: const TextStyle(fontSize: 11, color: Colors.white70),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  entry.label,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                if (height >= 40)
+                  Text(
+                    '${entry.startTime} – ${entry.endTime}',
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
               ],
             ),
-          // Hide the time line on shorter blocks where it can't fit.
-          if (height >= 58)
-            Text(
-              '${entry.startTime} – ${entry.endTime}',
-              style: const TextStyle(fontSize: 11, color: Colors.white70),
+          ),
+          // Right: the attached lesson plan's subject, split off by a faint
+          // divider so the block reads as two halves.
+          if (subject != null) ...[
+            Container(
+              width: 1,
+              height: height - 12,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              color: Colors.white38,
             ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 110),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.menu_book_outlined, size: 13, color: Colors.white70),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      subject!,
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

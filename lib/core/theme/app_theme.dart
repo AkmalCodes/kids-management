@@ -33,6 +33,8 @@ class AppTheme {
         foregroundColor: colorScheme.onPrimaryContainer,
         elevation: 0,
         centerTitle: true,
+        // A slimmer top bar (default is 56) to give content more room.
+        toolbarHeight: 48,
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -92,7 +94,20 @@ class AppTheme {
         // the pink bar.
         indicatorColor: colorScheme.surface,
         elevation: 0,
+        // Slimmer than the 80 default; the AppBottomNav floats it off the
+        // screen edges (see shared/widgets/app_bottom_nav.dart).
+        height: 62,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      ),
+
+      // Round the dropdown popup menu so open dropdowns match the app's
+      // rounded, filled inputs.
+      dropdownMenuTheme: DropdownMenuThemeData(
+        menuStyle: MenuStyle(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+          ),
+        ),
       ),
     );
   }

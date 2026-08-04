@@ -6,6 +6,7 @@ import '../../../core/models/daily_report.dart';
 import '../../../core/services/child_service.dart';
 import '../../../core/services/daily_report_service.dart';
 import '../../../shared/util/date_display.dart';
+import '../../../shared/widgets/signed_avatar.dart';
 
 // Parent's Reports tab: for each linked child, a feed of their daily
 // reports (newest first) — the teacher's note plus any photos. Read-only.
@@ -54,7 +55,18 @@ class _ChildReportsSection extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+          child: Row(
+            children: [
+              SignedAvatar(
+                urlProvider: child.avatarPath == null
+                    ? null
+                    : signedChildAvatarUrlProvider(child.avatarPath!),
+                radius: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(child.name, style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
         ),
         FutureBuilder<List<DailyReport>>(
           future: ref.read(dailyReportServiceProvider).fetchForChild(child.id),

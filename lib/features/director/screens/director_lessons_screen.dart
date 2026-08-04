@@ -124,13 +124,16 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
                         final subject = plan.subjectId == null
                             ? null
                             : data.subjectsById[plan.subjectId];
-                        return ListTile(
-                          title: Text(plan.title),
-                          subtitle: Text(
-                            '$teacher${subject == null ? '' : ' · $subject'}',
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          child: ListTile(
+                            title: Text(plan.title),
+                            subtitle: Text(
+                              '$teacher${subject == null ? '' : ' · $subject'}',
+                            ),
+                            trailing: LessonPlanStatusChip(status: plan.status),
+                            onTap: () => _open(plan),
                           ),
-                          trailing: LessonPlanStatusChip(status: plan.status),
-                          onTap: () => _open(plan),
                         );
                       },
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/widgets/app_bottom_nav.dart';
 import '../profile/profile_screen.dart';
 import 'screens/director_attendance_screen.dart';
 import 'screens/director_lessons_screen.dart';
@@ -30,7 +31,7 @@ class _DirectorShellState extends State<DirectorShell> {
         title: const Text('Childcare Manager'),
       ),
       body: _pages[_index],
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: AppBottomNav(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [

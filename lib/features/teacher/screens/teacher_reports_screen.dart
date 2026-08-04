@@ -53,16 +53,19 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
           itemCount: children.length,
           itemBuilder: (context, i) {
             final child = children[i];
-            return ListTile(
-              leading: SignedAvatar(
-                urlProvider: child.avatarPath == null
-                    ? null
-                    : signedChildAvatarUrlProvider(child.avatarPath!),
-                radius: 20,
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: ListTile(
+                leading: SignedAvatar(
+                  urlProvider: child.avatarPath == null
+                      ? null
+                      : signedChildAvatarUrlProvider(child.avatarPath!),
+                  radius: 20,
+                ),
+                title: Text(child.name),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openEditor(child),
               ),
-              title: Text(child.name),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openEditor(child),
             );
           },
         );
