@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
-// A NavigationBar that "floats": inset from the screen edges with rounded
-// corners and a soft shadow, so it reads as a hovering pill rather than a bar
-// welded to the bottom. Shared by every role's shell so they stay identical.
+// A "floating" bottom navigation bar: inset from the screen edges with
+// rounded corners and a soft shadow, so it reads as a hovering pill.
+//
+// It takes the same NavigationDestination list as Material's NavigationBar,
+// but renders the items itself. The reason: NavigationBar's selection
+// indicator is a fixed 64x32 pill (hardcoded in the framework, not
+// themeable), which looks too wide in this slim floated bar. Here the
+// highlight is a small rounded square that just hugs the icon.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -17,6 +22,7 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return SafeArea(
       top: false,
       child: Padding(
@@ -35,13 +41,77 @@ class AppBottomNav extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: NavigationBar(
-              selectedIndex: selectedIndex,
-              onDestinationSelected: onDestinationSelected,
-              destinations: destinations,
+            child: Material(
+              color: scheme.primaryContainer,
+              child: SizedBox(
+                height: 60,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < destinations.length; i++)
+                      Expanded(
+                        child: _NavItem(
+                          destination: destinations[i],
+                          selected: i == selectedIndex,
+                          scheme: scheme,
+                          onTap: () => onDestinationSelected(i),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.destination,
+    required this.selected,
+    required this.scheme,
+    required this.onTap,
+  });
+
+  final NavigationDestination destination;
+  final bool selected;
+  final ColorScheme scheme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+    return InkResponse(
+      onTap: onTap,
+      radius: 32,
+      containedInkWell: false,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // The highlight: a small rounded square that just hugs the icon,
+          // rather than a wide pill.
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: selected ? scheme.surface : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconTheme.merge(
+              data: IconThemeData(size: 22, color: fg),
+              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            destination.label,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
