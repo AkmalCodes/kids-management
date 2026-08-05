@@ -265,6 +265,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: DropdownButtonFormField<String?>(
                     isExpanded: true,
+                    borderRadius: BorderRadius.circular(16),
                     initialValue:
                         (_subjectId != null && ids.contains(_subjectId)) ? _subjectId : null,
                     decoration: const InputDecoration(labelText: 'Subject'),
@@ -298,6 +299,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: DropdownButtonFormField<String?>(
                     isExpanded: true,
+                    borderRadius: BorderRadius.circular(16),
                     initialValue: (_classId != null && ids.contains(_classId)) ? _classId : null,
                     decoration: const InputDecoration(labelText: 'Class'),
                     items: [

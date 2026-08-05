@@ -80,7 +80,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
 | Lessons | **DirectorLessonsScreen** | `features/director/screens/director_lessons_screen.dart` | Browse **all** lesson plans; filter by teacher + status; tap → LessonPlanEditScreen (approve/reject/edit). A **Subjects** button → ManageSubjectsScreen. |
 | (from Subjects) | **ManageSubjectsScreen** | `features/director/screens/manage_subjects_screen.dart` | Center-defined lesson subjects: list, **+** create, tap to rename/delete. |
-| Attendance | **DirectorAttendanceScreen** | `features/director/screens/director_attendance_screen.dart` | All children for a chosen date as **collapsible cards** (same style as the teacher screen, read-only); expand to see the day's photos. Date picker in the header. |
+| Attendance | **DirectorAttendanceScreen** | `features/director/screens/director_attendance_screen.dart` | All children for a chosen date as **collapsible cards** (same style as the teacher screen, read-only); expand to see the day's photos. Date picker + a **class filter** dropdown in the header. |
 | Profile | **ProfileScreen** | see *Profile* below | |
 
 ---
@@ -102,7 +102,7 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 | Name | File | Used by | What it is |
 |---|---|---|---|
 | **DayScheduleScreen** | `shared/screens/day_schedule_screen.dart` | Schedule flows | Hourly view for a single day; owns create/edit/delete of schedule entries. A class event can have an **attached lesson plan** — its subject shows on the event, and tapping the event opens the plan (`LessonPlanViewScreen`, §6.5). |
-| **ScheduleAgendaView** | `shared/widgets/schedule_agenda_view.dart` | Schedule screens | Week/month toggle with colored event cards; tap a day to drill in. |
+| **ScheduleAgendaView** | `shared/widgets/schedule_agenda_view.dart` | Schedule screens | Week/month toggle with **‹ ›** period navigation and colored event cards (each splits title/time \| attached subject); tap a day to drill in. For a class, resolves the subject via `class_plan_subjects` so it shows for all roles. |
 | **DayTimetable** | `shared/widgets/day_timetable.dart` | DayScheduleScreen | The hour grid; tap-to-add/edit, fade-in on new entries. |
 | **ScheduleEntryFormDialog** | `shared/widgets/schedule_entry_form_dialog.dart` | Schedule create/edit | Dialog for an event's label, times, and color. |
 | **PersonInviteDialog** | `shared/widgets/person_invite_dialog.dart` | Manage Teachers/Children | Shared name/email/phone dialog for teacher & parent invites. |

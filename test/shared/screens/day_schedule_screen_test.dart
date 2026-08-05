@@ -133,6 +133,10 @@ void main() {
       updatedBy: 'teacher-1',
     );
     when(() => mockPlans.fetchApprovedForClass(any())).thenAnswer((_) async => [plan]);
+    // The subject label now comes from the connected-role RPC.
+    when(() => mockPlans.fetchClassPlanSubjects(any())).thenAnswer(
+      (_) async => [const PlanSubject(id: 'lp-1', title: 'Watercolours', subject: 'Art')],
+    );
     when(() => mockSubjects.fetchAll()).thenAnswer(
       (_) async => [
         Subject(

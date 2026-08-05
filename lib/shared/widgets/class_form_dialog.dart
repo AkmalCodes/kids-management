@@ -77,6 +77,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String?>(
               isExpanded: true,
+              borderRadius: BorderRadius.circular(16),
               initialValue: _teacherId,
               decoration: const InputDecoration(labelText: 'Teacher'),
               items: [

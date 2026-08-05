@@ -5,7 +5,6 @@ import '../../core/models/lesson_plan.dart';
 import '../../core/models/schedule.dart';
 import '../../core/services/lesson_plan_service.dart';
 import '../../core/services/schedule_service.dart';
-import '../../core/services/subject_service.dart';
 import '../../features/shared_lessons/lesson_plan_view_screen.dart';
 import '../widgets/day_timetable.dart';
 import '../widgets/schedule_entry_form_dialog.dart';
@@ -67,32 +66,37 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
   }
 
   Future<void> _loadPlans(String classId) async {
+    final service = ref.read(lessonPlanServiceProvider);
+    // Subject labels for every role via the connected-role RPC -- this is
+    // what makes the subject show on events for parents (who can't read the
+    // lesson_plans rows directly). Also drives the event dialog's picker.
     try {
-      final plans = await ref.read(lessonPlanServiceProvider).fetchApprovedForClass(classId);
-      final subjects = await ref.read(subjectServiceProvider).fetchAll();
-      final subjectNameById = {for (final s in subjects) s.id: s.name};
+      final planSubjects = await service.fetchClassPlanSubjects(classId);
+      if (!mounted) return;
+      setState(() {
+        _subjectByPlanId
+          ..clear()
+          ..addEntries(planSubjects.map((p) => MapEntry(p.id, p.subject)));
+        _planOptions = [
+          for (final p in planSubjects)
+            (id: p.id, label: p.subject == null ? p.title : '${p.title} · ${p.subject}'),
+        ];
+      });
+    } catch (_) {
+      // Non-fatal: the schedule still works without subjects/the picker.
+    }
+    // Full plan rows (to open an attached plan's content, and to edit) --
+    // readable by the teacher/director and, via widened RLS, connected
+    // parents; empty otherwise. Non-fatal.
+    try {
+      final plans = await service.fetchApprovedForClass(classId);
       if (!mounted) return;
       setState(() {
         _planById
           ..clear()
           ..addEntries(plans.map((p) => MapEntry(p.id, p)));
-        _subjectByPlanId
-          ..clear()
-          ..addEntries(plans.map(
-              (p) => MapEntry(p.id, p.subjectId == null ? null : subjectNameById[p.subjectId])));
-        _planOptions = [
-          for (final p in plans)
-            (
-              id: p.id,
-              label: _subjectByPlanId[p.id] == null
-                  ? p.title
-                  : '${p.title} · ${_subjectByPlanId[p.id]}',
-            ),
-        ];
       });
-    } catch (_) {
-      // Non-fatal: the schedule still works without the plan picker.
-    }
+    } catch (_) {}
   }
 
   // The subject to show on an event (null if it has no attached plan / the

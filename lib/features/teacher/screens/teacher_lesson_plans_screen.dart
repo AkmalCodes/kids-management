@@ -99,7 +99,9 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
             return const Center(child: Text('No lesson plans yet.'));
           }
           return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
+            // Top gap matches the card side/bottom margins so the first card
+            // isn't flush against the app bar.
+            padding: const EdgeInsets.only(top: 8, bottom: 80),
             itemCount: data.plans.length,
             itemBuilder: (context, i) {
               final plan = data.plans[i];

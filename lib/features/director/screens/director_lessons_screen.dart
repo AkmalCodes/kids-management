@@ -194,6 +194,7 @@ class _FilterBar extends StatelessWidget {
                 child: DropdownButtonFormField<String?>(
                   initialValue: teacherFilter,
                   isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
                   decoration: const InputDecoration(labelText: 'Teacher', isDense: true),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All teachers')),
@@ -208,6 +209,7 @@ class _FilterBar extends StatelessWidget {
                 child: DropdownButtonFormField<LessonPlanStatus?>(
                   initialValue: statusFilter,
                   isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
                   decoration: const InputDecoration(labelText: 'Status', isDense: true),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('All statuses')),

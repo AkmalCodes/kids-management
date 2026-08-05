@@ -148,6 +148,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
                 final teachers = snapshot.data ?? [];
                 return DropdownButtonFormField<String>(
                   isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
                   initialValue: _selectedTeacherId,
                   decoration: const InputDecoration(labelText: 'Teacher (optional)'),
                   items: [

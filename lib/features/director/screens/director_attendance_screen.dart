@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
+import '../../../core/models/class_group.dart';
 import '../../../core/services/attendance_service.dart';
 import '../../../core/services/child_service.dart';
+import '../../../core/services/class_service.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
@@ -17,13 +19,19 @@ class DirectorAttendanceScreen extends ConsumerStatefulWidget {
 }
 
 class _RosterData {
-  const _RosterData({required this.children, required this.attendanceByChild});
+  const _RosterData({
+    required this.children,
+    required this.attendanceByChild,
+    required this.classes,
+  });
   final List<Child> children;
   final Map<String, Attendance> attendanceByChild;
+  final List<ClassGroup> classes;
 }
 
 class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
+  String? _classFilter; // null = all classes
   late Future<_RosterData> _future;
 
   // Only one child's card is expanded at a time (same accordion behaviour
@@ -41,9 +49,11 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
   Future<_RosterData> _load() async {
     final children = await ref.read(childServiceProvider).fetchAll();
     final records = await ref.read(attendanceServiceProvider).fetchForDate(_dateString);
+    final classes = await ref.read(classServiceProvider).fetchAll();
     return _RosterData(
       children: children,
       attendanceByChild: {for (final r in records) r.childId: r},
+      classes: classes,
     );
   }
 
@@ -185,19 +195,64 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
               if (data.children.isEmpty) {
                 return const Center(child: Text('No children enrolled yet.'));
               }
-              final sorted = [...data.children]..sort((a, b) => a.name.compareTo(b.name));
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                itemCount: sorted.length,
-                itemBuilder: (context, i) {
-                  final child = sorted[i];
-                  return _childCard(context, child, data.attendanceByChild[child.id]);
-                },
+              // Class filter (all classes by default).
+              final classFilterBar = Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: DropdownButtonFormField<String?>(
+                  initialValue: _classFilter,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
+                  decoration: const InputDecoration(labelText: 'Class', isDense: true),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('All classes')),
+                    for (final c in data.classes)
+                      DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _classFilter = v;
+                    _expandedChildId = null;
+                  }),
+                ),
+              );
+              final filtered = _classFilter == null
+                  ? data.children
+                  : data.children.where((c) => c.classId == _classFilter).toList();
+              final sorted = [...filtered]..sort((a, b) => a.name.compareTo(b.name));
+              if (sorted.isEmpty) {
+                return Column(
+                  children: [
+                    classFilterBar,
+                    const Expanded(child: Center(child: Text('No children in this class.'))),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  classFilterBar,
+                  Expanded(
+                    child: _buildList(context, sorted, data.attendanceByChild),
+                  ),
+                ],
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    List<Child> sorted,
+    Map<String, Attendance> attendanceByChild,
+  ) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      itemCount: sorted.length,
+      itemBuilder: (context, i) {
+        final child = sorted[i];
+        return _childCard(context, child, attendanceByChild[child.id]);
+      },
     );
   }
 }

@@ -143,7 +143,6 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
                         radius: 20,
                       ),
                       title: Text(child.name),
-                      trailing: const Icon(Icons.chevron_right),
                       onTap: () => _openEditor(child),
                     ),
                   );

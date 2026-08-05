@@ -480,6 +480,30 @@ CREATE POLICY "lesson_plans_select" ON lesson_plans FOR SELECT
       WHERE ch.class_id = lesson_plans.class_id AND cp.parent_id = auth.uid()
     ))
   );
+-- §6.5: the subject LABEL of a class's approved plans, for showing the
+-- subject on schedule events to EVERY role (incl. parents who can't read the
+-- lesson_plans rows directly). Returns only plan id + title + subject (no
+-- content) to a viewer connected to the class. Used on the agenda cards AND
+-- the day view. SECURITY DEFINER so the connection check gates every row.
+CREATE OR REPLACE FUNCTION class_plan_subjects(p_class_id UUID)
+RETURNS TABLE (plan_id UUID, title TEXT, subject_name TEXT)
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT lp.id, lp.title, s.name
+  FROM lesson_plans lp
+  LEFT JOIN subjects s ON s.id = lp.subject_id
+  WHERE lp.class_id = p_class_id
+    AND lp.status = 'approved'
+    AND (
+      current_role_name() = 'director'
+      OR EXISTS (SELECT 1 FROM classes c WHERE c.id = p_class_id AND c.teacher_uid = auth.uid())
+      OR EXISTS (
+        SELECT 1 FROM children ch
+        JOIN children_parents cp ON cp.child_id = ch.id
+        WHERE ch.class_id = p_class_id AND cp.parent_id = auth.uid()
+      )
+    );
+$$;
+
 CREATE POLICY "lesson_plans_insert" ON lesson_plans FOR INSERT
   WITH CHECK (current_role_name() = 'teacher' AND teacher_id = auth.uid());
 CREATE POLICY "lesson_plans_update_teacher" ON lesson_plans FOR UPDATE
@@ -705,6 +729,7 @@ Teacher-authored plans with a **subject** categorization and a **director approv
 - **Security (enforced at the DB, not just UI):** two UPDATE policies — a teacher may only set `draft`/`submitted` on their **own** plan (so a teacher **cannot self-approve**); a director may set any status on any plan. See §4 RLS.
 - ✅ **Increment 2 — attach a lesson plan to a schedule event (reshaped):** lesson plans are **reusable** — the `date` column was dropped; a plan is now subject + title + content + class + status, made once and attached to schedule events. When creating/editing a **class** event (`ScheduleEntryFormDialog`), a **Lesson plan** picker lists that class's **approved** plans (`schedule_entries.lesson_plan_id`). The event then shows the attached plan's **subject** on the timetable; **tapping the event opens the plan read-only** (`LessonPlanViewScreen`, incl. content). This replaced the earlier day-view "Planned lessons" section + the `class_day_lessons` function (both removed).
   - **Visibility:** `lesson_plans_select` was widened so a **connected role** (the class's teacher, or a parent of a child in the class) can read **approved** plans — so tapping a scheduled subject opens the full plan for parents too, while drafts/unapproved stay teacher/director-only. See §4 RLS.
+  - **Subject on events (every role):** the subject **label** shown on schedule event cards — on both the weekly/monthly **agenda** and the **day view** — is resolved via the **`class_plan_subjects(class_id)` SECURITY DEFINER function** (§4), which returns just each approved plan's id+title+subject to a connected viewer. This is what makes the subject appear for **parents** (who can't read `lesson_plans` rows), independent of the widened SELECT above (that one only governs opening the full plan's content).
   - 🔭 Content is plain text fields for now; a richer format (e.g. PDF attachments) is a possible later upgrade.
 - 🔭 **Increment 3 (still to design):** a dashboard + notifications for approval events.
 

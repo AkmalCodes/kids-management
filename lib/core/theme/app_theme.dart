@@ -35,6 +35,16 @@ class AppTheme {
         centerTitle: true,
         // A slimmer top bar (default is 56) to give content more room.
         toolbarHeight: 48,
+        // Rounded bottom edges so the top bar reads as a rounded panel.
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ),
+      ),
+
+      // Round each list row's ink/long-press highlight so it matches the
+      // rounded cards/containers instead of a boxy full-width splash.
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -98,6 +108,15 @@ class AppTheme {
         // screen edges (see shared/widgets/app_bottom_nav.dart).
         height: 62,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        // A rounder selection pill so the highlight echoes the bar's own
+        // rounded shape rather than a stadium that looks foreign.
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        // Bolder + smaller labels.
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
       ),
 
       // Round the dropdown popup menu so open dropdowns match the app's

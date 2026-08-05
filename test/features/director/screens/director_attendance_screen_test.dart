@@ -8,12 +8,15 @@ import 'package:test_flutter/core/models/attendance.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/services/attendance_service.dart';
 import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/services/class_service.dart';
 import 'package:test_flutter/features/director/screens/director_attendance_screen.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockChildService extends Mock implements ChildService {}
 
 class MockAttendanceService extends Mock implements AttendanceService {}
+
+class MockClassService extends Mock implements ClassService {}
 
 Child _child(String id, String name) => Child(
   id: id,
@@ -49,10 +52,13 @@ Attendance _record(String childId, AttendanceStatus status) => Attendance(
 void main() {
   late MockChildService mockChildren;
   late MockAttendanceService mockAttendance;
+  late MockClassService mockClasses;
 
   setUp(() {
     mockChildren = MockChildService();
     mockAttendance = MockAttendanceService();
+    mockClasses = MockClassService();
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
@@ -60,6 +66,7 @@ void main() {
           overrides: [
             childServiceProvider.overrideWithValue(mockChildren),
             attendanceServiceProvider.overrideWithValue(mockAttendance),
+            classServiceProvider.overrideWithValue(mockClasses),
           ],
           child: const MaterialApp(home: Scaffold(body: DirectorAttendanceScreen())),
         ),

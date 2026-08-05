@@ -131,6 +131,24 @@ class LessonPlanService {
         .toList();
   }
 
+  // plan id -> subject label for a class's approved plans, for showing the
+  // subject on schedule events to EVERY role. Goes through the
+  // `class_plan_subjects` SECURITY DEFINER function, which returns only the
+  // (approved) plan id + title + subject to a viewer connected to the class
+  // (director, the class's teacher, or a parent of a child in it) -- so the
+  // label resolves for parents without depending on the lesson_plans row
+  // being directly readable to them.
+  Future<List<PlanSubject>> fetchClassPlanSubjects(String classId) async {
+    final rows = await _client.rpc('class_plan_subjects', params: {'p_class_id': classId});
+    return (rows as List)
+        .map((r) => PlanSubject(
+              id: (r as Map)['plan_id'] as String,
+              title: r['title'] as String,
+              subject: r['subject_name'] as String?,
+            ))
+        .toList();
+  }
+
   // One plan by id (for opening an attached plan). Returns null if the caller
   // can't see it under RLS.
   Future<LessonPlan?> getPlan(String id) async {
@@ -139,6 +157,16 @@ class LessonPlanService {
     if (list.isEmpty) return null;
     return LessonPlan.fromJson(list.first as Map<String, dynamic>);
   }
+}
+
+// The subject/title label for an approved plan attached to a schedule event,
+// visible to any role connected to the class (no content -- see
+// fetchClassPlanSubjects).
+class PlanSubject {
+  const PlanSubject({required this.id, required this.title, required this.subject});
+  final String id;
+  final String title;
+  final String? subject;
 }
 
 final lessonPlanServiceProvider = Provider<LessonPlanService>(

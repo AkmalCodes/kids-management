@@ -165,6 +165,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 isExpanded: true,
+                borderRadius: BorderRadius.circular(16),
                 initialValue: _lessonPlanId,
                 decoration: const InputDecoration(labelText: 'Lesson plan'),
                 items: [

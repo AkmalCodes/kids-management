@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/schedule.dart';
+import '../../core/services/lesson_plan_service.dart';
 import '../screens/day_schedule_screen.dart';
 
 // Agenda-style schedule (modeled on typical calendar apps): date numbers
@@ -10,7 +12,7 @@ import '../screens/day_schedule_screen.dart';
 // Entries are a recurring weekly pattern (weekday + time, no calendar
 // date), so each calendar date simply shows the entries whose `day`
 // matches its weekday — the same class appears on every matching Monday.
-class ScheduleAgendaView extends StatefulWidget {
+class ScheduleAgendaView extends ConsumerStatefulWidget {
   const ScheduleAgendaView({
     super.key,
     required this.entries,
@@ -42,20 +44,45 @@ class ScheduleAgendaView extends StatefulWidget {
   final bool editable;
 
   @override
-  State<ScheduleAgendaView> createState() => _ScheduleAgendaViewState();
+  ConsumerState<ScheduleAgendaView> createState() => _ScheduleAgendaViewState();
 }
 
-class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
+class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   bool _monthView = false;
   // The period being shown. Starts at the injected/real "today" and the
   // prev/next arrows move it by a week (week view) or a month (month view).
   late DateTime _anchor;
+  // For a class schedule: plan id -> subject label, so the attached lesson's
+  // subject shows on each event card here too (not just the day view). Loaded
+  // via the connected-role RPC so it resolves for parents.
+  final Map<String, String?> _subjectByPlanId = {};
 
   @override
   void initState() {
     super.initState();
     _anchor = widget.anchorDate ?? DateTime.now();
+    if (widget.type == 'class' && widget.refId != null) {
+      _loadSubjects(widget.refId!);
+    }
   }
+
+  Future<void> _loadSubjects(String classId) async {
+    try {
+      final planSubjects =
+          await ref.read(lessonPlanServiceProvider).fetchClassPlanSubjects(classId);
+      if (!mounted) return;
+      setState(() {
+        _subjectByPlanId
+          ..clear()
+          ..addEntries(planSubjects.map((p) => MapEntry(p.id, p.subject)));
+      });
+    } catch (_) {
+      // Non-fatal: cards just won't show a subject.
+    }
+  }
+
+  String? _subjectFor(ScheduleEntry entry) =>
+      entry.lessonPlanId == null ? null : _subjectByPlanId[entry.lessonPlanId];
 
   static const _weekdayFull = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -183,6 +210,7 @@ class _ScheduleAgendaViewState extends State<ScheduleAgendaView> {
         date: dates[i],
         weekdayAbbrev: _weekdayAbbrev[dates[i].weekday - 1],
         entries: _entriesFor(dates[i]),
+        subjectForEntry: _subjectFor,
         onTap: () => _openDay(dates[i]),
       ),
     );
@@ -200,12 +228,14 @@ class _DayRow extends StatelessWidget {
     required this.weekdayAbbrev,
     required this.entries,
     required this.onTap,
+    this.subjectForEntry,
   });
 
   final DateTime date;
   final String weekdayAbbrev;
   final List<ScheduleEntry> entries;
   final VoidCallback onTap;
+  final String? Function(ScheduleEntry entry)? subjectForEntry;
 
   @override
   Widget build(BuildContext context) {
@@ -258,26 +288,65 @@ class _DayRow extends StatelessWidget {
                               color: entry.displayColor,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  entry.label,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                // Left: event title + time.
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        entry.label,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${entry.startTime} – ${entry.endTime}',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${entry.startTime} – ${entry.endTime}',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
+                                // Right: the attached lesson's subject.
+                                if (subjectForEntry?.call(entry) != null) ...[
+                                  Container(
+                                    width: 1,
+                                    height: 28,
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    color: Colors.white38,
                                   ),
-                                ),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 110),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.menu_book_outlined,
+                                            size: 13, color: Colors.white70),
+                                        const SizedBox(width: 3),
+                                        Flexible(
+                                          child: Text(
+                                            subjectForEntry!.call(entry)!,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

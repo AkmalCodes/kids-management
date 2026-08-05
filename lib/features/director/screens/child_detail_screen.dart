@@ -267,6 +267,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                 final ids = classes.map((c) => c.id).toSet();
                 return DropdownButtonFormField<String?>(
                   isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
                   initialValue: (_classId != null && ids.contains(_classId)) ? _classId : null,
                   decoration: const InputDecoration(
                     labelText: 'Class',
@@ -301,6 +302,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                 final ids = teachers.map((t) => t.id).toSet();
                 return DropdownButtonFormField<String?>(
                   isExpanded: true,
+                  borderRadius: BorderRadius.circular(16),
                   initialValue: (_teacherId != null && ids.contains(_teacherId)) ? _teacherId : null,
                   decoration: const InputDecoration(labelText: 'Class teacher'),
                   items: [
