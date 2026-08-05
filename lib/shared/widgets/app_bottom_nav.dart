@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 //
 // It takes the same NavigationDestination list as Material's NavigationBar,
 // but renders the items itself. The reason: NavigationBar's selection
-// indicator is a fixed 64x32 pill (hardcoded in the framework, not
-// themeable), which looks too wide in this slim floated bar. Here the
-// highlight is a small rounded square that just hugs the icon.
+// indicator is a fixed 64x32 pill (hardcoded, not themeable) that looks too
+// wide here, and it just cross-fades rather than sliding. Here the highlight
+// is a small rounded square that **slides** horizontally from the old tab to
+// the newly selected one.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -19,6 +20,9 @@ class AppBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<NavigationDestination> destinations;
+
+  static const _barHeight = 60.0;
+  static const _indicatorSize = 36.0;
 
   @override
   Widget build(BuildContext context) {
@@ -44,19 +48,47 @@ class AppBottomNav extends StatelessWidget {
             child: Material(
               color: scheme.primaryContainer,
               child: SizedBox(
-                height: 60,
-                child: Row(
-                  children: [
-                    for (var i = 0; i < destinations.length; i++)
-                      Expanded(
-                        child: _NavItem(
-                          destination: destinations[i],
-                          selected: i == selectedIndex,
-                          scheme: scheme,
-                          onTap: () => onDestinationSelected(i),
+                height: _barHeight,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final n = destinations.length;
+                    final slot = constraints.maxWidth / n;
+                    // Left edge of the highlight, centered in the selected
+                    // slot. AnimatedPositioned tweens this when the parent
+                    // rebuilds with a new selectedIndex -> the slide.
+                    final left = selectedIndex * slot + (slot - _indicatorSize) / 2;
+                    return Stack(
+                      children: [
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                          top: 6,
+                          left: left,
+                          width: _indicatorSize,
+                          height: _indicatorSize,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
-                      ),
-                  ],
+                        Row(
+                          children: [
+                            for (var i = 0; i < destinations.length; i++)
+                              Expanded(
+                                child: _NavItem(
+                                  destination: destinations[i],
+                                  selected: i == selectedIndex,
+                                  scheme: scheme,
+                                  onTap: () => onDestinationSelected(i),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -82,34 +114,37 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The icon/label sit ON TOP of the sliding highlight (drawn behind in the
+    // Stack), so items themselves have no background. Colour fades as the
+    // highlight arrives.
     final fg = selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
-    return InkResponse(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      radius: 32,
-      containedInkWell: false,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // The highlight: a small rounded square that just hugs the icon,
-          // rather than a wide pill.
-          Container(
+          Padding(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: selected ? scheme.surface : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconTheme.merge(
-              data: IconThemeData(size: 22, color: fg),
-              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: IconTheme.merge(
+                key: ValueKey(selected),
+                data: IconThemeData(size: 22, color: fg),
+                child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            destination.label,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            child: Text(
+              destination.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
