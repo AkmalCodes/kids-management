@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 // but renders the items itself. The reason: NavigationBar's selection
 // indicator is a fixed 64x32 pill (hardcoded, not themeable) that looks too
 // wide here, and it just cross-fades rather than sliding. Here the highlight
-// is a small rounded square that **slides** horizontally from the old tab to
-// the newly selected one.
+// is a rounded pill wrapping the whole item (icon + label) that **slides**
+// horizontally from the old tab to the newly selected one.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -25,7 +25,7 @@ class AppBottomNav extends StatelessWidget {
   // Gaps between the highlight and the bar edges (top/bottom + each side of
   // the slot) so it reads as a pill floating inside the bar.
   static const _vMargin = 6.0;
-  static const _hMargin = 6.0;
+  static const _hMargin = 4.0;
 
   @override
   Widget build(BuildContext context) {
@@ -128,29 +128,35 @@ class _NavItem extends StatelessWidget {
       // Vertical position of the icon+label within the slot: -1 = top,
       // 0 = centered, 1 = bottom. Nudge this up/down to move the content.
       child: Align(
-        alignment: const Alignment(0, 0.35),
+        alignment: const Alignment(0, 0.05),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: IconTheme.merge(
-              key: ValueKey(selected),
-              data: IconThemeData(size: 20, color: fg),
-              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: IconTheme.merge(
+                key: ValueKey(selected),
+                data: IconThemeData(size: 20, color: fg),
+                child: selected
+                    ? (destination.selectedIcon ?? destination.icon)
+                    : destination.icon,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
-            child: Text(
-              destination.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 2),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
           ],
         ),
       ),
