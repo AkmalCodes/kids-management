@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/child.dart';
-import '../../../core/services/child_service.dart';
+import '../../../core/controllers/child_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'daily_report_edit_screen.dart';
@@ -32,7 +32,7 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
   Future<List<Child>> _load() async {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return [];
-    return ref.read(childServiceProvider).fetchForTeacher(user.id);
+    return ref.read(childControllerProvider).fetchForTeacher(user.id);
   }
 
   String get _iso => _date.toIso8601String().substring(0, 10);

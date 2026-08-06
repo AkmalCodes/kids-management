@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/schedule.dart';
 
-class ScheduleService {
+class ScheduleController {
   final SupabaseClient _client;
 
-  ScheduleService({SupabaseClient? client})
+  ScheduleController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   Future<List<ScheduleEntry>> fetchEntries({
@@ -85,8 +85,8 @@ class ScheduleService {
   }
 }
 
-final scheduleServiceProvider = Provider<ScheduleService>(
-  (ref) => ScheduleService(client: ref.watch(supabaseClientProvider)),
+final scheduleControllerProvider = Provider<ScheduleController>(
+  (ref) => ScheduleController(client: ref.watch(supabaseClientProvider)),
 );
 
 // A record makes a clean Riverpod family key here — value-equatable by
@@ -96,6 +96,6 @@ typedef ScheduleQuery = ({String type, String refId});
 final scheduleEntriesProvider =
     FutureProvider.autoDispose.family<List<ScheduleEntry>, ScheduleQuery>((ref, query) {
   return ref
-      .watch(scheduleServiceProvider)
+      .watch(scheduleControllerProvider)
       .fetchEntries(type: query.type, refId: query.refId);
 });

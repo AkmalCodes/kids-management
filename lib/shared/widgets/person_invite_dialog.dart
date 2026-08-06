@@ -8,7 +8,7 @@ class PersonInviteResult {
 }
 
 // Shared by the teacher-invite flow and the "link another parent" action --
-// both just need a name/email/phone to hand off to UserManagementService.
+// both just need a name/email/phone to hand off to UserManagementController.
 // Returns null if the director cancels.
 Future<PersonInviteResult?> showPersonInviteDialog(
   BuildContext context, {

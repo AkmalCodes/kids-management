@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/class_group.dart';
 
 // Reads from the `classes` table. RLS lets directors see all, teachers see
 // their own, and parents see the class their child is in.
-class ClassService {
+class ClassController {
   final SupabaseClient _client;
 
-  ClassService({SupabaseClient? client})
+  ClassController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // For the director's Schedules tab (pick a class to edit its schedule).
@@ -104,18 +104,18 @@ class ClassService {
   Future<void> deleteClass(String id) => _client.rpc('delete_class', params: {'p_class_id': id});
 }
 
-final classServiceProvider = Provider<ClassService>(
-  (ref) => ClassService(client: ref.watch(supabaseClientProvider)),
+final classControllerProvider = Provider<ClassController>(
+  (ref) => ClassController(client: ref.watch(supabaseClientProvider)),
 );
 
 // Resolves a single class by id (cached per id). Used to look up the
 // class's teacher for the parent's schedule view.
 final classGroupProvider = FutureProvider.family<ClassGroup?, String>((ref, id) {
-  return ref.watch(classServiceProvider).getClass(id);
+  return ref.watch(classControllerProvider).getClass(id);
 });
 
 // Session-cached signed URL for a class avatar path (same pattern as
 // signedChildAvatarUrlProvider, but for the class-avatars bucket).
 final signedClassAvatarUrlProvider = FutureProvider.family<String, String>((ref, path) {
-  return ref.watch(classServiceProvider).getSignedClassAvatarUrl(path);
+  return ref.watch(classControllerProvider).getSignedClassAvatarUrl(path);
 });

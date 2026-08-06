@@ -6,10 +6,10 @@ import 'package:image_picker/image_picker.dart';
 // camera UI can't be driven from a widget test (same category of
 // untestable native interaction as showTimePicker/showDatePicker
 // elsewhere in this app), so this boundary is what tests mock.
-class PhotoCaptureService {
+class PhotoCaptureController {
   final ImagePicker _picker;
 
-  PhotoCaptureService({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
+  PhotoCaptureController({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
 
   Future<XFile?> captureFromCamera() {
     return _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
@@ -20,6 +20,6 @@ class PhotoCaptureService {
   }
 }
 
-final photoCaptureServiceProvider = Provider<PhotoCaptureService>(
-  (ref) => PhotoCaptureService(),
+final photoCaptureControllerProvider = Provider<PhotoCaptureController>(
+  (ref) => PhotoCaptureController(),
 );

@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
-import 'package:test_flutter/core/services/user_management_service.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
+import 'package:test_flutter/core/controllers/user_management_controller.dart';
 import 'package:test_flutter/features/director/screens/child_detail_screen.dart';
 import 'package:test_flutter/features/director/screens/enroll_child_screen.dart';
 import 'package:test_flutter/features/director/screens/manage_children_screen.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
-class MockUserManagementService extends Mock implements UserManagementService {}
+class MockUserManagementController extends Mock implements UserManagementController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -50,16 +50,16 @@ Child _child(String id, String name, {String className = ''}) => Child(
 );
 
 void main() {
-  late MockChildService mockChildren;
-  late MockTeacherService mockTeachers;
-  late MockClassService mockClasses;
-  late MockUserManagementService mockUserManagement;
+  late MockChildController mockChildren;
+  late MockTeacherController mockTeachers;
+  late MockClassController mockClasses;
+  late MockUserManagementController mockUserManagement;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockTeachers = MockTeacherService();
-    mockClasses = MockClassService();
-    mockUserManagement = MockUserManagementService();
+    mockChildren = MockChildController();
+    mockTeachers = MockTeacherController();
+    mockClasses = MockClassController();
+    mockUserManagement = MockUserManagementController();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
     when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
     // ChildDetailScreen (opened by the tap-through test) loads parents +
@@ -74,10 +74,10 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          childServiceProvider.overrideWithValue(mockChildren),
-          teacherServiceProvider.overrideWithValue(mockTeachers),
-          classServiceProvider.overrideWithValue(mockClasses),
-          userManagementServiceProvider.overrideWithValue(mockUserManagement),
+          childControllerProvider.overrideWithValue(mockChildren),
+          teacherControllerProvider.overrideWithValue(mockTeachers),
+          classControllerProvider.overrideWithValue(mockClasses),
+          userManagementControllerProvider.overrideWithValue(mockUserManagement),
         ],
         child: const MaterialApp(home: ManageChildrenScreen()),
       ),

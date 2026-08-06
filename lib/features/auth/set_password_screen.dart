@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 
 // Reached two ways, both after a valid session is already established from
 // an emailed link:
@@ -33,7 +33,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
-    final auth = ref.read(authServiceProvider);
+    final auth = ref.read(authControllerProvider);
     try {
       await auth.updatePassword(_passwordController.text);
       if (widget.clearMustSetPasswordFlag) {

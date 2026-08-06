@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/class_service.dart';
-import '../../../core/services/photo_capture_service.dart';
-import '../../../core/services/teacher_service.dart';
+import '../../../core/controllers/class_controller.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
+import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
 
 // Director-only view/edit of one class. Reached by tapping a class in
 // People > Classes. Edits the photo (class-avatars bucket), name, and
-// assigned teacher; saving writes back via ClassService.updateClass
+// assigned teacher; saving writes back via ClassController.updateClass
 // (director-only per RLS) and pops the updated class so the list refreshes.
 // (Creating a class stays a dialog -- there's no class_id to key the photo
 // upload path until the row exists, so a picture is added by opening it here
@@ -43,7 +43,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
     _nameController = TextEditingController(text: widget.classGroup.name);
     _teacherId = widget.classGroup.teacherId;
     _avatarPath = widget.classGroup.avatarPath;
-    _teachersFuture = ref.read(teacherServiceProvider).fetchAll();
+    _teachersFuture = ref.read(teacherControllerProvider).fetchAll();
   }
 
   @override
@@ -59,12 +59,12 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
     if (source == null) return;
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
-    final capture = ref.read(photoCaptureServiceProvider);
+    final capture = ref.read(photoCaptureControllerProvider);
     final photo = source == AvatarSource.gallery
         ? await capture.pickFromGallery()
         : await capture.captureFromCamera();
     if (photo == null) return;
-    final service = ref.read(classServiceProvider);
+    final service = ref.read(classControllerProvider);
     try {
       final path =
           await service.uploadClassAvatar(classId: widget.classGroup.id, photo: photo);
@@ -87,7 +87,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
     if (user == null) return;
     setState(() => _saving = true);
     try {
-      final updated = await ref.read(classServiceProvider).updateClass(
+      final updated = await ref.read(classControllerProvider).updateClass(
             id: widget.classGroup.id,
             name: _nameController.text.trim(),
             teacherId: _teacherId,

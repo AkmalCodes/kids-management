@@ -1,17 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/daily_report.dart';
 
 // One report per child per day (UNIQUE child_id,date). Teachers write for
 // their class; parents read their child's; directors read all -- enforced
 // by daily_reports RLS. Report photos live in the private
 // 'daily-report-images' bucket.
-class DailyReportService {
+class DailyReportController {
   final SupabaseClient _client;
 
-  DailyReportService({SupabaseClient? client})
+  DailyReportController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // Newest first -- the parent's feed for a child.
@@ -90,11 +90,11 @@ class DailyReportService {
       _client.storage.from('daily-report-images').createSignedUrl(path, 3600);
 }
 
-final dailyReportServiceProvider = Provider<DailyReportService>(
-  (ref) => DailyReportService(client: ref.watch(supabaseClientProvider)),
+final dailyReportControllerProvider = Provider<DailyReportController>(
+  (ref) => DailyReportController(client: ref.watch(supabaseClientProvider)),
 );
 
 // Session-cached signed URL for a report image path.
 final signedReportImageUrlProvider = FutureProvider.family<String, String>((ref, path) {
-  return ref.watch(dailyReportServiceProvider).getSignedReportImageUrl(path);
+  return ref.watch(dailyReportControllerProvider).getSignedReportImageUrl(path);
 });

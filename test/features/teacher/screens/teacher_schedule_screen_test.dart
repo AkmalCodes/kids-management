@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/class_group.dart';
 import 'package:test_flutter/core/models/schedule.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/schedule_service.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/schedule_controller.dart';
 import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.dart';
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -36,10 +36,10 @@ ClassGroup _classGroup() => ClassGroup(
 );
 
 void main() {
-  late MockClassService mockClasses;
+  late MockClassController mockClasses;
 
   setUp(() {
-    mockClasses = MockClassService();
+    mockClasses = MockClassController();
   });
 
   Future<void> pumpScreen(WidgetTester tester, {List<Override> extra = const []}) =>
@@ -47,7 +47,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-            classServiceProvider.overrideWithValue(mockClasses),
+            classControllerProvider.overrideWithValue(mockClasses),
             ...extra,
           ],
           child: const MaterialApp(home: Scaffold(body: TeacherScheduleScreen())),

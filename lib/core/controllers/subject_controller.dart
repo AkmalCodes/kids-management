@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/subject.dart';
 
 // Reads/writes the `subjects` table. RLS lets any authenticated user read
 // (subjects show up on lesson plans and the schedule), but only directors
 // create/edit/delete them.
-class SubjectService {
+class SubjectController {
   final SupabaseClient _client;
 
-  SubjectService({SupabaseClient? client})
+  SubjectController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   Future<List<Subject>> fetchAll() async {
@@ -57,6 +57,6 @@ class SubjectService {
   }
 }
 
-final subjectServiceProvider = Provider<SubjectService>(
-  (ref) => SubjectService(client: ref.watch(supabaseClientProvider)),
+final subjectControllerProvider = Provider<SubjectController>(
+  (ref) => SubjectController(client: ref.watch(supabaseClientProvider)),
 );

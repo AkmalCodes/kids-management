@@ -4,20 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/attendance.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/attendance_service.dart';
-import 'package:test_flutter/core/services/child_service.dart';
+import 'package:test_flutter/core/controllers/attendance_controller.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
 import 'package:test_flutter/shared/util/date_display.dart';
 import 'package:test_flutter/features/parent/screens/attendance_detail_screen.dart';
 import 'package:test_flutter/features/parent/screens/child_attendance_screen.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockAttendanceService extends Mock implements AttendanceService {}
+class MockAttendanceController extends Mock implements AttendanceController {}
 
 AppUser _parent() => AppUser(
   id: 'parent-1',
@@ -63,20 +63,20 @@ Attendance _record(String date, AttendanceStatus status) => Attendance(
 );
 
 void main() {
-  late MockChildService mockChildren;
-  late MockAttendanceService mockAttendance;
+  late MockChildController mockChildren;
+  late MockAttendanceController mockAttendance;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockAttendance = MockAttendanceService();
+    mockChildren = MockChildController();
+    mockAttendance = MockAttendanceController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_parent())),
-            childServiceProvider.overrideWithValue(mockChildren),
-            attendanceServiceProvider.overrideWithValue(mockAttendance),
+            childControllerProvider.overrideWithValue(mockChildren),
+            attendanceControllerProvider.overrideWithValue(mockAttendance),
           ],
           child: const MaterialApp(home: Scaffold(body: ChildAttendanceScreen())),
         ),

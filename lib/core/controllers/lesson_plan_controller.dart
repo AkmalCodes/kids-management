@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/lesson_plan.dart';
 
 // Reads/writes the `lesson_plans` table. RLS: a teacher sees/creates/edits
 // their own; a director sees all and can edit/delete/approve any. The DB has
 // two UPDATE policies so a teacher can only set draft/submitted (never
 // self-approve) -- see the design doc §6.5.
-class LessonPlanService {
+class LessonPlanController {
   final SupabaseClient _client;
 
-  LessonPlanService({SupabaseClient? client})
+  LessonPlanController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // A teacher's own plans, newest first. (Ordered by created_at now that
@@ -169,6 +169,6 @@ class PlanSubject {
   final String? subject;
 }
 
-final lessonPlanServiceProvider = Provider<LessonPlanService>(
-  (ref) => LessonPlanService(client: ref.watch(supabaseClientProvider)),
+final lessonPlanControllerProvider = Provider<LessonPlanController>(
+  (ref) => LessonPlanController(client: ref.watch(supabaseClientProvider)),
 );

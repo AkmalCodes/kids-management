@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../auth/role_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/set_password_screen.dart';

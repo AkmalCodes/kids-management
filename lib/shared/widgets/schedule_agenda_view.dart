@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/schedule.dart';
-import '../../core/services/lesson_plan_service.dart';
+import '../../core/controllers/lesson_plan_controller.dart';
 import '../screens/day_schedule_screen.dart';
 
 // Agenda-style schedule (modeled on typical calendar apps): date numbers
@@ -69,7 +69,7 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   Future<void> _loadSubjects(String classId) async {
     try {
       final planSubjects =
-          await ref.read(lessonPlanServiceProvider).fetchClassPlanSubjects(classId);
+          await ref.read(lessonPlanControllerProvider).fetchClassPlanSubjects(classId);
       if (!mounted) return;
       setState(() {
         _subjectByPlanId

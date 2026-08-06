@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 
 // Changing your password while already signed in (from the Profile tab).
 // Separate from SetPasswordScreen because the post-success behaviour
@@ -30,7 +30,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      await ref.read(authServiceProvider).updatePassword(_passwordController.text);
+      await ref.read(authControllerProvider).updatePassword(_passwordController.text);
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/app_user.dart';
-import '../../../core/services/photo_capture_service.dart';
-import '../../../core/services/profile_service.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
+import '../../../core/controllers/profile_controller.dart';
 import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
@@ -72,12 +72,12 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     if (source == null) return;
     final me = await ref.read(currentUserProvider.future);
     if (me == null) return;
-    final capture = ref.read(photoCaptureServiceProvider);
+    final capture = ref.read(photoCaptureControllerProvider);
     final photo = source == AvatarSource.gallery
         ? await capture.pickFromGallery()
         : await capture.captureFromCamera();
     if (photo == null) return;
-    final service = ref.read(profileServiceProvider);
+    final service = ref.read(profileControllerProvider);
     try {
       final path = await service.uploadAvatar(userId: widget.person.id, photo: photo);
       if (me.id == widget.person.id) {
@@ -105,7 +105,7 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
     setState(() => _saving = true);
-    final service = ref.read(profileServiceProvider);
+    final service = ref.read(profileControllerProvider);
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     // Trim to null so empty fields clear the column rather than storing ''.

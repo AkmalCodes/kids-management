@@ -4,15 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
-import 'package:test_flutter/core/services/profile_service.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
+import 'package:test_flutter/core/controllers/profile_controller.dart';
 import 'package:test_flutter/features/profile/person_detail_screen.dart';
 
-class MockProfileService extends Mock implements ProfileService {}
+class MockProfileController extends Mock implements ProfileController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -60,12 +60,12 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockProfileService mockProfile;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockProfileController mockProfile;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockProfile = MockProfileService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockProfile = MockProfileController();
+    mockPhotoCapture = MockPhotoCaptureController();
   });
 
   Future<void> pumpScreen(
@@ -81,8 +81,8 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(currentUser ?? _director())),
-          profileServiceProvider.overrideWithValue(mockProfile),
-          photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+          profileControllerProvider.overrideWithValue(mockProfile),
+          photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
         ],
         child: MaterialApp(home: PersonDetailScreen(person: person ?? _teacher())),
       ),

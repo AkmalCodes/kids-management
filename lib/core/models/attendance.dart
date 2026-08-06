@@ -11,7 +11,7 @@ class Attendance {
   // other — teachers may attach either, neither, or both. Stored as
   // Supabase Storage object paths (private bucket), not ready-to-use
   // URLs: display code must exchange these for a signed URL (see
-  // AttendanceService.getSignedPhotoUrl).
+  // AttendanceController.getSignedPhotoUrl).
   final String? photoPath; // optional check-in photo
   final String? belongingsPhotoPath; // optional photo of the child's belongings/clothes
   final DateTime createdAt;

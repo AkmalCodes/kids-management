@@ -4,18 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/models/daily_report.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/daily_report_service.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/daily_report_controller.dart';
 import 'package:test_flutter/shared/util/date_display.dart';
 import 'package:test_flutter/features/parent/screens/child_reports_screen.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockDailyReportService extends Mock implements DailyReportService {}
+class MockDailyReportController extends Mock implements DailyReportController {}
 
 AppUser _parent() => AppUser(
   id: 'parent-1',
@@ -61,20 +61,20 @@ DailyReport _report({String date = '2026-07-28', String text = '', List<String> 
     );
 
 void main() {
-  late MockChildService mockChildren;
-  late MockDailyReportService mockReports;
+  late MockChildController mockChildren;
+  late MockDailyReportController mockReports;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockReports = MockDailyReportService();
+    mockChildren = MockChildController();
+    mockReports = MockDailyReportController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_parent())),
-            childServiceProvider.overrideWithValue(mockChildren),
-            dailyReportServiceProvider.overrideWithValue(mockReports),
+            childControllerProvider.overrideWithValue(mockChildren),
+            dailyReportControllerProvider.overrideWithValue(mockReports),
           ],
           child: const MaterialApp(home: Scaffold(body: ChildReportsScreen())),
         ),

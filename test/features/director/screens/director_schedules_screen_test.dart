@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/models/class_group.dart';
-import 'package:test_flutter/core/services/class_service.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
 import 'package:test_flutter/features/director/screens/director_schedules_screen.dart';
 import 'package:test_flutter/features/director/screens/person_schedule_screen.dart';
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
 ClassGroup _classGroup(String id, String name) => ClassGroup(
   id: id,
@@ -21,15 +21,15 @@ ClassGroup _classGroup(String id, String name) => ClassGroup(
 );
 
 void main() {
-  late MockClassService mockClasses;
+  late MockClassController mockClasses;
 
   setUp(() {
-    mockClasses = MockClassService();
+    mockClasses = MockClassController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
-          overrides: [classServiceProvider.overrideWithValue(mockClasses)],
+          overrides: [classControllerProvider.overrideWithValue(mockClasses)],
           child: const MaterialApp(
             home: Scaffold(body: DirectorSchedulesScreen()),
           ),

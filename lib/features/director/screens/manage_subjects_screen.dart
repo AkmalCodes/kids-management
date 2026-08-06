@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/subject.dart';
-import '../../../core/services/subject_service.dart';
+import '../../../core/controllers/subject_controller.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 
 // Director-managed list of lesson subjects (Art, Numeracy, …). Teachers tag
@@ -21,14 +21,14 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
   @override
   void initState() {
     super.initState();
-    _future = ref.read(subjectServiceProvider).fetchAll();
+    _future = ref.read(subjectControllerProvider).fetchAll();
   }
 
   // Block body, not `() =>`: an arrow would return the Future from the
   // assignment and setState rejects a callback that returns a Future.
   void _refresh() {
     setState(() {
-      _future = ref.read(subjectServiceProvider).fetchAll();
+      _future = ref.read(subjectControllerProvider).fetchAll();
     });
   }
 
@@ -38,7 +38,7 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
     final result = await _showSubjectDialog(title: 'New subject');
     if (result == null || result.name == null) return;
     try {
-      await ref.read(subjectServiceProvider).createSubject(
+      await ref.read(subjectControllerProvider).createSubject(
             name: result.name!,
             centerId: user.centerId!,
             actorUid: user.id,
@@ -57,7 +57,7 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
     if (user == null || !mounted) return;
     final result = await _showSubjectDialog(title: 'Edit subject', initialName: subject.name);
     if (result == null) return;
-    final service = ref.read(subjectServiceProvider);
+    final service = ref.read(subjectControllerProvider);
     try {
       if (result.delete) {
         await service.deleteSubject(subject.id);
@@ -78,7 +78,7 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
   Future<void> _deleteSubject(Subject subject) async {
     if (!await confirmDelete(context, message: 'Delete subject "${subject.name}"?')) return;
     try {
-      await ref.read(subjectServiceProvider).deleteSubject(subject.id);
+      await ref.read(subjectControllerProvider).deleteSubject(subject.id);
       if (mounted) _refresh();
     } catch (e) {
       if (mounted) {

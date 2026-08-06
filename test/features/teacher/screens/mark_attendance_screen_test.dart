@@ -5,21 +5,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/attendance.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/attendance_service.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
+import 'package:test_flutter/core/controllers/attendance_controller.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
 import 'package:test_flutter/features/teacher/screens/mark_attendance_screen.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockAttendanceService extends Mock implements AttendanceService {}
+class MockAttendanceController extends Mock implements AttendanceController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -55,23 +55,23 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockChildService mockChildren;
-  late MockAttendanceService mockAttendance;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockChildController mockChildren;
+  late MockAttendanceController mockAttendance;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockAttendance = MockAttendanceService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockChildren = MockChildController();
+    mockAttendance = MockAttendanceController();
+    mockPhotoCapture = MockPhotoCaptureController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-            childServiceProvider.overrideWithValue(mockChildren),
-            attendanceServiceProvider.overrideWithValue(mockAttendance),
-            photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+            childControllerProvider.overrideWithValue(mockChildren),
+            attendanceControllerProvider.overrideWithValue(mockAttendance),
+            photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
           ],
           child: const MaterialApp(home: Scaffold(body: MarkAttendanceScreen())),
         ),

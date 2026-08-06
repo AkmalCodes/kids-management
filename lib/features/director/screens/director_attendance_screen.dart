@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/attendance_service.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/class_service.dart';
+import '../../../core/controllers/attendance_controller.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/class_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
@@ -47,9 +47,9 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
   }
 
   Future<_RosterData> _load() async {
-    final children = await ref.read(childServiceProvider).fetchAll();
-    final records = await ref.read(attendanceServiceProvider).fetchForDate(_dateString);
-    final classes = await ref.read(classServiceProvider).fetchAll();
+    final children = await ref.read(childControllerProvider).fetchAll();
+    final records = await ref.read(attendanceControllerProvider).fetchForDate(_dateString);
+    final classes = await ref.read(classControllerProvider).fetchAll();
     return _RosterData(
       children: children,
       attendanceByChild: {for (final r in records) r.childId: r},

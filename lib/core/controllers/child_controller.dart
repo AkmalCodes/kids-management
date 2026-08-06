@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/app_user.dart';
 import '../models/child.dart';
 
-class ChildService {
+class ChildController {
   final SupabaseClient _client;
 
-  ChildService({SupabaseClient? client})
+  ChildController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // Unfiltered — relies on the children_select RLS policy to grant
@@ -120,12 +120,12 @@ class ChildService {
   }
 }
 
-final childServiceProvider = Provider<ChildService>(
-  (ref) => ChildService(client: ref.watch(supabaseClientProvider)),
+final childControllerProvider = Provider<ChildController>(
+  (ref) => ChildController(client: ref.watch(supabaseClientProvider)),
 );
 
 // Session-cached signed URL for a child avatar path (same pattern as
 // signedAvatarUrlProvider, but for the child-avatars bucket).
 final signedChildAvatarUrlProvider = FutureProvider.family<String, String>((ref, path) {
-  return ref.watch(childServiceProvider).getSignedChildAvatarUrl(path);
+  return ref.watch(childControllerProvider).getSignedChildAvatarUrl(path);
 });

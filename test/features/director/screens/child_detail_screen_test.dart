@@ -3,22 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
 import 'package:test_flutter/features/director/screens/child_detail_screen.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 class FakeChild extends Fake implements Child {}
 
@@ -56,16 +56,16 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockChildService mockChildren;
-  late MockTeacherService mockTeachers;
-  late MockClassService mockClasses;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockChildController mockChildren;
+  late MockTeacherController mockTeachers;
+  late MockClassController mockClasses;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockTeachers = MockTeacherService();
-    mockClasses = MockClassService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockChildren = MockChildController();
+    mockTeachers = MockTeacherController();
+    mockClasses = MockClassController();
+    mockPhotoCapture = MockPhotoCaptureController();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
     when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
     when(() => mockChildren.fetchParentsForChild(any())).thenAnswer((_) async => []);
@@ -78,10 +78,10 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          childServiceProvider.overrideWithValue(mockChildren),
-          teacherServiceProvider.overrideWithValue(mockTeachers),
-          classServiceProvider.overrideWithValue(mockClasses),
-          photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+          childControllerProvider.overrideWithValue(mockChildren),
+          teacherControllerProvider.overrideWithValue(mockTeachers),
+          classControllerProvider.overrideWithValue(mockClasses),
+          photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
         ],
         child: MaterialApp(home: ChildDetailScreen(child: _child())),
       ),

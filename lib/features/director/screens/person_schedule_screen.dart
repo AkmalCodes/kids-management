@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/profile_service.dart';
-import '../../../core/services/schedule_service.dart';
+import '../../../core/controllers/profile_controller.dart';
+import '../../../core/controllers/schedule_controller.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 

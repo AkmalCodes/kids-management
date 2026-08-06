@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/schedule_service.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/schedule_controller.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
 AppUser _parent() => AppUser(
   id: 'parent-1',
@@ -41,10 +41,10 @@ Child _child({String? classId}) => Child(
 );
 
 void main() {
-  late MockChildService mockChildren;
+  late MockChildController mockChildren;
 
   setUp(() {
-    mockChildren = MockChildService();
+    mockChildren = MockChildController();
   });
 
   Future<void> pumpScreen(WidgetTester tester, {List<Override> extra = const []}) =>
@@ -52,7 +52,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_parent())),
-            childServiceProvider.overrideWithValue(mockChildren),
+            childControllerProvider.overrideWithValue(mockChildren),
             ...extra,
           ],
           child: const MaterialApp(home: Scaffold(body: ChildScheduleScreen())),

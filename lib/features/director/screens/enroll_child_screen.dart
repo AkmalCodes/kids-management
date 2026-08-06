@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/child.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/teacher_service.dart';
-import '../../../core/services/user_management_service.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/teacher_controller.dart';
+import '../../../core/controllers/user_management_controller.dart';
 
 // One form covers both halves of "enroll a child": the child record itself,
 // and inviting the first parent account linked to it -- matches how a
@@ -36,7 +36,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
   @override
   void initState() {
     super.initState();
-    _teachersFuture = ref.read(teacherServiceProvider).fetchAll();
+    _teachersFuture = ref.read(teacherControllerProvider).fetchAll();
   }
 
   @override
@@ -74,7 +74,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
     setState(() => _saving = true);
     try {
       final now = DateTime.now();
-      final child = await ref.read(childServiceProvider).createChild(
+      final child = await ref.read(childControllerProvider).createChild(
             Child(
               id: '',
               name: _childNameController.text.trim(),
@@ -91,7 +91,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               updatedBy: user.id,
             ),
           );
-      await ref.read(userManagementServiceProvider).inviteParent(
+      await ref.read(userManagementControllerProvider).inviteParent(
             email: _parentEmailController.text.trim(),
             name: _parentNameController.text.trim(),
             childId: child.id,

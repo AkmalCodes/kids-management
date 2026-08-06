@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/class_service.dart';
-import '../../../core/services/schedule_service.dart';
+import '../../../core/controllers/class_controller.dart';
+import '../../../core/controllers/schedule_controller.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 
 // A teacher's schedule is their class's schedule (§6.8). Resolves the class
@@ -22,7 +22,7 @@ class TeacherScheduleScreen extends ConsumerWidget {
       data: (user) {
         if (user == null) return const SizedBox.shrink();
         return FutureBuilder<List<ClassGroup>>(
-          future: ref.read(classServiceProvider).fetchForTeacher(user.id),
+          future: ref.read(classControllerProvider).fetchForTeacher(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());

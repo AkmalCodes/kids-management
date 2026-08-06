@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/class_service.dart';
+import '../../../core/controllers/class_controller.dart';
 import 'person_schedule_screen.dart';
 
 // Director's "Schedules" tab: search/pick a class, land on its schedule in
@@ -83,7 +83,7 @@ class _ClassList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return FutureBuilder<List<ClassGroup>>(
-      future: ref.read(classServiceProvider).fetchAll(),
+      future: ref.read(classControllerProvider).fetchAll(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());

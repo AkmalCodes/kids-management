@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/subject.dart';
-import 'package:test_flutter/core/services/subject_service.dart';
+import 'package:test_flutter/core/controllers/subject_controller.dart';
 import 'package:test_flutter/features/director/screens/manage_subjects_screen.dart';
 
-class MockSubjectService extends Mock implements SubjectService {}
+class MockSubjectController extends Mock implements SubjectController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -33,10 +33,10 @@ Subject _subject(String id, String name) => Subject(
 );
 
 void main() {
-  late MockSubjectService mockSubjects;
+  late MockSubjectController mockSubjects;
 
   setUp(() {
-    mockSubjects = MockSubjectService();
+    mockSubjects = MockSubjectController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) async {
@@ -44,7 +44,7 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          subjectServiceProvider.overrideWithValue(mockSubjects),
+          subjectControllerProvider.overrideWithValue(mockSubjects),
         ],
         child: const MaterialApp(home: ManageSubjectsScreen()),
       ),

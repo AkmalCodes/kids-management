@@ -7,7 +7,7 @@ class ClassGroup {
   final String centerId;
   // Class photo in the private 'class-avatars' bucket, null if unset. Not a
   // ready URL — exchange for a signed URL to display (see
-  // ClassService.getSignedClassAvatarUrl).
+  // ClassController.getSignedClassAvatarUrl).
   final String? avatarPath;
   final DateTime createdAt;
   final DateTime updatedAt;

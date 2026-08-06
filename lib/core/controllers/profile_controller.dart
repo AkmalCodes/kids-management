@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/app_user.dart';
 
 // Profile pictures live in a private 'avatars' Storage bucket, one file per
 // user keyed by their own id ('<uid>/avatar.jpg'), same private-bucket +
 // signed-URL pattern as attendance photos.
-class ProfileService {
+class ProfileController {
   final SupabaseClient _client;
 
-  ProfileService({SupabaseClient? client})
+  ProfileController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // Deterministic path per user so replacing an avatar overwrites (upsert)
@@ -105,12 +105,12 @@ class ProfileService {
   }
 }
 
-final profileServiceProvider = Provider<ProfileService>(
-  (ref) => ProfileService(client: ref.watch(supabaseClientProvider)),
+final profileControllerProvider = Provider<ProfileController>(
+  (ref) => ProfileController(client: ref.watch(supabaseClientProvider)),
 );
 
 // Cached per path for the session so the avatar doesn't re-fetch a signed
 // URL on every rebuild (same pattern as signedPhotoUrlProvider).
 final signedAvatarUrlProvider = FutureProvider.family<String, String>((ref, path) {
-  return ref.watch(profileServiceProvider).getSignedAvatarUrl(path);
+  return ref.watch(profileControllerProvider).getSignedAvatarUrl(path);
 });

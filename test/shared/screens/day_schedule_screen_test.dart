@@ -2,23 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/lesson_plan.dart';
 import 'package:test_flutter/core/models/schedule.dart';
 import 'package:test_flutter/core/models/subject.dart';
-import 'package:test_flutter/core/services/lesson_plan_service.dart';
-import 'package:test_flutter/core/services/schedule_service.dart';
-import 'package:test_flutter/core/services/subject_service.dart';
+import 'package:test_flutter/core/controllers/lesson_plan_controller.dart';
+import 'package:test_flutter/core/controllers/schedule_controller.dart';
+import 'package:test_flutter/core/controllers/subject_controller.dart';
 import 'package:test_flutter/features/shared_lessons/lesson_plan_view_screen.dart';
 import 'package:test_flutter/shared/screens/day_schedule_screen.dart';
 import 'package:test_flutter/shared/widgets/day_timetable.dart';
 
-class MockScheduleService extends Mock implements ScheduleService {}
+class MockScheduleController extends Mock implements ScheduleController {}
 
-class MockLessonPlanService extends Mock implements LessonPlanService {}
+class MockLessonPlanController extends Mock implements LessonPlanController {}
 
-class MockSubjectService extends Mock implements SubjectService {}
+class MockSubjectController extends Mock implements SubjectController {}
 
 AppUser _teacher(String id) => AppUser(
   id: id,
@@ -60,10 +60,10 @@ void main() {
     registerFallbackValue(_entry(id: 'fallback', createdBy: 'teacher-1'));
   });
 
-  late MockScheduleService mockService;
+  late MockScheduleController mockService;
 
   setUp(() {
-    mockService = MockScheduleService();
+    mockService = MockScheduleController();
   });
 
   Future<void> pumpScreen(
@@ -77,7 +77,7 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher(viewerId))),
-            scheduleServiceProvider.overrideWithValue(mockService),
+            scheduleControllerProvider.overrideWithValue(mockService),
           ],
           child: MaterialApp(
             home: DayScheduleScreen(
@@ -116,8 +116,8 @@ void main() {
 
   testWidgets('a class event with an attached plan shows its subject and opens it',
       (tester) async {
-    final mockPlans = MockLessonPlanService();
-    final mockSubjects = MockSubjectService();
+    final mockPlans = MockLessonPlanController();
+    final mockSubjects = MockSubjectController();
     final plan = LessonPlan(
       id: 'lp-1',
       teacherId: 'teacher-1',
@@ -172,9 +172,9 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_teacher('parent-1'))),
-          scheduleServiceProvider.overrideWithValue(mockService),
-          lessonPlanServiceProvider.overrideWithValue(mockPlans),
-          subjectServiceProvider.overrideWithValue(mockSubjects),
+          scheduleControllerProvider.overrideWithValue(mockService),
+          lessonPlanControllerProvider.overrideWithValue(mockPlans),
+          subjectControllerProvider.overrideWithValue(mockSubjects),
         ],
         child: MaterialApp(
           home: DayScheduleScreen(

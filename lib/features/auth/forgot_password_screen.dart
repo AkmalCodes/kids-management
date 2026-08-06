@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 
 // Sends a password-recovery email. The link in that email deep-links back
 // into the app (same com.example.test_flutter://login-callback/ scheme as
@@ -30,7 +30,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _sending = true);
     try {
-      await ref.read(authServiceProvider).sendPasswordReset(_emailController.text.trim());
+      await ref.read(authControllerProvider).sendPasswordReset(_emailController.text.trim());
       if (!mounted) return;
       setState(() {
         _sending = false;

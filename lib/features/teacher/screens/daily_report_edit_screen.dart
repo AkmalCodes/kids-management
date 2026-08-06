@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/child.dart';
 import '../../../core/models/daily_report.dart';
-import '../../../core/services/daily_report_service.dart';
-import '../../../core/services/photo_capture_service.dart';
+import '../../../core/controllers/daily_report_controller.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 
@@ -48,7 +48,7 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
 
   Future<DailyReport?> _load() async {
     final report = await ref
-        .read(dailyReportServiceProvider)
+        .read(dailyReportControllerProvider)
         .fetchForChildAndDate(widget.child.id, _today);
     if (report != null) {
       _existing = report;
@@ -62,13 +62,13 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
   Future<void> _addPhoto() async {
     final source = await showAvatarSourceSheet(context);
     if (source == null) return;
-    final capture = ref.read(photoCaptureServiceProvider);
+    final capture = ref.read(photoCaptureControllerProvider);
     final photo = source == AvatarSource.gallery
         ? await capture.pickFromGallery()
         : await capture.captureFromCamera();
     if (photo == null) return;
     try {
-      final path = await ref.read(dailyReportServiceProvider).uploadReportImage(
+      final path = await ref.read(dailyReportControllerProvider).uploadReportImage(
             childId: widget.child.id,
             date: _today,
             photo: photo,
@@ -92,7 +92,7 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
     if (user == null) return;
     setState(() => _saving = true);
     try {
-      await ref.read(dailyReportServiceProvider).saveReport(
+      await ref.read(dailyReportControllerProvider).saveReport(
             childId: widget.child.id,
             teacherId: user.id,
             centerId: widget.child.centerId,

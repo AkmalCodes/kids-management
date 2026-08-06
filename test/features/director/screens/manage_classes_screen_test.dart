@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/class_group.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
 import 'package:test_flutter/features/director/screens/class_detail_screen.dart';
 import 'package:test_flutter/features/director/screens/manage_classes_screen.dart';
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -50,12 +50,12 @@ ClassGroup _class(String id, String name, {String? teacherId}) => ClassGroup(
 );
 
 void main() {
-  late MockClassService mockClasses;
-  late MockTeacherService mockTeachers;
+  late MockClassController mockClasses;
+  late MockTeacherController mockTeachers;
 
   setUp(() {
-    mockClasses = MockClassService();
-    mockTeachers = MockTeacherService();
+    mockClasses = MockClassController();
+    mockTeachers = MockTeacherController();
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
     when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
   });
@@ -67,8 +67,8 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          classServiceProvider.overrideWithValue(mockClasses),
-          teacherServiceProvider.overrideWithValue(mockTeachers),
+          classControllerProvider.overrideWithValue(mockClasses),
+          teacherControllerProvider.overrideWithValue(mockTeachers),
         ],
         child: const MaterialApp(home: ManageClassesScreen()),
       ),

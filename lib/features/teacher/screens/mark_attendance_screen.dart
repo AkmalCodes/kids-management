@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
-import '../../../core/services/attendance_service.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/photo_capture_service.dart';
+import '../../../core/controllers/attendance_controller.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
@@ -75,8 +75,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     if (user == null) {
       return const _RosterData(children: [], attendanceByChild: {});
     }
-    final children = await ref.read(childServiceProvider).fetchForTeacher(user.id);
-    final records = await ref.read(attendanceServiceProvider).fetchForDate(_today);
+    final children = await ref.read(childControllerProvider).fetchForTeacher(user.id);
+    final records = await ref.read(attendanceControllerProvider).fetchForDate(_today);
     return _RosterData(
       children: children,
       attendanceByChild: {for (final r in records) r.childId: r},
@@ -86,7 +86,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   // Applies a write's returned row straight to the already-loaded roster
   // instead of re-fetching everything from the network -- that round trip
   // was why status changes visibly lagged before this (same fix already
-  // applied to schedule entries; see ScheduleService).
+  // applied to schedule entries; see ScheduleController).
   Future<void> _applyUpdate(String childId, Attendance updated) async {
     final data = await _future;
     if (!mounted) return;
@@ -103,7 +103,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   Future<void> _setStatus(Child child, AttendanceStatus status, Attendance? existing) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    final updated = await ref.read(attendanceServiceProvider).markAttendance(
+    final updated = await ref.read(attendanceControllerProvider).markAttendance(
           childId: child.id,
           centerId: child.centerId,
           date: _today,
@@ -126,12 +126,12 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    final captureService = ref.read(photoCaptureServiceProvider);
+    final captureService = ref.read(photoCaptureControllerProvider);
     final photo = fromGallery
         ? await captureService.pickFromGallery()
         : await captureService.captureFromCamera();
     if (photo == null) return;
-    final service = ref.read(attendanceServiceProvider);
+    final service = ref.read(attendanceControllerProvider);
     try {
       final Attendance updated;
       if (isBelongings) {
@@ -173,7 +173,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    final service = ref.read(attendanceServiceProvider);
+    final service = ref.read(attendanceControllerProvider);
     try {
       final updated = isBelongings
           ? await service.removeBelongingsPhoto(

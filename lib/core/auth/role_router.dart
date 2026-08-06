@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../../features/parent/parent_shell.dart';
 import '../../features/teacher/teacher_shell.dart';
 import '../../features/director/director_shell.dart';

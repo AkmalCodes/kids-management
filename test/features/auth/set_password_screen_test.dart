@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/features/auth/set_password_screen.dart';
 
-class MockAuthService extends Mock implements AuthService {}
+class MockAuthController extends Mock implements AuthController {}
 
 void main() {
-  late MockAuthService mockAuth;
+  late MockAuthController mockAuth;
 
   setUp(() {
-    mockAuth = MockAuthService();
+    mockAuth = MockAuthController();
   });
 
   Future<void> pumpScreen(WidgetTester tester, {bool clearFlag = true}) => tester.pumpWidget(
         ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(mockAuth)],
+          overrides: [authControllerProvider.overrideWithValue(mockAuth)],
           child: MaterialApp(
             home: SetPasswordScreen(clearMustSetPasswordFlag: clearFlag),
           ),

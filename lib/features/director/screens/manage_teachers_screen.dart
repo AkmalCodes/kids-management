@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/app_user.dart';
-import '../../../core/services/teacher_service.dart';
-import '../../../core/services/profile_service.dart';
-import '../../../core/services/user_management_service.dart';
+import '../../../core/controllers/teacher_controller.dart';
+import '../../../core/controllers/profile_controller.dart';
+import '../../../core/controllers/user_management_controller.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../profile/person_detail_screen.dart';
@@ -24,13 +24,13 @@ class _ManageTeachersScreenState extends ConsumerState<ManageTeachersScreen> {
     _future = _load();
   }
 
-  Future<List<AppUser>> _load() => ref.read(teacherServiceProvider).fetchAll();
+  Future<List<AppUser>> _load() => ref.read(teacherControllerProvider).fetchAll();
 
   Future<void> _addTeacher() async {
     final result = await showPersonInviteDialog(context, title: 'Invite a teacher');
     if (result == null || !mounted) return;
     try {
-      await ref.read(userManagementServiceProvider).inviteTeacher(
+      await ref.read(userManagementControllerProvider).inviteTeacher(
             email: result.email,
             name: result.name,
             phone: result.phone,

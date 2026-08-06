@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 
 // Account creation for anyone other than yourself always goes through the
 // create-user Edge Function (see supabase/functions/create-user) -- it
 // needs the service role key, which can never live in this app, so the
 // privileged part happens server-side. This service just calls it and
 // unpacks the error into something the UI can show directly.
-class UserManagementService {
+class UserManagementController {
   final SupabaseClient _client;
 
-  UserManagementService({SupabaseClient? client})
+  UserManagementController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   // Invites a new teacher by email -- Supabase sends them a secure link to
@@ -52,6 +52,6 @@ class UserManagementService {
   }
 }
 
-final userManagementServiceProvider = Provider<UserManagementService>(
-  (ref) => UserManagementService(client: ref.watch(supabaseClientProvider)),
+final userManagementControllerProvider = Provider<UserManagementController>(
+  (ref) => UserManagementController(client: ref.watch(supabaseClientProvider)),
 );

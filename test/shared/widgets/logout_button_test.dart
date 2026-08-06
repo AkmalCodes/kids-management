@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/shared/widgets/logout_button.dart';
 
-class MockAuthService extends Mock implements AuthService {}
+class MockAuthController extends Mock implements AuthController {}
 
 void main() {
-  late MockAuthService mockAuth;
+  late MockAuthController mockAuth;
 
   setUp(() {
-    mockAuth = MockAuthService();
+    mockAuth = MockAuthController();
     when(() => mockAuth.signOut()).thenAnswer((_) async {});
   });
 
   Future<void> pumpButton(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
-          overrides: [authServiceProvider.overrideWithValue(mockAuth)],
+          overrides: [authControllerProvider.overrideWithValue(mockAuth)],
           child: const MaterialApp(home: Scaffold(body: LogoutButton())),
         ),
       );

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 import '../../core/models/app_user.dart';
-import '../../core/services/photo_capture_service.dart';
-import '../../core/services/profile_service.dart';
+import '../../core/controllers/photo_capture_controller.dart';
+import '../../core/controllers/profile_controller.dart';
 import '../../shared/widgets/avatar_source_sheet.dart';
 import '../../shared/widgets/signed_avatar.dart';
 import 'change_password_screen.dart';
@@ -17,12 +17,12 @@ class ProfileScreen extends ConsumerWidget {
   Future<void> _changeAvatar(BuildContext context, WidgetRef ref, AppUser user) async {
     final source = await showAvatarSourceSheet(context);
     if (source == null) return;
-    final capture = ref.read(photoCaptureServiceProvider);
+    final capture = ref.read(photoCaptureControllerProvider);
     final photo = source == AvatarSource.gallery
         ? await capture.pickFromGallery()
         : await capture.captureFromCamera();
     if (photo == null) return;
-    final profile = ref.read(profileServiceProvider);
+    final profile = ref.read(profileControllerProvider);
     try {
       final path = await profile.uploadAvatar(userId: user.id, photo: photo);
       await profile.setAvatarPath(path);
@@ -45,7 +45,7 @@ class ProfileScreen extends ConsumerWidget {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
-        final email = ref.read(authServiceProvider).currentEmail ?? '';
+        final email = ref.read(authControllerProvider).currentEmail ?? '';
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
@@ -93,7 +93,7 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => ref.read(authServiceProvider).signOut(),
+              onPressed: () => ref.read(authControllerProvider).signOut(),
               icon: const Icon(Icons.logout),
               label: const Text('Sign out'),
               style: OutlinedButton.styleFrom(

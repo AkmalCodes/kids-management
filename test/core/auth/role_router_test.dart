@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/auth/role_router.dart';
 import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
 import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
 import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
 import 'package:test_flutter/features/teacher/screens/teacher_schedule_screen.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
 AppUser _user(String role) => AppUser(
   id: 'uid-1',
@@ -32,19 +32,19 @@ AppUser _user(String role) => AppUser(
 
 void main() {
   testWidgets('routes parent to ParentShell', (tester) async {
-    final mockChildren = MockChildService();
+    final mockChildren = MockChildController();
     when(() => mockChildren.fetchForParent(any())).thenAnswer((_) async => []);
 
     await tester.pumpWidget(ProviderScope(
       // overrideWith replaces the real provider (which would hit Supabase)
       // with a fake stream — this is how we test routing logic in
-      // isolation, without a real network connection. childServiceProvider
+      // isolation, without a real network connection. childControllerProvider
       // also needs overriding: ParentShell's first tab (ChildScheduleScreen)
       // reads it directly during build, which would otherwise crash since
       // Supabase.initialize() never runs in the test environment.
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('parent'))),
-        childServiceProvider.overrideWithValue(mockChildren),
+        childControllerProvider.overrideWithValue(mockChildren),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));
@@ -55,13 +55,13 @@ void main() {
   testWidgets('routes teacher to TeacherShell', (tester) async {
     // TeacherShell's first tab (TeacherScheduleScreen) reads classService
     // during build to resolve the teacher's class.
-    final mockClasses = MockClassService();
+    final mockClasses = MockClassController();
     when(() => mockClasses.fetchForTeacher(any())).thenAnswer((_) async => []);
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('teacher'))),
-        classServiceProvider.overrideWithValue(mockClasses),
+        classControllerProvider.overrideWithValue(mockClasses),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));
@@ -70,8 +70,8 @@ void main() {
   });
 
   testWidgets('routes director to DirectorShell', (tester) async {
-    final mockChildren = MockChildService();
-    final mockTeachers = MockTeacherService();
+    final mockChildren = MockChildController();
+    final mockTeachers = MockTeacherController();
     when(() => mockChildren.fetchAll()).thenAnswer((_) async => []);
     when(() => mockTeachers.fetchAll()).thenAnswer((_) async => []);
 
@@ -81,8 +81,8 @@ void main() {
       // parent case above.
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('director'))),
-        childServiceProvider.overrideWithValue(mockChildren),
-        teacherServiceProvider.overrideWithValue(mockTeachers),
+        childControllerProvider.overrideWithValue(mockChildren),
+        teacherControllerProvider.overrideWithValue(mockTeachers),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));

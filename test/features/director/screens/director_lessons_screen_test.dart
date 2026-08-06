@@ -2,25 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/lesson_plan.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/lesson_plan_service.dart';
-import 'package:test_flutter/core/services/subject_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/lesson_plan_controller.dart';
+import 'package:test_flutter/core/controllers/subject_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
 import 'package:test_flutter/features/director/screens/director_lessons_screen.dart';
 import 'package:test_flutter/features/director/screens/manage_subjects_screen.dart';
 import 'package:test_flutter/features/shared_lessons/lesson_plan_edit_screen.dart';
 import 'package:test_flutter/shared/widgets/lesson_plan_status_chip.dart';
 
-class MockLessonPlanService extends Mock implements LessonPlanService {}
+class MockLessonPlanController extends Mock implements LessonPlanController {}
 
-class MockSubjectService extends Mock implements SubjectService {}
+class MockSubjectController extends Mock implements SubjectController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -60,16 +60,16 @@ LessonPlan _plan(String id, String title, String teacherId, LessonPlanStatus sta
 );
 
 void main() {
-  late MockLessonPlanService mockPlans;
-  late MockSubjectService mockSubjects;
-  late MockTeacherService mockTeachers;
-  late MockClassService mockClasses;
+  late MockLessonPlanController mockPlans;
+  late MockSubjectController mockSubjects;
+  late MockTeacherController mockTeachers;
+  late MockClassController mockClasses;
 
   setUp(() {
-    mockPlans = MockLessonPlanService();
-    mockSubjects = MockSubjectService();
-    mockTeachers = MockTeacherService();
-    mockClasses = MockClassService();
+    mockPlans = MockLessonPlanController();
+    mockSubjects = MockSubjectController();
+    mockTeachers = MockTeacherController();
+    mockClasses = MockClassController();
     when(() => mockSubjects.fetchAll()).thenAnswer((_) async => []);
     when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
     when(() => mockTeachers.fetchAll())
@@ -85,10 +85,10 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          lessonPlanServiceProvider.overrideWithValue(mockPlans),
-          subjectServiceProvider.overrideWithValue(mockSubjects),
-          teacherServiceProvider.overrideWithValue(mockTeachers),
-          classServiceProvider.overrideWithValue(mockClasses),
+          lessonPlanControllerProvider.overrideWithValue(mockPlans),
+          subjectControllerProvider.overrideWithValue(mockSubjects),
+          teacherControllerProvider.overrideWithValue(mockTeachers),
+          classControllerProvider.overrideWithValue(mockClasses),
         ],
         child: const MaterialApp(home: Scaffold(body: DirectorLessonsScreen())),
       ),

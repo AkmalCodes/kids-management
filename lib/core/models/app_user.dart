@@ -20,7 +20,7 @@ class AppUser {
   final bool mustSetPassword;
   // Storage path (private 'avatars' bucket) of the user's profile picture,
   // or null if they haven't set one. Not a ready URL -- exchange for a
-  // signed URL to display (see ProfileService.getSignedAvatarUrl).
+  // signed URL to display (see ProfileController.getSignedAvatarUrl).
   final String? avatarPath;
   final DateTime createdAt;
   final DateTime updatedAt;

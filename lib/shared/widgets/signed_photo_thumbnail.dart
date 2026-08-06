@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/services/attendance_service.dart';
+import '../../core/controllers/attendance_controller.dart';
 
 // Cached per photoPath for the life of the app (no .autoDispose) so
 // collapsing/re-expanding a card, or navigating away and back, reuses the
@@ -8,10 +8,10 @@ import '../../core/services/attendance_service.dart';
 // lets Flutter's own NetworkImage cache kick in, since the URL string
 // stays identical across rebuilds instead of getting a fresh signature
 // each time. Signed URLs are minted for 1 hour (see
-// AttendanceService.getSignedPhotoUrl); a session open longer than that
+// AttendanceController.getSignedPhotoUrl); a session open longer than that
 // would need this invalidated, but that's not worth the complexity here.
 final signedPhotoUrlProvider = FutureProvider.family<String, String>((ref, photoPath) {
-  return ref.watch(attendanceServiceProvider).getSignedPhotoUrl(photoPath);
+  return ref.watch(attendanceControllerProvider).getSignedPhotoUrl(photoPath);
 });
 
 // The attendance-photos Storage bucket is private, so a stored path can't

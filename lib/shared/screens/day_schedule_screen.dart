@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 import '../../core/models/lesson_plan.dart';
 import '../../core/models/schedule.dart';
-import '../../core/services/lesson_plan_service.dart';
-import '../../core/services/schedule_service.dart';
+import '../../core/controllers/lesson_plan_controller.dart';
+import '../../core/controllers/schedule_controller.dart';
 import '../../features/shared_lessons/lesson_plan_view_screen.dart';
 import '../widgets/day_timetable.dart';
 import '../widgets/schedule_entry_form_dialog.dart';
@@ -66,7 +66,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
   }
 
   Future<void> _loadPlans(String classId) async {
-    final service = ref.read(lessonPlanServiceProvider);
+    final service = ref.read(lessonPlanControllerProvider);
     // Subject labels for every role via the connected-role RPC -- this is
     // what makes the subject show on events for parents (who can't read the
     // lesson_plans rows directly). Also drives the event dialog's picker.
@@ -144,7 +144,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     );
     if (result is! ScheduleEntrySaved) return;
 
-    final newEntry = await ref.read(scheduleServiceProvider).createEntry(
+    final newEntry = await ref.read(scheduleControllerProvider).createEntry(
           type: type,
           refId: refId,
           centerId: centerId,
@@ -171,7 +171,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     if (id == null) return;
     // Prefer the already-loaded plan; fall back to a fetch (e.g. it isn't in
     // the approved set we cached).
-    final plan = _planById[id] ?? await ref.read(lessonPlanServiceProvider).getPlan(id);
+    final plan = _planById[id] ?? await ref.read(lessonPlanControllerProvider).getPlan(id);
     if (plan == null || !mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -208,7 +208,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     );
     if (result == null) return;
 
-    final service = ref.read(scheduleServiceProvider);
+    final service = ref.read(scheduleControllerProvider);
     switch (result) {
       case ScheduleEntrySaved(
           :final startTime,

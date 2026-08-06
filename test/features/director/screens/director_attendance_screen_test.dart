@@ -6,17 +6,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/models/attendance.dart';
 import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/services/attendance_service.dart';
-import 'package:test_flutter/core/services/child_service.dart';
-import 'package:test_flutter/core/services/class_service.dart';
+import 'package:test_flutter/core/controllers/attendance_controller.dart';
+import 'package:test_flutter/core/controllers/child_controller.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
 import 'package:test_flutter/features/director/screens/director_attendance_screen.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
-class MockChildService extends Mock implements ChildService {}
+class MockChildController extends Mock implements ChildController {}
 
-class MockAttendanceService extends Mock implements AttendanceService {}
+class MockAttendanceController extends Mock implements AttendanceController {}
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
 Child _child(String id, String name) => Child(
   id: id,
@@ -50,23 +50,23 @@ Attendance _record(String childId, AttendanceStatus status) => Attendance(
 );
 
 void main() {
-  late MockChildService mockChildren;
-  late MockAttendanceService mockAttendance;
-  late MockClassService mockClasses;
+  late MockChildController mockChildren;
+  late MockAttendanceController mockAttendance;
+  late MockClassController mockClasses;
 
   setUp(() {
-    mockChildren = MockChildService();
-    mockAttendance = MockAttendanceService();
-    mockClasses = MockClassService();
+    mockChildren = MockChildController();
+    mockAttendance = MockAttendanceController();
+    mockClasses = MockClassController();
     when(() => mockClasses.fetchAll()).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
-            childServiceProvider.overrideWithValue(mockChildren),
-            attendanceServiceProvider.overrideWithValue(mockAttendance),
-            classServiceProvider.overrideWithValue(mockClasses),
+            childControllerProvider.overrideWithValue(mockChildren),
+            attendanceControllerProvider.overrideWithValue(mockAttendance),
+            classControllerProvider.overrideWithValue(mockClasses),
           ],
           child: const MaterialApp(home: Scaffold(body: DirectorAttendanceScreen())),
         ),

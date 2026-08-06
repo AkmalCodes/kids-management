@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/class_service.dart';
-import '../../../core/services/teacher_service.dart';
+import '../../../core/controllers/class_controller.dart';
+import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/class_form_dialog.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
@@ -34,8 +34,8 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
   }
 
   Future<_RosterData> _load() async {
-    final classes = await ref.read(classServiceProvider).fetchAll();
-    final teachers = await ref.read(teacherServiceProvider).fetchAll();
+    final classes = await ref.read(classControllerProvider).fetchAll();
+    final teachers = await ref.read(teacherControllerProvider).fetchAll();
     return _RosterData(
       classes: classes,
       teachersById: {for (final t in teachers) t.id: t.name},
@@ -45,12 +45,12 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
   Future<void> _create() async {
     final user = await ref.read(currentUserProvider.future);
     if (user == null || user.centerId == null || !mounted) return;
-    final teachers = await ref.read(teacherServiceProvider).fetchAll();
+    final teachers = await ref.read(teacherControllerProvider).fetchAll();
     if (!mounted) return;
     final result = await showClassFormDialog(context, title: 'New class', teachers: teachers);
     if (result == null) return;
     try {
-      await ref.read(classServiceProvider).createClass(
+      await ref.read(classControllerProvider).createClass(
             name: result.name,
             teacherId: result.teacherId,
             centerId: user.centerId!,
@@ -88,7 +88,7 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
       return;
     }
     try {
-      await ref.read(classServiceProvider).deleteClass(classGroup.id);
+      await ref.read(classControllerProvider).deleteClass(classGroup.id);
       if (!mounted) return;
       setState(() {
         _future = _load();

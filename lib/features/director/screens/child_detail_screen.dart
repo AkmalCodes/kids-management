@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/child.dart';
 import '../../../core/models/class_group.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/class_service.dart';
-import '../../../core/services/photo_capture_service.dart';
-import '../../../core/services/profile_service.dart';
-import '../../../core/services/teacher_service.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/class_controller.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
+import '../../../core/controllers/profile_controller.dart';
+import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
@@ -17,7 +17,7 @@ import '../../../shared/widgets/signed_avatar.dart';
 
 // Director-only view/edit of a single child's details. Reached by tapping a
 // child in the People > Children list. Every field is editable; saving
-// writes back via ChildService.updateChild (director-only per RLS) and pops
+// writes back via ChildController.updateChild (director-only per RLS) and pops
 // the updated child so the list can refresh.
 class ChildDetailScreen extends ConsumerStatefulWidget {
   const ChildDetailScreen({super.key, required this.child});
@@ -53,13 +53,13 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     _nameController = TextEditingController(text: c.name);
     _allergiesController = TextEditingController(text: c.allergies);
     _notesController = TextEditingController(text: c.notes);
-    _parentsFuture = ref.read(childServiceProvider).fetchParentsForChild(c.id);
+    _parentsFuture = ref.read(childControllerProvider).fetchParentsForChild(c.id);
     _dob = c.dob;
     _teacherId = c.teacherId;
     _classId = c.classId;
     _avatarPath = c.avatarPath;
-    _teachersFuture = ref.read(teacherServiceProvider).fetchAll();
-    _classesFuture = ref.read(classServiceProvider).fetchAll();
+    _teachersFuture = ref.read(teacherControllerProvider).fetchAll();
+    _classesFuture = ref.read(classControllerProvider).fetchAll();
   }
 
   // Immediate (independent of the Save button): pick -> upload -> write the
@@ -69,12 +69,12 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
     if (source == null) return;
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
-    final capture = ref.read(photoCaptureServiceProvider);
+    final capture = ref.read(photoCaptureControllerProvider);
     final photo = source == AvatarSource.gallery
         ? await capture.pickFromGallery()
         : await capture.captureFromCamera();
     if (photo == null) return;
-    final service = ref.read(childServiceProvider);
+    final service = ref.read(childControllerProvider);
     try {
       final path = await service.uploadChildAvatar(childId: widget.child.id, photo: photo);
       await service.setChildAvatarPath(childId: widget.child.id, path: path, actorUid: user.id);
@@ -143,7 +143,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
 
     setState(() => _saving = true);
     try {
-      final updated = await ref.read(childServiceProvider).updateChild(
+      final updated = await ref.read(childControllerProvider).updateChild(
             widget.child.copyWith(
               name: _nameController.text.trim(),
               dob: _dob,

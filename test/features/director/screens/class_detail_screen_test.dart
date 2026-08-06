@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/class_group.dart';
-import 'package:test_flutter/core/services/class_service.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
+import 'package:test_flutter/core/controllers/class_controller.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
 import 'package:test_flutter/features/director/screens/class_detail_screen.dart';
 
-class MockClassService extends Mock implements ClassService {}
+class MockClassController extends Mock implements ClassController {}
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _director() => AppUser(
   id: 'director-1',
@@ -57,14 +57,14 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockClassService mockClasses;
-  late MockTeacherService mockTeachers;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockClassController mockClasses;
+  late MockTeacherController mockTeachers;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockClasses = MockClassService();
-    mockTeachers = MockTeacherService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockClasses = MockClassController();
+    mockTeachers = MockTeacherController();
+    mockPhotoCapture = MockPhotoCaptureController();
     when(() => mockTeachers.fetchAll())
         .thenAnswer((_) async => [_teacher('teacher-1', 'Ms. Rose')]);
   });
@@ -74,9 +74,9 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => Stream.value(_director())),
-          classServiceProvider.overrideWithValue(mockClasses),
-          teacherServiceProvider.overrideWithValue(mockTeachers),
-          photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+          classControllerProvider.overrideWithValue(mockClasses),
+          teacherControllerProvider.overrideWithValue(mockTeachers),
+          photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
         ],
         child: MaterialApp(home: ClassDetailScreen(classGroup: _class())),
       ),

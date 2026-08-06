@@ -5,17 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
 import 'package:test_flutter/core/models/child.dart';
 import 'package:test_flutter/core/models/daily_report.dart';
-import 'package:test_flutter/core/services/daily_report_service.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
+import 'package:test_flutter/core/controllers/daily_report_controller.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
 import 'package:test_flutter/features/teacher/screens/daily_report_edit_screen.dart';
 
-class MockDailyReportService extends Mock implements DailyReportService {}
+class MockDailyReportController extends Mock implements DailyReportController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -64,20 +64,20 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockDailyReportService mockReports;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockDailyReportController mockReports;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockReports = MockDailyReportService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockReports = MockDailyReportController();
+    mockPhotoCapture = MockPhotoCaptureController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
-            dailyReportServiceProvider.overrideWithValue(mockReports),
-            photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+            dailyReportControllerProvider.overrideWithValue(mockReports),
+            photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
           ],
           child: MaterialApp(home: DailyReportEditScreen(child: _child())),
         ),

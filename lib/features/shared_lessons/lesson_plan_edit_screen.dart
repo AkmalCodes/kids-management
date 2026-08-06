@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 import '../../core/models/class_group.dart';
 import '../../core/models/lesson_plan.dart';
 import '../../core/models/subject.dart';
-import '../../core/services/class_service.dart';
-import '../../core/services/lesson_plan_service.dart';
-import '../../core/services/subject_service.dart';
+import '../../core/controllers/class_controller.dart';
+import '../../core/controllers/lesson_plan_controller.dart';
+import '../../core/controllers/subject_controller.dart';
 import '../../shared/widgets/editable_field.dart';
 import '../../shared/widgets/lesson_plan_status_chip.dart';
 
@@ -58,8 +58,8 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     _subjectId = p?.subjectId;
     _classId = p?.classId;
     _status = p?.status ?? LessonPlanStatus.draft;
-    _subjectsFuture = ref.read(subjectServiceProvider).fetchAll();
-    _classesFuture = ref.read(classServiceProvider).fetchAll();
+    _subjectsFuture = ref.read(subjectControllerProvider).fetchAll();
+    _classesFuture = ref.read(classControllerProvider).fetchAll();
   }
 
   @override
@@ -89,7 +89,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     if (!_formKey.currentState!.validate()) return;
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
-    final service = ref.read(lessonPlanServiceProvider);
+    final service = ref.read(lessonPlanControllerProvider);
     await _run(() async {
       if (_isNew) {
         if (user.centerId == null) return;
@@ -121,7 +121,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     if (!_formKey.currentState!.validate()) return;
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return;
-    final service = ref.read(lessonPlanServiceProvider);
+    final service = ref.read(lessonPlanControllerProvider);
     await _run(() async {
       await service.updatePlan(
         id: widget.plan!.id,
@@ -140,7 +140,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     if (user == null) return;
     final note = await _askReviewNote(approved);
     if (note == null) return; // cancelled
-    final service = ref.read(lessonPlanServiceProvider);
+    final service = ref.read(lessonPlanControllerProvider);
     await _run(() => service.reviewPlan(
           id: widget.plan!.id,
           approved: approved,
@@ -194,7 +194,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
       ),
     );
     if (confirmed != true) return;
-    await _run(() => ref.read(lessonPlanServiceProvider).deletePlan(widget.plan!.id));
+    await _run(() => ref.read(lessonPlanControllerProvider).deletePlan(widget.plan!.id));
   }
 
   Widget _readOnlyRow(String label, String value) {

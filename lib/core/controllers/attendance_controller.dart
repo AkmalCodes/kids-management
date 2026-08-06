@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/auth_service.dart';
+import '../auth/auth_controller.dart';
 import '../models/attendance.dart';
 
-class AttendanceService {
+class AttendanceController {
   final SupabaseClient _client;
 
-  AttendanceService({SupabaseClient? client})
+  AttendanceController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   Future<List<Attendance>> fetchForChild(String childId) async {
@@ -30,14 +30,14 @@ class AttendanceService {
   }
 
   // existingId absent -> insert; existingId present -> update, preserving
-  // the original created_by (same pattern as ScheduleService.saveSchedule).
+  // the original created_by (same pattern as ScheduleController.saveSchedule).
   // Deliberately doesn't touch photo_path/belongings_photo_path -- those
   // are attached independently via attachCheckInPhoto/attachBelongingsPhoto
   // so changing status never silently wipes out a photo someone attached
   // earlier.
   // Returns the saved row (via .select().single()) so the caller can
   // update its local state directly instead of re-fetching the whole
-  // roster -- same round-trip-avoidance as ScheduleService's create/update.
+  // roster -- same round-trip-avoidance as ScheduleController's create/update.
   Future<Attendance> markAttendance({
     required String childId,
     required String centerId,
@@ -160,6 +160,6 @@ class AttendanceService {
   }
 }
 
-final attendanceServiceProvider = Provider<AttendanceService>(
-  (ref) => AttendanceService(client: ref.watch(supabaseClientProvider)),
+final attendanceControllerProvider = Provider<AttendanceController>(
+  (ref) => AttendanceController(client: ref.watch(supabaseClientProvider)),
 );

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/child.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/user_management_service.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/user_management_controller.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
@@ -25,7 +25,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
     _future = _load();
   }
 
-  Future<List<Child>> _load() => ref.read(childServiceProvider).fetchAll();
+  Future<List<Child>> _load() => ref.read(childControllerProvider).fetchAll();
 
   Future<void> _enrollChild() async {
     final enrolled = await Navigator.of(context).push<bool>(
@@ -47,7 +47,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
     final result = await showPersonInviteDialog(context, title: 'Invite a parent for ${child.name}');
     if (result == null || !mounted) return;
     try {
-      await ref.read(userManagementServiceProvider).inviteParent(
+      await ref.read(userManagementControllerProvider).inviteParent(
             email: result.email,
             name: result.name,
             childId: child.id,
@@ -71,7 +71,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
       return;
     }
     try {
-      await ref.read(childServiceProvider).deleteChild(child.id);
+      await ref.read(childControllerProvider).deleteChild(child.id);
       if (!mounted) return;
       setState(() {
         _future = _load();

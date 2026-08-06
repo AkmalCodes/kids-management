@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/services/photo_capture_service.dart';
-import 'package:test_flutter/core/services/profile_service.dart';
+import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
+import 'package:test_flutter/core/controllers/profile_controller.dart';
 import 'package:test_flutter/features/profile/change_password_screen.dart';
 import 'package:test_flutter/features/profile/person_detail_screen.dart';
 import 'package:test_flutter/features/profile/profile_screen.dart';
 
-class MockAuthService extends Mock implements AuthService {}
+class MockAuthController extends Mock implements AuthController {}
 
-class MockProfileService extends Mock implements ProfileService {}
+class MockProfileController extends Mock implements ProfileController {}
 
-class MockPhotoCaptureService extends Mock implements PhotoCaptureService {}
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _user({String? avatarPath}) => AppUser(
   id: 'uid-1',
@@ -35,24 +35,24 @@ void main() {
     registerFallbackValue(XFile(''));
   });
 
-  late MockAuthService mockAuth;
-  late MockProfileService mockProfile;
-  late MockPhotoCaptureService mockPhotoCapture;
+  late MockAuthController mockAuth;
+  late MockProfileController mockProfile;
+  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
-    mockAuth = MockAuthService();
-    mockProfile = MockProfileService();
-    mockPhotoCapture = MockPhotoCaptureService();
+    mockAuth = MockAuthController();
+    mockProfile = MockProfileController();
+    mockPhotoCapture = MockPhotoCaptureController();
     when(() => mockAuth.currentEmail).thenReturn('alice@example.com');
   });
 
   Future<void> pumpScreen(WidgetTester tester, {String? avatarPath}) => tester.pumpWidget(
         ProviderScope(
           overrides: [
-            authServiceProvider.overrideWithValue(mockAuth),
+            authControllerProvider.overrideWithValue(mockAuth),
             currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath))),
-            profileServiceProvider.overrideWithValue(mockProfile),
-            photoCaptureServiceProvider.overrideWithValue(mockPhotoCapture),
+            profileControllerProvider.overrideWithValue(mockProfile),
+            photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
           ],
           child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
         ),

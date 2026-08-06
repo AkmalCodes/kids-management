@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/child.dart';
 import '../../../core/models/daily_report.dart';
-import '../../../core/services/child_service.dart';
-import '../../../core/services/daily_report_service.dart';
+import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/daily_report_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 
@@ -22,7 +22,7 @@ class ChildReportsScreen extends ConsumerWidget {
       data: (user) {
         if (user == null) return const SizedBox.shrink();
         return FutureBuilder<List<Child>>(
-          future: ref.read(childServiceProvider).fetchForParent(user.id),
+          future: ref.read(childControllerProvider).fetchForParent(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -69,7 +69,7 @@ class _ChildReportsSection extends ConsumerWidget {
           ),
         ),
         FutureBuilder<List<DailyReport>>(
-          future: ref.read(dailyReportServiceProvider).fetchForChild(child.id),
+          future: ref.read(dailyReportControllerProvider).fetchForChild(child.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Padding(

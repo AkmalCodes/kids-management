@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/app_user.dart';
 
-class AuthService {
+class AuthController {
   final SupabaseClient _client;
 
-  AuthService({SupabaseClient? client})
+  AuthController({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
   Stream<AppUser?> get userStream =>
@@ -61,14 +61,14 @@ final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
 
-final authServiceProvider = Provider<AuthService>(
-  (ref) => AuthService(client: ref.watch(supabaseClientProvider)),
+final authControllerProvider = Provider<AuthController>(
+  (ref) => AuthController(client: ref.watch(supabaseClientProvider)),
 );
 
 final currentUserProvider = StreamProvider<AppUser?>((ref) {
-  return ref.watch(authServiceProvider).userStream;
+  return ref.watch(authControllerProvider).userStream;
 });
 
 final passwordRecoveryProvider = StreamProvider<bool>((ref) {
-  return ref.watch(authServiceProvider).passwordRecoveryStream;
+  return ref.watch(authControllerProvider).passwordRecoveryStream;
 });

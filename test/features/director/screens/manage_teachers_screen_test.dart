@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/services/teacher_service.dart';
-import 'package:test_flutter/core/services/user_management_service.dart';
+import 'package:test_flutter/core/controllers/teacher_controller.dart';
+import 'package:test_flutter/core/controllers/user_management_controller.dart';
 import 'package:test_flutter/features/director/screens/manage_teachers_screen.dart';
 import 'package:test_flutter/features/profile/person_detail_screen.dart';
 
-class MockTeacherService extends Mock implements TeacherService {}
+class MockTeacherController extends Mock implements TeacherController {}
 
-class MockUserManagementService extends Mock implements UserManagementService {}
+class MockUserManagementController extends Mock implements UserManagementController {}
 
 AppUser _teacher(String id, String name) => AppUser(
   id: id,
@@ -29,19 +29,19 @@ void main() {
     registerFallbackValue('');
   });
 
-  late MockTeacherService mockTeachers;
-  late MockUserManagementService mockUserManagement;
+  late MockTeacherController mockTeachers;
+  late MockUserManagementController mockUserManagement;
 
   setUp(() {
-    mockTeachers = MockTeacherService();
-    mockUserManagement = MockUserManagementService();
+    mockTeachers = MockTeacherController();
+    mockUserManagement = MockUserManagementController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
         ProviderScope(
           overrides: [
-            teacherServiceProvider.overrideWithValue(mockTeachers),
-            userManagementServiceProvider.overrideWithValue(mockUserManagement),
+            teacherControllerProvider.overrideWithValue(mockTeachers),
+            userManagementControllerProvider.overrideWithValue(mockUserManagement),
           ],
           child: const MaterialApp(home: ManageTeachersScreen()),
         ),

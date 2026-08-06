@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/lesson_plan.dart';
-import '../../../core/services/lesson_plan_service.dart';
-import '../../../core/services/subject_service.dart';
+import '../../../core/controllers/lesson_plan_controller.dart';
+import '../../../core/controllers/subject_controller.dart';
 import '../../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
@@ -36,8 +36,8 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
   Future<_PlansData> _load() async {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return const _PlansData(plans: [], subjectsById: {});
-    final plans = await ref.read(lessonPlanServiceProvider).fetchForTeacher(user.id);
-    final subjects = await ref.read(subjectServiceProvider).fetchAll();
+    final plans = await ref.read(lessonPlanControllerProvider).fetchForTeacher(user.id);
+    final subjects = await ref.read(subjectControllerProvider).fetchAll();
     return _PlansData(
       plans: plans,
       subjectsById: {for (final s in subjects) s.id: s.name},
@@ -64,7 +64,7 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
   Future<void> _delete(LessonPlan plan) async {
     if (!await confirmDelete(context, message: 'Delete lesson plan "${plan.title}"?')) return;
     try {
-      await ref.read(lessonPlanServiceProvider).deletePlan(plan.id);
+      await ref.read(lessonPlanControllerProvider).deletePlan(plan.id);
       if (mounted) _refresh();
     } catch (e) {
       if (mounted) {

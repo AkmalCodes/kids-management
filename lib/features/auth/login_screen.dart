@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 import 'forgot_password_screen.dart';
 
 // ConsumerStatefulWidget instead of plain StatefulWidget: this screen needs
 // both local UI state (text controllers, loading/error flags via setState)
-// AND access to Riverpod providers (authServiceProvider) via `ref`.
+// AND access to Riverpod providers (authControllerProvider) via `ref`.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -58,7 +58,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // ref.read (not ref.watch) here: we only need authService once, for
       // this one-off action — watch is for values a widget should rebuild
       // in response to, which doesn't apply inside a button callback.
-      await ref.read(authServiceProvider).signIn(
+      await ref.read(authControllerProvider).signIn(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );

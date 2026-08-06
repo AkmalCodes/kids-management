@@ -587,7 +587,7 @@ lib/
   core/
     auth/
       auth_gate.dart
-      auth_service.dart
+      auth_controller.dart
       role_router.dart
     constants/
       schedule_colors.dart          -- shared color palette (picker + display)
@@ -600,18 +600,18 @@ lib/
       subject.dart                  -- center-defined lesson subject/category (§6.5)
       daily_report.dart
       class_group.dart              -- the `classes` table (named ClassGroup; `Class` is reserved) (§6.8)
-    services/
-      child_service.dart
-      teacher_service.dart
-      class_service.dart            -- fetch classes + resolve a class's teacher (§6.8)
-      schedule_service.dart
-      attendance_service.dart
-      photo_capture_service.dart    -- thin ImagePicker wrapper, injectable/mockable
-      user_management_service.dart  -- calls the create-user Edge Function (invite teacher/parent)
-      profile_service.dart          -- user avatar upload/signed-url + set/update RPCs + director edit (§6.7)
-      daily_report_service.dart     -- fetch/save reports + report-image upload/signed-url (§6.4)
-      lesson_plan_service.dart      -- lesson plan CRUD + submit/review (approval) (§6.5)
-      subject_service.dart          -- center subjects CRUD (§6.5)
+    controllers/                    -- the app's "controller" layer: logic + Supabase access (formerly `services/`)
+      child_controller.dart
+      teacher_controller.dart
+      class_controller.dart            -- fetch classes + resolve a class's teacher (§6.8)
+      schedule_controller.dart
+      attendance_controller.dart
+      photo_capture_controller.dart    -- thin ImagePicker wrapper, injectable/mockable
+      user_management_controller.dart  -- calls the create-user Edge Function (invite teacher/parent)
+      profile_controller.dart          -- user avatar upload/signed-url + set/update RPCs + director edit (§6.7)
+      daily_report_controller.dart     -- fetch/save reports + report-image upload/signed-url (§6.4)
+      lesson_plan_controller.dart      -- lesson plan CRUD + submit/review (approval) (§6.5)
+      subject_controller.dart          -- center subjects CRUD (§6.5)
     theme/
       app_theme.dart                -- single seed color + font (Nunito via google_fonts) + tinted top/bottom bars, cascades app-wide
   features/
@@ -696,7 +696,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 
 - Schedules are **class-owned** (`type='class'`, `ref_id = class_id`) — §6.8, so a class's schedule is independent of how many teachers it has.
 - **Director**: Schedules tab is a searchable **class** list → lands on that class's editable agenda/day view (tap a day for the hourly timetable, tap a slot / **+** to add, tap an event to edit/delete).
-- **Teacher**: manages the schedule of the class they're assigned to (`ClassService.fetchForTeacher`), same editable view.
+- **Teacher**: manages the schedule of the class they're assigned to (`ClassController.fetchForTeacher`), same editable view.
 - **Parent**: read-only view of their child's class schedule (child → `class_id` → `type='class'` entries); falls back to "Not assigned to a class yet".
 - **Edit/delete permission on a specific event**: only the person who created it, or any director — enforced by `schedule_entries` RLS, not just the UI (see §4).
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
@@ -706,7 +706,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Each child's card starts collapsed, showing only avatar, name, and current status; tapping expands it to the full marking view (status chips, photo capture) and collapses whichever other card was open — only one expanded at a time
 - Marks each child: Present / Absent (Late/Excused still exist in the `status` enum and DB check constraint, but aren't offered as choices on this screen)
 - One record per child per day — re-opening the screen shows existing marks for editing
-- Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleService`'s create/update)
+- Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleController`'s create/update)
 - Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day
 - Tapping a photo slot opens a menu: Take/Retake photo (camera), Choose from gallery, and — once a photo exists — Delete photo (removes both the Storage object and the column reference). Both slots are a fixed size regardless of whether they show the placeholder icon or an existing thumbnail, so the row's layout doesn't shift depending on photo state
 - The photo row's two halves are `Expanded` with an ellipsizing `Flexible` label (not sized to their own intrinsic content width) so the row can't overflow on a narrow screen; same fix applied to the header's date text next to "Attendance" — both surfaced after switching the app font (now Nunito; see folder structure note on `app_theme.dart` below) rendered text wider than the previous default. Covered by a regression test that pumps the screen at a 320px-wide surface
@@ -715,7 +715,7 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - Director can filter and view attendance across all children and dates
 
 ### 6.4 Daily Reports — built (teacher write, parent read)
-- **Teacher** (Reports tab, `TeacherReportsScreen`): their class as a list; tap a child → `DailyReportEditScreen` to write today's report — free text + photos. One report per child per day, so it opens the existing one to edit or a blank form. Photos upload immediately to the `daily-report-images` bucket; text + image paths persist on Save (via `DailyReportService.saveReport`, insert-or-update on the child+date row).
+- **Teacher** (Reports tab, `TeacherReportsScreen`): their class as a list; tap a child → `DailyReportEditScreen` to write today's report — free text + photos. One report per child per day, so it opens the existing one to edit or a blank form. Photos upload immediately to the `daily-report-images` bucket; text + image paths persist on Save (via `DailyReportController.saveReport`, insert-or-update on the child+date row).
 - **Parent** (Reports tab, `ChildReportsScreen`): for each linked child, a read-only feed of daily reports newest-first — the teacher's note + photo thumbnails (signed URLs).
 - **Director**: reads all via RLS, but no dedicated reports screen yet (⬜ could add a browse view later).
 - Data: `daily_reports` table (one row per child+date), image paths stored on the row, photos in the private `daily-report-images` bucket.
@@ -740,7 +740,7 @@ Teacher-authored plans with a **subject** categorization and a **director approv
   - Invite a teacher by email
   - Enroll a child and invite its first parent in one form; invite additional parents per child from the Children list
 - ✅ **Tap a row to view/edit details:**
-  - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), **class** (a dropdown of real `classes` rows setting `class_id` — helper text "Drives the schedule the parent sees"; replaced the old free-text `class_name` field, which is now preserved untouched), class teacher (dropdown, sets `teacher_id`), allergies, notes — saved via `ChildService.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildService.fetchParentsForChild`).
+  - A child → `ChildDetailScreen`: edit photo (child-avatars bucket), name, date of birth (age is shown, derived), **class** (a dropdown of real `classes` rows setting `class_id` — helper text "Drives the schedule the parent sees"; replaced the old free-text `class_name` field, which is now preserved untouched), class teacher (dropdown, sets `teacher_id`), allergies, notes — saved via `ChildController.updateChild` (director-only per `children_update` RLS). Also shows a read-only **Parents** section (each linked parent's name + email, via `ChildController.fetchParentsForChild`).
   - A teacher/parent → `PersonDetailScreen`: edit photo, name, phone, and **HR/contact details** (address, date of birth, emergency contact name/phone — §6.6b), plus a **read-only login email**. A director editing someone else uses `updatePersonDetails` + `setAvatarPathFor` (director policy); editing yourself uses the self-only `update_own_profile` / `setAvatarPath` RPCs (see §6.7).
 - ✅ **Delete records via long-press:** on the People (Classes, Children), and the Lessons (teacher + director) and Subjects lists, **long-pressing a row** opens a bottom-sheet with **Edit / Delete** (`showRowActionsSheet`; Delete asks `confirmDelete` first). Deleting a **class** (`delete_class`) un-assigns its children/plans + clears its schedule; deleting a **child** (`delete_child`) removes its parent links, attendance, and daily reports — both are director-only SECURITY DEFINER functions (§4). Lesson plans / subjects delete via their own service calls.
 - ⬜ Deactivate/delete **accounts** (teacher/parent) still needs an Edge Function (auth.users deletion is server-side) — not built; the long-press menu isn't offered on the Teachers list yet.
@@ -768,7 +768,7 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
 - ✅ Schema: `classes` (id, name, teacher_uid, center_id, avatar_path) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
-- ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (avatar + assigned teacher's name), and creates a class via the shared `showClassFormDialog` (name + teacher dropdown). **Tapping a class opens `ClassDetailScreen`** (a full screen like children/teachers, not a dialog): edit the **class photo** (class-avatars bucket), name, and teacher, via `ClassService.updateClass` / `uploadClassAvatar` / `setClassAvatarPath`. Create stays a dialog because there's no `class_id` to key the photo path until the row exists — add a picture by opening the new class afterwards. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
+- ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (avatar + assigned teacher's name), and creates a class via the shared `showClassFormDialog` (name + teacher dropdown). **Tapping a class opens `ClassDetailScreen`** (a full screen like children/teachers, not a dialog): edit the **class photo** (class-avatars bucket), name, and teacher, via `ClassController.updateClass` / `uploadClassAvatar` / `setClassAvatarPath`. Create stays a dialog because there's no `class_id` to key the photo path until the row exists — add a picture by opening the new class afterwards. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
 - ✅ **Deleting a class** is built (long-press a class → Delete, via the `delete_class` function, §6.6). Undecided: whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
 - 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
@@ -865,7 +865,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 
 Tracked for later; none of this is code-complete yet. Blocking items are called out.
 
-- ⚠️ **Rename `applicationId`** from the placeholder `com.example.test_flutter` to a real reverse-domain id (e.g. `com.akmalcodes.childcaremanager`) — Google Play rejects `com.example`. **Coordinated change**: the auth deep-link scheme (`com.example.test_flutter://login-callback/`) is duplicated in `AndroidManifest.xml`, `ios/Runner/Info.plist`, the `create-user` Edge Function, `auth_service.dart`, and the Supabase dashboard **Redirect URLs** — all must move together or invites/password-reset break.
+- ⚠️ **Rename `applicationId`** from the placeholder `com.example.test_flutter` to a real reverse-domain id (e.g. `com.akmalcodes.childcaremanager`) — Google Play rejects `com.example`. **Coordinated change**: the auth deep-link scheme (`com.example.test_flutter://login-callback/`) is duplicated in `AndroidManifest.xml`, `ios/Runner/Info.plist`, the `create-user` Edge Function, `auth_controller.dart`, and the Supabase dashboard **Redirect URLs** — all must move together or invites/password-reset break.
 - Set a real app **display name** ("Childcare Manager") and a **launcher icon** (e.g. via `flutter_launcher_icons`).
 - **Play App Signing**: create an upload keystore (`keytool`), keep the keystore + passwords backed up outside the repo, wire a release signing config.
 - Build: `flutter build appbundle --release --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...` (anon key is safe to ship; RLS protects the data).

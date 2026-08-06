@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:test_flutter/core/auth/auth_service.dart';
+import 'package:test_flutter/core/auth/auth_controller.dart';
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 class MockSupabaseClient extends Mock implements SupabaseClient {}
@@ -9,16 +9,16 @@ class MockSupabaseClient extends Mock implements SupabaseClient {}
 void main() {
   late MockGoTrueClient mockAuth;
   late MockSupabaseClient mockClient;
-  late AuthService service;
+  late AuthController service;
 
   setUp(() {
     mockAuth = MockGoTrueClient();
     mockClient = MockSupabaseClient();
     when(() => mockClient.auth).thenReturn(mockAuth);
-    service = AuthService(client: mockClient);
+    service = AuthController(client: mockClient);
   });
 
-  group('AuthService', () {
+  group('AuthController', () {
     test('signIn calls signInWithPassword', () async {
       when(() => mockAuth.signInWithPassword(
         email: any(named: 'email'),

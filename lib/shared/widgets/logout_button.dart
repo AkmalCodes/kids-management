@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/auth/auth_service.dart';
+import '../../core/auth/auth_controller.dart';
 
 // AuthGate watches currentUserProvider and swaps back to LoginScreen
 // automatically once the session clears, so this button needs no
@@ -28,7 +28,7 @@ class LogoutButton extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await ref.read(authServiceProvider).signOut();
+      await ref.read(authControllerProvider).signOut();
     }
   }
 
