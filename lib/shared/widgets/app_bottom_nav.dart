@@ -133,14 +133,14 @@ class _NavItem extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             child: IconTheme.merge(
               key: ValueKey(selected),
-              data: IconThemeData(size: 22, color: fg),
+              data: IconThemeData(size: 20, color: fg),
               child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg),
             child: Text(
               destination.label,
               maxLines: 1,
