@@ -314,10 +314,19 @@ ALTER TABLE attendance       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lesson_plans     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_reports    ENABLE ROW LEVEL SECURITY;
 
--- Helper: get current user's role
-CREATE OR REPLACE FUNCTION current_role_name() RETURNS TEXT AS $$
-  SELECT role FROM profiles WHERE id = auth.uid();
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+-- Helper: get current user's role.
+-- SECURITY HARDENING (M4): every SECURITY DEFINER function pins
+-- `SET search_path = ''` and schema-qualifies its tables (public.*, auth.*),
+-- so a malicious object on the caller's search_path (e.g. a pg_temp table
+-- shadowing `profiles`) can't hijack a definer function. This applies to ALL
+-- the SECURITY DEFINER functions in this spec — current_role_name,
+-- complete_password_setup, set_avatar_path, update_own_profile,
+-- sync_profile_email, delete_class, delete_child, class_plan_subjects — see
+-- the security-hardening SQL handoff for the full set.
+CREATE OR REPLACE FUNCTION current_role_name() RETURNS TEXT
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+$$;
 
 -- profiles: users read their own; directors read all in their center
 CREATE POLICY "profiles_select" ON profiles FOR SELECT
@@ -328,6 +337,19 @@ CREATE POLICY "profiles_select" ON profiles FOR SELECT
 -- narrow SECURITY DEFINER RPCs instead of a broad self-update policy.
 CREATE POLICY "profiles_update_director" ON profiles FOR UPDATE
   USING (current_role_name() = 'director');
+
+-- SECURITY HARDENING (M2): an RLS policy's WITH CHECK can't compare NEW vs OLD,
+-- so it can't by itself stop a director from changing a profile's `role` or
+-- `center_id` (privilege escalation / cross-center move). Instead we lock it
+-- down with COLUMN-LEVEL privileges: the `authenticated` role may only UPDATE
+-- the editable columns, never `role`/`center_id`/`email`/`must_set_password`.
+-- The SECURITY DEFINER self-edit RPCs (owned by postgres) and the Edge
+-- Function's service_role bypass column grants, so legitimate flows still work;
+-- role changes must go through a dedicated privileged path.
+REVOKE UPDATE ON profiles FROM authenticated;
+GRANT UPDATE (name, phone, address, dob, emergency_contact_name,
+              emergency_contact_phone, avatar_path, updated_by, updated_at)
+  ON profiles TO authenticated;
 
 -- children: parents see their linked children; teachers see their class; directors see all
 CREATE POLICY "children_select" ON children FOR SELECT
@@ -398,8 +420,14 @@ CREATE POLICY "attendance_select" ON attendance FOR SELECT
     OR created_by = auth.uid()
     OR EXISTS (SELECT 1 FROM children_parents WHERE child_id = attendance.child_id AND parent_id = auth.uid())
   );
+-- SECURITY HARDENING (M3): a teacher may only mark attendance for a child in
+-- their own class -- not any child in the DB.
 CREATE POLICY "attendance_insert" ON attendance FOR INSERT
-  WITH CHECK (current_role_name() = 'teacher');
+  WITH CHECK (
+    current_role_name() = 'teacher'
+    AND EXISTS (SELECT 1 FROM children
+                WHERE children.id = attendance.child_id AND children.teacher_id = auth.uid())
+  );
 CREATE POLICY "attendance_update" ON attendance FOR UPDATE
   USING (current_role_name() = 'teacher' AND created_by = auth.uid());
 
@@ -553,8 +581,14 @@ CREATE POLICY "daily_reports_select" ON daily_reports FOR SELECT
     OR current_role_name() = 'director'
     OR EXISTS (SELECT 1 FROM children_parents WHERE child_id = daily_reports.child_id AND parent_id = auth.uid())
   );
+-- SECURITY HARDENING (M3): a teacher may only write a daily report for a child
+-- in their own class -- not any child in the DB.
 CREATE POLICY "daily_reports_insert" ON daily_reports FOR INSERT
-  WITH CHECK (current_role_name() = 'teacher');
+  WITH CHECK (
+    current_role_name() = 'teacher'
+    AND EXISTS (SELECT 1 FROM children
+                WHERE children.id = daily_reports.child_id AND children.teacher_id = auth.uid())
+  );
 CREATE POLICY "daily_reports_update" ON daily_reports FOR UPDATE
   USING (current_role_name() = 'teacher' AND teacher_id = auth.uid());
 ```

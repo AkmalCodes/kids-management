@@ -79,6 +79,24 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "childId is required when role is 'parent'" }, 400);
   }
 
+  // Security (M5): a parent link must target a child in the CALLER's own
+  // center. Without this, a director could link a parent to any child id in
+  // the database (the admin client below bypasses RLS), leaking across
+  // centers. Checked with the caller's own RLS-scoped client.
+  if (role === "parent") {
+    const { data: child, error: childError } = await callerClient
+      .from("children")
+      .select("center_id")
+      .eq("id", childId)
+      .single();
+    if (childError || !child) {
+      return jsonResponse({ error: "Child not found" }, 404);
+    }
+    if (child.center_id !== callerProfile.center_id) {
+      return jsonResponse({ error: "Child is not in your center" }, 403);
+    }
+  }
+
   // Privileged client -- only ever touches what this function explicitly
   // does below, never anything driven by unvalidated request input.
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
