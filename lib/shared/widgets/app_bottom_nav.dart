@@ -22,7 +22,10 @@ class AppBottomNav extends StatelessWidget {
   final List<NavigationDestination> destinations;
 
   static const _barHeight = 60.0;
-  static const _indicatorSize = 36.0;
+  // Gaps between the highlight and the bar edges (top/bottom + each side of
+  // the slot) so it reads as a pill floating inside the bar.
+  static const _vMargin = 8.0;
+  static const _hMargin = 6.0;
 
   @override
   Widget build(BuildContext context) {
@@ -53,23 +56,24 @@ class AppBottomNav extends StatelessWidget {
                   builder: (context, constraints) {
                     final n = destinations.length;
                     final slot = constraints.maxWidth / n;
-                    // Left edge of the highlight, centered in the selected
-                    // slot. AnimatedPositioned tweens this when the parent
-                    // rebuilds with a new selectedIndex -> the slide.
-                    final left = selectedIndex * slot + (slot - _indicatorSize) / 2;
+                    // The highlight wraps a whole item (icon + label), inset
+                    // from the slot's sides and the bar's top/bottom.
+                    // AnimatedPositioned tweens `left` when the parent rebuilds
+                    // with a new selectedIndex -> the slide.
+                    final left = selectedIndex * slot + _hMargin;
                     return Stack(
                       children: [
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 280),
                           curve: Curves.easeOutCubic,
-                          top: 6,
+                          top: _vMargin,
                           left: left,
-                          width: _indicatorSize,
-                          height: _indicatorSize,
+                          width: slot - _hMargin * 2,
+                          height: _barHeight - _vMargin * 2,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: scheme.surface,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                         ),
@@ -125,18 +129,15 @@ class _NavItem extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(6),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: IconTheme.merge(
-                key: ValueKey(selected),
-                data: IconThemeData(size: 22, color: fg),
-                child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
-              ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: IconTheme.merge(
+              key: ValueKey(selected),
+              data: IconThemeData(size: 22, color: fg),
+              child: selected ? (destination.selectedIcon ?? destination.icon) : destination.icon,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
