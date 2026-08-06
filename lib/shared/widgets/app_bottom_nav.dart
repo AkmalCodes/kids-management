@@ -24,7 +24,7 @@ class AppBottomNav extends StatelessWidget {
   static const _barHeight = 60.0;
   // Gaps between the highlight and the bar edges (top/bottom + each side of
   // the slot) so it reads as a pill floating inside the bar.
-  static const _vMargin = 8.0;
+  static const _vMargin = 6.0;
   static const _hMargin = 6.0;
 
   @override
@@ -34,7 +34,7 @@ class AppBottomNav extends StatelessWidget {
       top: false,
       child: Padding(
         // Small gap on all sides so the bar hovers off the edges.
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
@@ -125,10 +125,14 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      // Vertical position of the icon+label within the slot: -1 = top,
+      // 0 = centered, 1 = bottom. Nudge this up/down to move the content.
+      child: Align(
+        alignment: const Alignment(0, 0.35),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: IconTheme.merge(
@@ -147,7 +151,8 @@ class _NavItem extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
