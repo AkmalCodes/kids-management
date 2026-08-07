@@ -906,3 +906,20 @@ Tracked for later; none of this is code-complete yet. Blocking items are called 
 - Play Console listing: store listing assets, content rating, **Data safety form + privacy policy URL** (we store emails and children's photos), target-audience = adults (users are teachers/parents/directors).
 - Distribution: **Internal testing track** is the portfolio path (shareable install link, minimal review). A full production launch of a real childcare app carries children's-data privacy weight (COPPA/GDPR-K) — use dummy data for the portfolio demo.
 - New personal developer accounts must run a closed test with a minimum number of testers (~12) for 14 days before production access (doesn't affect internal testing).
+
+---
+
+## 12. Security audit (2026-08-07)
+
+Findings from a defensive review of the RLS policies, SECURITY DEFINER functions, the `create-user` Edge Function, auth/deep-link handling, and secret injection. **Good baseline:** no hardcoded secrets (service-role key server-only; anon key is public-safe), parameterized queries throughout (no SQL injection), RLS on every table, private buckets + signed URLs, and the teacher-can't-self-approve split policy.
+
+**Fixed (code + docs in this repo; SQL in [`2026-08-07-security-hardening.sql`](2026-08-07-security-hardening.sql), run once in Supabase):**
+- **M2** — `profiles` column-level UPDATE lockdown so clients can't change `role`/`center_id`/`email`/`must_set_password` (privilege-escalation guard). Legitimate edits go through the granted columns or the SECURITY DEFINER RPCs.
+- **M3** — `attendance_insert` / `daily_reports_insert` now require the child to be in the teacher's class (a teacher couldn't otherwise be stopped from writing for any child).
+- **M4** — every SECURITY DEFINER function pins `SET search_path = ''` + schema-qualifies (search-path-hijack guard); the cascading deletes (`delete_class`/`delete_child`) also gained a **center guard**.
+- **M5** — the `create-user` Edge Function verifies a parent-link `childId` belongs to the caller's own center before linking (the admin client bypasses RLS). **Redeploy the function** after pulling.
+- **M1** — multi-center isolation: every "director sees/edits all" policy is now scoped `AND center_id = my_center()` (new `my_center()` helper), plus explicit **`classes`** policies (previously undocumented) and **storage** policies for `avatars` / `child-avatars` / `class-avatars` / `daily-report-images` (**L2** — only `attendance-photos` had been written out).
+
+**Still open (deliberate):**
+- **H1 (high)** — the auth **deep link uses an unverified custom URL scheme** (`com.example.test_flutter://`), which any app can register to intercept the invite/recovery token → account takeover. Fix with **Android App Links + iOS Universal Links** (verified https), bundled with the §11 `applicationId` rename. Until then, treat invites as dev-only.
+- **L1** — the `create-user` Edge Function has no CORS handling (needed for a Flutter **web** build) and no invite throttling/input-length caps.
