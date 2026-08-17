@@ -7,6 +7,7 @@ import '../../../core/controllers/subject_controller.dart';
 import '../../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Teacher's Lessons tab: their own lesson plans (newest first) with the
 // approval status, plus a + to write a new one. Tapping a plan opens the
@@ -92,7 +93,7 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
             );
           }
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           final data = snapshot.data!;
           if (data.plans.isEmpty) {

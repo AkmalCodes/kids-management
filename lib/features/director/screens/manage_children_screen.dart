@@ -8,6 +8,7 @@ import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'child_detail_screen.dart';
 import 'enroll_child_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 class ManageChildrenScreen extends ConsumerStatefulWidget {
   const ManageChildrenScreen({super.key});
@@ -102,7 +103,7 @@ class _ManageChildrenScreenState extends ConsumerState<ManageChildrenScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           final children = snapshot.data!;
           if (children.isEmpty) {

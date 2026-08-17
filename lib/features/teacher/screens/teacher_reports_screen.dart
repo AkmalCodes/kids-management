@@ -6,6 +6,7 @@ import '../../../core/controllers/child_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'daily_report_edit_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Teacher's Reports tab: their class as a list. Pick a day (‹ › or the date
 // picker) and search a student by name (collapsible), then tap a child to
@@ -116,7 +117,7 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
             future: _future,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoader());
               }
               final children = snapshot.data!
                   .where((c) => _query.isEmpty || c.name.toLowerCase().contains(_query))

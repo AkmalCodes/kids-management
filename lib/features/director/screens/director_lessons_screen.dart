@@ -8,6 +8,7 @@ import '../../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
 import 'manage_subjects_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Director's Lessons tab: browse every teacher's lesson plans, filter by
 // teacher and approval status, and open one to approve/reject/edit. A Subjects
@@ -113,7 +114,7 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
           );
         }
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: AppLoader());
         }
         final data = snapshot.data!;
         final filtered = _applyFilters(data.plans);

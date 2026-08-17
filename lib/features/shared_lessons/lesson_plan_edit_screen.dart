@@ -9,6 +9,7 @@ import '../../core/controllers/lesson_plan_controller.dart';
 import '../../core/controllers/subject_controller.dart';
 import '../../shared/widgets/editable_field.dart';
 import '../../shared/widgets/lesson_plan_status_chip.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // Create/edit/review one lesson plan. Shared by teachers and directors:
 //  - Teacher (isDirector = false): creates a plan (draft), edits it while
@@ -328,7 +329,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
 
   List<Widget> _actions(bool editable) {
     if (_saving) {
-      return const [Center(child: CircularProgressIndicator())];
+      return const [Center(child: AppLoader(delayed: false))];
     }
     final buttons = <Widget>[];
     if (editable) {

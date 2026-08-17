@@ -6,6 +6,7 @@ import '../../../core/models/child.dart';
 import '../../../core/controllers/child_controller.dart';
 import '../../../core/controllers/teacher_controller.dart';
 import '../../../core/controllers/user_management_controller.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // One form covers both halves of "enroll a child": the child record itself,
 // and inviting the first parent account linked to it -- matches how a
@@ -200,11 +201,7 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
             FilledButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const AppLoader(size: 20, delayed: false)
                   : const Text('Enroll child & invite parent'),
             ),
           ],

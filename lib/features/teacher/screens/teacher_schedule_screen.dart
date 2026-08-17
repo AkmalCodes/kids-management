@@ -5,6 +5,7 @@ import '../../../core/models/class_group.dart';
 import '../../../core/controllers/class_controller.dart';
 import '../../../core/controllers/schedule_controller.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // A teacher's schedule is their class's schedule (§6.8). Resolves the class
 // they're assigned to, then shows/edits that class's entries. (Multiple
@@ -17,7 +18,7 @@ class TeacherScheduleScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
 
     return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoader()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
@@ -25,7 +26,7 @@ class TeacherScheduleScreen extends ConsumerWidget {
           future: ref.read(classControllerProvider).fetchForTeacher(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: AppLoader());
             }
             final classes = snapshot.data!;
             if (classes.isEmpty) {
@@ -35,7 +36,7 @@ class TeacherScheduleScreen extends ConsumerWidget {
             final entriesAsync =
                 ref.watch(scheduleEntriesProvider((type: 'class', refId: classGroup.id)));
             return entriesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppLoader()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (entries) => ScheduleAgendaView(
                 entries: entries,

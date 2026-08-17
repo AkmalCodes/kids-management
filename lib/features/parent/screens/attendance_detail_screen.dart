@@ -4,6 +4,7 @@ import '../../../core/models/attendance.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Opened by tapping an attendance card in the parent view. Shows the day's
 // status plus the check-in and belongings photos at a large size.
@@ -72,7 +73,7 @@ class _LargePhoto extends ConsumerWidget {
         child: urlAsync.when(
           loading: () => const ColoredBox(
             color: Color(0x11000000),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: AppLoader()),
           ),
           error: (_, _) => const ColoredBox(
             color: Color(0x11000000),

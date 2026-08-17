@@ -7,6 +7,7 @@ import '../../../core/controllers/daily_report_controller.dart';
 import '../../../core/controllers/photo_capture_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Teacher writes/edits the daily report for one child on one day. One report
 // per child per day: opens the existing one if present, else a blank form.
@@ -121,7 +122,7 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
         future: _existingFuture,
         builder: (context, snapshot) {
           if (!_loaded) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -164,11 +165,7 @@ class _DailyReportEditScreenState extends ConsumerState<DailyReportEditScreen> {
               FilledButton(
                 onPressed: _saving ? null : _save,
                 child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const AppLoader(size: 20, delayed: false)
                     : const Text('Save report'),
               ),
             ],
@@ -199,7 +196,7 @@ class _ReportImageThumb extends ConsumerWidget {
             child: urlAsync.when(
               loading: () => const ColoredBox(
                 color: Color(0x11000000),
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                child: Center(child: AppLoader()),
               ),
               error: (_, _) => const ColoredBox(
                 color: Color(0x11000000),

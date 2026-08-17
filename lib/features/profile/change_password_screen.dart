@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // Changing your password while already signed in (from the Profile tab).
 // Separate from SetPasswordScreen because the post-success behaviour
@@ -77,11 +78,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const AppLoader(size: 20, delayed: false)
                         : const Text('Update password'),
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/class_group.dart';
 import '../../../core/controllers/class_controller.dart';
 import 'person_schedule_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Director's "Schedules" tab: search/pick a class, land on its schedule in
 // edit mode. Schedules belong to a class (§6.8), not an individual teacher.
@@ -86,7 +87,7 @@ class _ClassList extends ConsumerWidget {
       future: ref.read(classControllerProvider).fetchAll(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: AppLoader());
         }
         final classes = snapshot.data!
             .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))

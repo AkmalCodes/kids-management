@@ -9,6 +9,7 @@ import '../../../core/controllers/photo_capture_controller.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 enum _PhotoAction { camera, gallery, delete }
 
@@ -486,7 +487,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
             future: _future,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoader());
               }
               final data = snapshot.data!;
               if (data.children.isEmpty) {

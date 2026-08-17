@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test_flutter/core/controllers/attendance_controller.dart';
+import 'package:test_flutter/shared/widgets/app_loader.dart';
 import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockAttendanceController extends Mock implements AttendanceController {}
@@ -26,7 +27,7 @@ void main() {
     );
 
     // Before the future resolves: loading state.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AppLoader), findsOneWidget);
 
     await tester.pump();
 

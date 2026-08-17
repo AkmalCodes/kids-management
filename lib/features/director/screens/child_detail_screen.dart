@@ -14,6 +14,7 @@ import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Director-only view/edit of a single child's details. Reached by tapping a
 // child in the People > Children list. Every field is editable; saving
@@ -330,11 +331,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
               FilledButton(
                 onPressed: _saving ? null : _save,
                 child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const AppLoader(size: 20, delayed: false)
                     : const Text('Save changes'),
               ),
             const SizedBox(height: 24),
@@ -346,7 +343,7 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                 if (!snapshot.hasData) {
                   return const Padding(
                     padding: EdgeInsets.all(8),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: AppLoader()),
                   );
                 }
                 final parents = snapshot.data!;

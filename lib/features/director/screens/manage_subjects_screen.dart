@@ -4,6 +4,7 @@ import '../../../core/auth/auth_controller.dart';
 import '../../../core/models/subject.dart';
 import '../../../core/controllers/subject_controller.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Director-managed list of lesson subjects (Art, Numeracy, …). Teachers tag
 // lesson plans with these, and they surface on the schedule (later). Create,
@@ -116,7 +117,7 @@ class _ManageSubjectsScreenState extends ConsumerState<ManageSubjectsScreen> {
             );
           }
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           final subjects = snapshot.data!;
           if (subjects.isEmpty) {

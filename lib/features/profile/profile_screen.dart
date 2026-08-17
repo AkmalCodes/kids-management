@@ -8,6 +8,7 @@ import '../../shared/widgets/avatar_source_sheet.dart';
 import '../../shared/widgets/signed_avatar.dart';
 import 'change_password_screen.dart';
 import 'person_detail_screen.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // Shared account-settings tab for every role. Shows the user's avatar,
 // name, email and role, plus actions to change the avatar and password.
@@ -41,7 +42,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoader()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();

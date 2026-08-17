@@ -10,6 +10,7 @@ import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 import 'attendance_detail_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 class ChildAttendanceScreen extends ConsumerWidget {
   const ChildAttendanceScreen({super.key});
@@ -19,7 +20,7 @@ class ChildAttendanceScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
 
     return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoader()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
@@ -27,7 +28,7 @@ class ChildAttendanceScreen extends ConsumerWidget {
           future: ref.read(childControllerProvider).fetchForParent(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: AppLoader());
             }
             final children = snapshot.data!;
             if (children.isEmpty) {
@@ -76,7 +77,7 @@ class _ChildAttendanceSection extends ConsumerWidget {
             if (!snapshot.hasData) {
               return const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: AppLoader()),
               );
             }
             final records = snapshot.data!;

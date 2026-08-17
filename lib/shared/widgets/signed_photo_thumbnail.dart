@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/controllers/attendance_controller.dart';
+import 'app_loader.dart';
 
 // Cached per photoPath for the life of the app (no .autoDispose) so
 // collapsing/re-expanding a card, or navigating away and back, reuses the
@@ -29,11 +30,7 @@ class SignedPhotoThumbnail extends ConsumerWidget {
     return urlAsync.when(
       loading: () => CircleAvatar(
         radius: radius,
-        child: SizedBox(
-          width: radius,
-          height: radius,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        ),
+        child: AppLoader(size: radius),
       ),
       error: (_, _) => CircleAvatar(radius: radius, child: const Icon(Icons.broken_image_outlined)),
       data: (url) => CircleAvatar(radius: radius, backgroundImage: NetworkImage(url)),

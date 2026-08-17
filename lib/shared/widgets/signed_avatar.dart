@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app_loader.dart';
 
 // A round avatar backed by a private-bucket signed URL. The caller passes
 // the URL provider for the relevant bucket (e.g. signedAvatarUrlProvider
@@ -20,11 +21,7 @@ class SignedAvatar extends ConsumerWidget {
     return ref.watch(provider).when(
           loading: () => CircleAvatar(
             radius: radius,
-            child: SizedBox(
-              width: radius / 2,
-              height: radius / 2,
-              child: const CircularProgressIndicator(strokeWidth: 2),
-            ),
+            child: AppLoader(size: radius / 2),
           ),
           error: (_, _) =>
               CircleAvatar(radius: radius, child: Icon(Icons.broken_image_outlined, size: radius)),

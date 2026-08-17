@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // Sends a password-recovery email. The link in that email deep-links back
 // into the app (same com.example.test_flutter://login-callback/ scheme as
@@ -104,11 +105,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             child: FilledButton(
               onPressed: _sending ? null : _send,
               child: _sending
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const AppLoader(size: 20, delayed: false)
                   : const Text('Send reset link'),
             ),
           ),

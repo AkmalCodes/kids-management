@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'signed_avatar.dart';
+import 'app_loader.dart';
 
 // A round avatar (SignedAvatar) that, when tapped, opens a full-screen
 // zoomable preview of the photo -- the "tap your profile picture to enlarge"
@@ -44,7 +45,7 @@ class _AvatarPreviewDialog extends ConsumerWidget {
         // Tap anywhere to dismiss.
         onTap: () => Navigator.of(context).pop(),
         child: ref.watch(urlProvider).when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: AppLoader()),
               error: (_, _) => const Icon(Icons.broken_image_outlined,
                   size: 64, color: Colors.white70),
               // InteractiveViewer gives pinch-to-zoom / drag on the photo.

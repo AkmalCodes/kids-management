@@ -8,6 +8,7 @@ import '../../../shared/widgets/class_form_dialog.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'class_detail_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Director's Classes sub-tab: create classes, assign a teacher, rename /
 // reassign. Assigning children to a class is done from ChildDetailScreen.
@@ -107,7 +108,7 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           final data = snapshot.data!;
           if (data.classes.isEmpty) {

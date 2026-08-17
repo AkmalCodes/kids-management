@@ -4,6 +4,7 @@ import '../auth/auth_controller.dart';
 import '../auth/role_router.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/set_password_screen.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // The single entry point main.dart points at. Its only job is the
 // logged-out/logged-in split; once a user exists, RoleRouter takes over
@@ -20,7 +21,7 @@ class AuthGate extends ConsumerWidget {
 
     return userAsync.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: AppLoader()),
       ),
       // On error, fall back to LoginScreen rather than an error page —
       // most likely cause is "no session yet", which isn't really an error

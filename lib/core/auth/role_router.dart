@@ -4,6 +4,7 @@ import '../auth/auth_controller.dart';
 import '../../features/parent/parent_shell.dart';
 import '../../features/teacher/teacher_shell.dart';
 import '../../features/director/director_shell.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // ConsumerWidget (not ConsumerStatefulWidget): this widget has no local
 // state of its own to track — it only ever re-renders in response to
@@ -22,7 +23,7 @@ class RoleRouter extends ConsumerWidget {
     // so we can't accidentally forget to handle the loading/error UI.
     return userAsync.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: AppLoader()),
       ),
       error: (e, _) => Scaffold(
         body: Center(child: Text('Error loading profile: $e')),

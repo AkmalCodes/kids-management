@@ -4,6 +4,7 @@ import '../../../core/controllers/profile_controller.dart';
 import '../../../core/controllers/schedule_controller.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Landed on from DirectorSchedulesScreen after picking a teacher or child.
 // Always editable=true: a director can create/edit/delete any schedule,
@@ -44,7 +45,7 @@ class PersonScheduleScreen extends ConsumerWidget {
         ),
       ),
       body: entriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: AppLoader()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (entries) => ScheduleAgendaView(
           entries: entries,

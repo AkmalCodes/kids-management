@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // Reached two ways, both after a valid session is already established from
 // an emailed link:
@@ -89,11 +90,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                   child: FilledButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const AppLoader(size: 20, delayed: false)
                         : const Text('Save password'),
                   ),
                 ),

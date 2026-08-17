@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
 import 'forgot_password_screen.dart';
+import '../../shared/widgets/app_loader.dart';
 
 // ConsumerStatefulWidget instead of plain StatefulWidget: this screen needs
 // both local UI state (text controllers, loading/error flags via setState)
@@ -141,10 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _signIn,
                     child: _loading
-                        ? const SizedBox(
-                            height: 20, width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? const AppLoader(size: 20, delayed: false)
                         : const Text('Sign In'),
                   ),
                 ),

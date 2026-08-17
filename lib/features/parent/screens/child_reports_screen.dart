@@ -7,6 +7,7 @@ import '../../../core/controllers/child_controller.dart';
 import '../../../core/controllers/daily_report_controller.dart';
 import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 // Parent's Reports tab: for each linked child, a feed of their daily
 // reports (newest first) — the teacher's note plus any photos. Read-only.
@@ -17,7 +18,7 @@ class ChildReportsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoader()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
@@ -25,7 +26,7 @@ class ChildReportsScreen extends ConsumerWidget {
           future: ref.read(childControllerProvider).fetchForParent(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: AppLoader());
             }
             final children = snapshot.data!;
             if (children.isEmpty) {
@@ -74,7 +75,7 @@ class _ChildReportsSection extends ConsumerWidget {
             if (!snapshot.hasData) {
               return const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: AppLoader()),
               );
             }
             final reports = snapshot.data!;
@@ -148,7 +149,7 @@ class _ReportImage extends ConsumerWidget {
         child: urlAsync.when(
           loading: () => const ColoredBox(
             color: Color(0x11000000),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child: Center(child: AppLoader()),
           ),
           error: (_, _) => const ColoredBox(
             color: Color(0x11000000),

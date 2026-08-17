@@ -7,6 +7,7 @@ import '../../../core/controllers/user_management_controller.dart';
 import '../../../shared/widgets/person_invite_dialog.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../profile/person_detail_screen.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 class ManageTeachersScreen extends ConsumerStatefulWidget {
   const ManageTeachersScreen({super.key});
@@ -67,7 +68,7 @@ class _ManageTeachersScreenState extends ConsumerState<ManageTeachersScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
           final teachers = snapshot.data!;
           if (teachers.isEmpty) {

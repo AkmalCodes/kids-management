@@ -6,6 +6,7 @@ import '../../../core/controllers/child_controller.dart';
 import '../../../core/controllers/schedule_controller.dart';
 import '../../../shared/widgets/schedule_agenda_view.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 class ChildScheduleScreen extends ConsumerWidget {
   const ChildScheduleScreen({super.key});
@@ -15,7 +16,7 @@ class ChildScheduleScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
 
     return userAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: AppLoader()),
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (user) {
         if (user == null) return const SizedBox.shrink();
@@ -23,7 +24,7 @@ class ChildScheduleScreen extends ConsumerWidget {
           future: ref.read(childControllerProvider).fetchForParent(user.id),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: AppLoader());
             }
             final children = snapshot.data!;
             if (children.isEmpty) {
@@ -84,7 +85,7 @@ class _ChildScheduleSection extends ConsumerWidget {
     return entriesAsync.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: AppLoader()),
       ),
       error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Error: $e')),
       // editable defaults to false: parents only ever view.

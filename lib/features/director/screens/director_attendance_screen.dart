@@ -10,6 +10,7 @@ import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
+import '../../../shared/widgets/app_loader.dart';
 
 class DirectorAttendanceScreen extends ConsumerStatefulWidget {
   const DirectorAttendanceScreen({super.key});
@@ -189,7 +190,7 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
             future: _future,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: AppLoader());
               }
               final data = snapshot.data!;
               if (data.children.isEmpty) {

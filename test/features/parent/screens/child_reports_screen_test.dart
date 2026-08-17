@@ -11,6 +11,7 @@ import 'package:test_flutter/core/models/daily_report.dart';
 import 'package:test_flutter/core/controllers/child_controller.dart';
 import 'package:test_flutter/core/controllers/daily_report_controller.dart';
 import 'package:test_flutter/shared/util/date_display.dart';
+import 'package:test_flutter/shared/widgets/app_loader.dart';
 import 'package:test_flutter/features/parent/screens/child_reports_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
@@ -140,6 +141,6 @@ void main() {
 
     expect(find.text('Fun day'), findsOneWidget);
     // A loading spinner inside the thumbnail slot while the URL is pending.
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(AppLoader), findsWidgets);
   });
 }
