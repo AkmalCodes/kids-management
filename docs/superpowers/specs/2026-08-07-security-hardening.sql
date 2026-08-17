@@ -63,22 +63,27 @@ DROP POLICY IF EXISTS "children_update" ON children;
 CREATE POLICY "children_update" ON children FOR UPDATE
   USING (current_role_name() = 'director' AND center_id = my_center());
 
--- children_parents (no center_id of its own -> scope via the child's center)
+-- children_parents (no center_id of its own -> scope via the child's center).
+-- Reads the center through child_center(), a SECURITY DEFINER function, NOT
+-- a plain EXISTS on `children` (that ran under children_select's RLS, which
+-- itself queries children_parents -> infinite recursion; fixed 2026-08-11,
+-- fix folded straight into this file, no separate migration).
+CREATE OR REPLACE FUNCTION child_center(p_child_id UUID) RETURNS UUID
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
+  SELECT center_id FROM public.children WHERE id = p_child_id;
+$$;
 DROP POLICY IF EXISTS "children_parents_select" ON children_parents;
 CREATE POLICY "children_parents_select" ON children_parents FOR SELECT USING (
   parent_id = auth.uid()
-  OR (current_role_name() = 'director' AND EXISTS (
-        SELECT 1 FROM children c WHERE c.id = children_parents.child_id AND c.center_id = my_center()))
+  OR (current_role_name() = 'director' AND child_center(child_id) = my_center())
 );
 DROP POLICY IF EXISTS "children_parents_insert" ON children_parents;
 CREATE POLICY "children_parents_insert" ON children_parents FOR INSERT WITH CHECK (
-  current_role_name() = 'director' AND EXISTS (
-    SELECT 1 FROM children c WHERE c.id = children_parents.child_id AND c.center_id = my_center())
+  current_role_name() = 'director' AND child_center(child_id) = my_center()
 );
 DROP POLICY IF EXISTS "children_parents_delete" ON children_parents;
 CREATE POLICY "children_parents_delete" ON children_parents FOR DELETE USING (
-  current_role_name() = 'director' AND EXISTS (
-    SELECT 1 FROM children c WHERE c.id = children_parents.child_id AND c.center_id = my_center())
+  current_role_name() = 'director' AND child_center(child_id) = my_center()
 );
 
 -- schedule_entries (has center_id)

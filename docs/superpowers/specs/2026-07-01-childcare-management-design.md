@@ -366,13 +366,26 @@ CREATE POLICY "children_update" ON children FOR UPDATE
 
 -- children_parents: RLS must be enabled on this junction table (it wasn't
 -- originally). Directors manage links; a parent can read their own.
+--
+-- SECURITY HARDENING (2026-08-11 fix, folded into
+-- 2026-08-07-security-hardening.sql): the director clause reads the
+-- child's center via child_center(), a SECURITY DEFINER function, NOT a
+-- plain `EXISTS (SELECT 1 FROM children ...)`. A direct subquery on
+-- `children` runs under children's own RLS (children_select), which queries
+-- children_parents back -> infinite recursion ("infinite recursion detected
+-- in policy for relation children"). child_center() bypasses RLS (same
+-- trick as my_center()/current_role_name()) so the cycle never starts.
 ALTER TABLE children_parents ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "children_parents_select" ON children_parents FOR SELECT
-  USING (current_role_name() = 'director' OR parent_id = auth.uid());
-CREATE POLICY "children_parents_insert" ON children_parents FOR INSERT
-  WITH CHECK (current_role_name() = 'director');
-CREATE POLICY "children_parents_delete" ON children_parents FOR DELETE
-  USING (current_role_name() = 'director');
+CREATE POLICY "children_parents_select" ON children_parents FOR SELECT USING (
+  parent_id = auth.uid()
+  OR (current_role_name() = 'director' AND child_center(child_id) = my_center())
+);
+CREATE POLICY "children_parents_insert" ON children_parents FOR INSERT WITH CHECK (
+  current_role_name() = 'director' AND child_center(child_id) = my_center()
+);
+CREATE POLICY "children_parents_delete" ON children_parents FOR DELETE USING (
+  current_role_name() = 'director' AND child_center(child_id) = my_center()
+);
 
 -- schedule_entries: director sees/edits everything; teachers see every
 -- teacher's schedule but can only create on their own, and can only
@@ -920,6 +933,9 @@ Findings from a defensive review of the RLS policies, SECURITY DEFINER functions
 - **M5** — the `create-user` Edge Function verifies a parent-link `childId` belongs to the caller's own center before linking (the admin client bypasses RLS). **Redeploy the function** after pulling.
 - **M1** — multi-center isolation: every "director sees/edits all" policy is now scoped `AND center_id = my_center()` (new `my_center()` helper), plus explicit **`classes`** policies (previously undocumented) and **storage** policies for `avatars` / `child-avatars` / `class-avatars` / `daily-report-images` (**L2** — only `attendance-photos` had been written out).
 
+**Bug found after M1 shipped, fixed 2026-08-11** (SQL folded into [`2026-08-07-security-hardening.sql`](2026-08-07-security-hardening.sql) — re-run that file, it's idempotent): M1's `children_parents` director clause added `EXISTS (SELECT 1 FROM children ...)` to scope by center. That subquery runs under `children`'s own RLS, which queries `children_parents` back, which re-triggers its own RLS, which queries `children` again — infinite recursion. Postgres throws `infinite recursion detected in policy for relation "children"`; symptoms were an immediate error on the lessons tab and a stuck spinner on schedule/attendance (same cycle, different call sites). Fixed with a new SECURITY DEFINER helper `child_center(child_id)` that reads the center without going through RLS, same pattern as `my_center()`.
+
 **Still open (deliberate):**
 - **H1 (high)** — the auth **deep link uses an unverified custom URL scheme** (`com.example.test_flutter://`), which any app can register to intercept the invite/recovery token → account takeover. Fix with **Android App Links + iOS Universal Links** (verified https), bundled with the §11 `applicationId` rename. Until then, treat invites as dev-only.
 - **L1** — the `create-user` Edge Function has no CORS handling (needed for a Flutter **web** build) and no invite throttling/input-length caps.
+- **L3** — invite emails are sent via Mailgun (see `sendInviteEmail` in `create-user/index.ts`) but `MAILGUN_DOMAIN` is still Mailgun's free **sandbox domain**. Sandbox domains can never pass DMARC alignment (SPF/DKIM authenticate against `mgsend.net`, not the visible `From:` domain `mailgun.org`), so invite emails land in Gmail spam (`dmarc=fail p=QUARANTINE`) — confirmed via raw headers 2026-08-13. Sandbox mode also only delivers to recipients manually authorized in the Mailgun dashboard. Deliberately deferred until a real domain is bought (user's planning to buy one for a portfolio site anyway — reuse a subdomain of it, e.g. `mail.<domain>`, add the SPF/DKIM records Mailgun gives you, then update the `MAILGUN_DOMAIN` secret and redeploy).

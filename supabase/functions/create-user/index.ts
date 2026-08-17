@@ -101,17 +101,49 @@ Deno.serve(async (req) => {
   // does below, never anything driven by unvalidated request input.
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  // redirectTo makes the invite email link deep-link back into the app
-  // (see the matching scheme in AndroidManifest.xml / Info.plist) instead
-  // of the project's default Site URL.
-  const { data: invited, error: inviteError } = await adminClient.auth.admin
-    .inviteUserByEmail(email, {
-      redirectTo: "com.example.test_flutter://login-callback/",
+  // generateLink creates the auth user and hands back the invite URL, but
+  // -- unlike inviteUserByEmail -- does NOT send any email itself; we send
+  // it ourselves below via Mailgun's API. Switched away from
+  // inviteUserByEmail because Supabase's own SMTP-relay mailer was
+  // silently stripping the HTML down to plain text, dropping the link
+  // (recipients saw the words "Accept invitation" with no href).
+  // redirectTo makes that link deep-link back into the app (see the
+  // matching scheme in AndroidManifest.xml / Info.plist) instead of the
+  // project's default Site URL.
+  const { data: linkData, error: linkError } = await adminClient.auth.admin
+    .generateLink({
+      type: "invite",
+      email,
+      options: {
+        redirectTo: "com.example.test_flutter://login-callback/",
+      },
     });
-  if (inviteError || !invited?.user) {
-    return jsonResponse({ error: inviteError?.message ?? "Invite failed" }, 400);
+  if (linkError || !linkData?.user) {
+    return jsonResponse({ error: linkError?.message ?? "Invite failed" }, 400);
   }
-  const newUserId = invited.user.id;
+  const newUserId = linkData.user.id;
+
+  // Build the verify URL ourselves instead of trusting action_link's
+  // embedded redirect_to -- in testing, the redirectTo option above didn't
+  // reliably make it through the SDK into action_link (it silently fell
+  // back to the project's default Site URL, http://localhost:3000,
+  // instead of our app's scheme). hashed_token + verification_type are
+  // exactly what action_link is built from (per GoTrue's own doc comment:
+  // auth/v1/verify?type={verification_type}&token={hashed_token}&redirect_to={redirect_to}),
+  // so reconstructing it here guarantees our redirect always applies.
+  const props = linkData.properties;
+  const actionLink = `${supabaseUrl}/auth/v1/verify?type=${props.verification_type}&token=${props.hashed_token}&redirect_to=${
+    encodeURIComponent("com.example.test_flutter://login-callback/")
+  }`;
+
+  const emailError = await sendInviteEmail(email, actionLink);
+  if (emailError) {
+    // The auth user + link already exist at this point -- don't leave the
+    // director thinking nothing happened. A retry would just mint a
+    // second (still valid) link rather than fix anything, so surface this
+    // distinctly instead of the generic "Invite failed" above.
+    return jsonResponse({ error: `Account created but email failed to send: ${emailError}` }, 502);
+  }
 
   const { error: insertProfileError } = await adminClient.from("profiles").insert({
     id: newUserId,
@@ -152,4 +184,46 @@ function jsonResponse(body: unknown, status: number): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// Sends the invite email ourselves via Mailgun's HTTP API (see the comment
+// above generateLink for why this replaced Supabase's SMTP relay).
+// Returns null on success, or an error message string on failure.
+async function sendInviteEmail(toEmail: string, actionLink: string): Promise<string | null> {
+  const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY")!;
+  const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN")!;
+
+  const html = `
+    <h2>You've been invited</h2>
+    <p>You've been invited to create a Childcare Manager account. Follow the link below to accept and set your password.</p>
+    <p><a href="${actionLink}">Accept invitation</a></p>
+  `;
+
+  const form = new FormData();
+  form.append("from", `Childcare Manager <no-reply@${mailgunDomain}>`);
+  form.append("to", toEmail);
+  form.append("subject", "You've been invited");
+  form.append("html", html);
+  // Mailgun's click-tracking is on by default: it rewrites every <a href>
+  // to go through a Mailgun tracking subdomain first, then redirects to
+  // the real link. Gmail's spam filter distrusts that redirect hop on an
+  // unfamiliar domain and was stripping the link entirely. Turning
+  // tracking off keeps our actual actionLink verbatim in the HTML.
+  form.append("o:tracking-clicks", "no");
+
+  const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+    method: "POST",
+    headers: {
+      // Mailgun HTTP API uses Basic auth: username is always the literal
+      // string "api", password is the private API key.
+      Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}`,
+    },
+    body: form,
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    return `Mailgun ${response.status}: ${body}`;
+  }
+  return null;
 }
