@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/features/teacher/teacher_shell.dart';
+import 'package:kids_management/features/teacher/teacher_shell.dart';
 
 void main() {
   testWidgets('TeacherShell renders its tabs', (tester) async {

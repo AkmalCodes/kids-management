@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/features/auth/forgot_password_screen.dart';
-import 'package:test_flutter/features/auth/login_screen.dart';
+import 'package:kids_management/features/auth/forgot_password_screen.dart';
+import 'package:kids_management/features/auth/login_screen.dart';
 
 void main() {
   testWidgets('LoginScreen shows two fields and a Sign In button', (tester) async {

@@ -4,7 +4,7 @@ import '../../core/auth/auth_controller.dart';
 import '../../shared/widgets/app_loader.dart';
 
 // Sends a password-recovery email. The link in that email deep-links back
-// into the app (same com.example.test_flutter://login-callback/ scheme as
+// into the app (same com.example.kids_management://login-callback/ scheme as
 // invites), which fires a passwordRecovery auth event that routes to
 // SetPasswordScreen -- so this screen's only job is capturing the email
 // and kicking off the send.

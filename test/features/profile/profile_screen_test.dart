@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
-import 'package:test_flutter/core/controllers/profile_controller.dart';
-import 'package:test_flutter/features/profile/change_password_screen.dart';
-import 'package:test_flutter/features/profile/person_detail_screen.dart';
-import 'package:test_flutter/features/profile/profile_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/controllers/photo_capture_controller.dart';
+import 'package:kids_management/core/controllers/profile_controller.dart';
+import 'package:kids_management/features/profile/change_password_screen.dart';
+import 'package:kids_management/features/profile/person_detail_screen.dart';
+import 'package:kids_management/features/profile/profile_screen.dart';
 
 class MockAuthController extends Mock implements AuthController {}
 

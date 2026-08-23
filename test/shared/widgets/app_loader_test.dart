@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/shared/widgets/app_loader.dart';
+import 'package:kids_management/shared/widgets/app_loader.dart';
 
 void main() {
   Future<void> pumpLoader(WidgetTester tester, {bool delayed = true}) =>

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/core/models/daily_report.dart';
+import 'package:kids_management/core/models/daily_report.dart';
 
 void main() {
   final sampleJson = {

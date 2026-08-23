@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/class_group.dart';
-import 'package:test_flutter/core/controllers/class_controller.dart';
-import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
-import 'package:test_flutter/core/controllers/teacher_controller.dart';
-import 'package:test_flutter/features/director/screens/class_detail_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/class_group.dart';
+import 'package:kids_management/core/controllers/class_controller.dart';
+import 'package:kids_management/core/controllers/photo_capture_controller.dart';
+import 'package:kids_management/core/controllers/teacher_controller.dart';
+import 'package:kids_management/features/director/screens/class_detail_screen.dart';
 
 class MockClassController extends Mock implements ClassController {}
 

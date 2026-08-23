@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/core/models/schedule.dart';
-import 'package:test_flutter/shared/widgets/day_timetable.dart';
-import 'package:test_flutter/shared/widgets/schedule_agenda_view.dart';
+import 'package:kids_management/core/models/schedule.dart';
+import 'package:kids_management/shared/widgets/day_timetable.dart';
+import 'package:kids_management/shared/widgets/schedule_agenda_view.dart';
 
 // anchorDate is injected everywhere so tests don't depend on the real
 // current date (July has 31 days; February doesn't — a test that relies

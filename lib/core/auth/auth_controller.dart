@@ -53,7 +53,7 @@ class AuthController {
   // (see redirectTo scheme in AndroidManifest / Info.plist).
   Future<void> sendPasswordReset(String email) => _client.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'com.example.test_flutter://login-callback/',
+        redirectTo: 'com.example.kids_management://login-callback/',
       );
 }
 

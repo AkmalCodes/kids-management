@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/core/models/schedule.dart';
-import 'package:test_flutter/shared/widgets/schedule_entry_form_dialog.dart';
+import 'package:kids_management/core/models/schedule.dart';
+import 'package:kids_management/shared/widgets/schedule_entry_form_dialog.dart';
 
 ScheduleEntry _entry({String color = 'D81B60'}) => ScheduleEntry(
   id: 'entry-1',

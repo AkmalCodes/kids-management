@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       type: "invite",
       email,
       options: {
-        redirectTo: "com.example.test_flutter://login-callback/",
+        redirectTo: "com.example.kids_management://login-callback/",
       },
     });
   if (linkError || !linkData?.user) {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
   // so reconstructing it here guarantees our redirect always applies.
   const props = linkData.properties;
   const actionLink = `${supabaseUrl}/auth/v1/verify?type=${props.verification_type}&token=${props.hashed_token}&redirect_to=${
-    encodeURIComponent("com.example.test_flutter://login-callback/")
+    encodeURIComponent("com.example.kids_management://login-callback/")
   }`;
 
   const emailError = await sendInviteEmail(email, actionLink);

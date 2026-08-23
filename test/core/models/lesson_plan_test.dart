@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/core/models/lesson_plan.dart';
+import 'package:kids_management/core/models/lesson_plan.dart';
 
 void main() {
   Map<String, dynamic> baseJson() => {

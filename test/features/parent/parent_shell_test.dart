@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/features/parent/parent_shell.dart';
-import 'package:test_flutter/features/parent/screens/child_attendance_screen.dart';
-import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
+import 'package:kids_management/features/parent/parent_shell.dart';
+import 'package:kids_management/features/parent/screens/child_attendance_screen.dart';
+import 'package:kids_management/features/parent/screens/child_schedule_screen.dart';
 
 void main() {
   testWidgets('ParentShell renders Schedule, Attendance, Reports and Profile tabs',

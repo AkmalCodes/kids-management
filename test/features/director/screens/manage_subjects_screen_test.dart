@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/subject.dart';
-import 'package:test_flutter/core/controllers/subject_controller.dart';
-import 'package:test_flutter/features/director/screens/manage_subjects_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/subject.dart';
+import 'package:kids_management/core/controllers/subject_controller.dart';
+import 'package:kids_management/features/director/screens/manage_subjects_screen.dart';
 
 class MockSubjectController extends Mock implements SubjectController {}
 

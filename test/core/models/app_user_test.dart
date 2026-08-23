@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/core/models/app_user.dart';
+import 'package:kids_management/core/models/app_user.dart';
 
 void main() {
   group('AppUser', () {

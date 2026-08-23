@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/lesson_plan.dart';
-import 'package:test_flutter/core/controllers/class_controller.dart';
-import 'package:test_flutter/core/controllers/lesson_plan_controller.dart';
-import 'package:test_flutter/core/controllers/subject_controller.dart';
-import 'package:test_flutter/features/shared_lessons/lesson_plan_edit_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/lesson_plan.dart';
+import 'package:kids_management/core/controllers/class_controller.dart';
+import 'package:kids_management/core/controllers/lesson_plan_controller.dart';
+import 'package:kids_management/core/controllers/subject_controller.dart';
+import 'package:kids_management/features/shared_lessons/lesson_plan_edit_screen.dart';
 
 class MockLessonPlanController extends Mock implements LessonPlanController {}
 

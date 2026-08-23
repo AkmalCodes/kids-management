@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/controllers/child_controller.dart';
-import 'package:test_flutter/core/controllers/teacher_controller.dart';
-import 'package:test_flutter/core/controllers/user_management_controller.dart';
-import 'package:test_flutter/features/director/screens/enroll_child_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/child.dart';
+import 'package:kids_management/core/controllers/child_controller.dart';
+import 'package:kids_management/core/controllers/teacher_controller.dart';
+import 'package:kids_management/core/controllers/user_management_controller.dart';
+import 'package:kids_management/features/director/screens/enroll_child_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
 

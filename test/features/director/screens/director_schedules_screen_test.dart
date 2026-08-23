@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/models/class_group.dart';
-import 'package:test_flutter/core/controllers/class_controller.dart';
-import 'package:test_flutter/features/director/screens/director_schedules_screen.dart';
-import 'package:test_flutter/features/director/screens/person_schedule_screen.dart';
+import 'package:kids_management/core/models/class_group.dart';
+import 'package:kids_management/core/controllers/class_controller.dart';
+import 'package:kids_management/features/director/screens/director_schedules_screen.dart';
+import 'package:kids_management/features/director/screens/person_schedule_screen.dart';
 
 class MockClassController extends Mock implements ClassController {}
 

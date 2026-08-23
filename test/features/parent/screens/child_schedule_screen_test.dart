@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/controllers/child_controller.dart';
-import 'package:test_flutter/core/controllers/schedule_controller.dart';
-import 'package:test_flutter/features/parent/screens/child_schedule_screen.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/child.dart';
+import 'package:kids_management/core/controllers/child_controller.dart';
+import 'package:kids_management/core/controllers/schedule_controller.dart';
+import 'package:kids_management/features/parent/screens/child_schedule_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
 

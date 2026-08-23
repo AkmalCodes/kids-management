@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test_flutter/shared/widgets/person_invite_dialog.dart';
+import 'package:kids_management/shared/widgets/person_invite_dialog.dart';
 
 // A button that opens the dialog and stashes the result, so tests can pump
 // a real widget tree (showDialog needs a Navigator/MaterialApp context).

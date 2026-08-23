@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:test_flutter/core/auth/auth_controller.dart';
-import 'package:test_flutter/core/models/app_user.dart';
-import 'package:test_flutter/core/models/attendance.dart';
-import 'package:test_flutter/core/models/child.dart';
-import 'package:test_flutter/core/controllers/attendance_controller.dart';
-import 'package:test_flutter/core/controllers/child_controller.dart';
-import 'package:test_flutter/core/controllers/photo_capture_controller.dart';
-import 'package:test_flutter/features/teacher/screens/mark_attendance_screen.dart';
-import 'package:test_flutter/shared/widgets/signed_photo_thumbnail.dart';
+import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/attendance.dart';
+import 'package:kids_management/core/models/child.dart';
+import 'package:kids_management/core/controllers/attendance_controller.dart';
+import 'package:kids_management/core/controllers/child_controller.dart';
+import 'package:kids_management/core/controllers/photo_capture_controller.dart';
+import 'package:kids_management/features/teacher/screens/mark_attendance_screen.dart';
+import 'package:kids_management/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockChildController extends Mock implements ChildController {}
 
