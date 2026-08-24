@@ -130,21 +130,46 @@ The `CLAUDE.md` "Auth deep-link scheme" section stays useful history — the
 underscore rule still explains why the scheme approach was abandoned — but
 must be rewritten to say the scheme is no longer used for auth callbacks.
 
-## Hosting
+## Hosting — Cloudflare Pages
 
-Static files live in a `web/` directory in this repo and deploy to a static
-host on `kids.akmalcodes.quest`, pointed there by a CNAME record at Porkbun
-(same DNS panel as the Mailgun records).
+Static files live in a `web/` directory in this repo and deploy to **Cloudflare
+Pages**, served at `kids.akmalcodes.quest`.
 
-**To verify at implementation time, not assumed here:** whether the chosen host
-(Cloudflare Pages, Netlify, and Vercel are all candidates) supports a custom
-domain when the DNS zone is *not* on that provider, and what exact record it
-wants. Porkbun's DNS is Cloudflare-powered but the zone is not in a Cloudflare
-account, which is the case that differs between providers. Confirm the
-provider's current requirements before writing DNS steps.
+**Why this provider.** The requirement was a host that attaches a custom domain
+using only a CNAME record at Porkbun, with no nameserver migration. A
+nameserver move would drag the entire `akmalcodes.quest` zone out of Porkbun,
+including the SPF, DKIM, and tracking records that make Mailgun work — an
+unacceptable risk to a flow that was only just repaired.
 
-Per the standing rule in `CLAUDE.md`, the DNS and hosting setup gets its own
-step-by-step, explain-as-you-go document in `docs/`, in the same style as
+- **Cloudflare Pages** — meets it. Cloudflare's docs are explicit that for a
+  *subdomain* you do not need to move nameservers; you create a CNAME at your
+  existing provider. (Apex domains *do* require the nameserver move — which is
+  another reason the page lives on `kids.` rather than the bare domain.)
+- **GitHub Pages** — rejected. On the free plan Pages only publishes from a
+  **public** repository; serving from a private repo needs GitHub Pro. This
+  repo should not become public.
+
+Note that Porkbun's DNS is Cloudflare-powered under the hood, but the zone is
+not in *your* Cloudflare account — so Pages treats it as external DNS, which is
+precisely the CNAME case above.
+
+### Setup order (the ordering matters)
+
+1. Create a free Cloudflare account.
+2. Cloudflare dashboard → **Workers & Pages** → create a Pages project and
+   deploy the `web/` directory. Note the assigned `<project>.pages.dev` address.
+3. In that Pages project → **Custom domains** → add `kids.akmalcodes.quest`.
+4. **Only then**, in Porkbun's DNS panel for `akmalcodes.quest`, add:
+   **CNAME**, host `kids`, value `<project>.pages.dev`, TTL default (600).
+5. Wait for Cloudflare to issue the TLS certificate, then load
+   `https://kids.akmalcodes.quest/` and confirm it serves over https.
+
+Step 3 must happen before step 4. Adding the CNAME without first registering
+the custom domain in the Pages dashboard produces a **522 error**, because the
+record points at Cloudflare with nothing on the other side claiming it.
+
+Per the standing rule in `CLAUDE.md`, this setup gets its own step-by-step,
+explain-as-you-go document in `docs/`, in the same style as
 `docs/mailgun-porkbun-domain-setup.md` — not just a terse diff.
 
 ## Testing
@@ -174,5 +199,6 @@ The first row is the one that catches a missing step 7.
 
 ## Open questions
 
-None blocking. The hosting-provider custom-domain requirement is the one item
-flagged for verification during implementation.
+None. The hosting provider was the one open item and is now settled on
+Cloudflare Pages, with the CNAME-only requirement confirmed against current
+Cloudflare documentation.
