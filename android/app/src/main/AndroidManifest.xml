@@ -30,12 +30,23 @@
                  the app instead of a browser; supabase_flutter then reads
                  the session tokens out of the URL automatically. Scheme +
                  host must match the redirectTo used when sending the
-                 email. -->
+                 email.
+
+                 NO UNDERSCORE in the scheme. RFC 3986 only allows letters,
+                 digits, '+', '-' and '.' in a URI scheme, and Supabase Auth
+                 (GoTrue, written in Go) parses redirect_to with Go's
+                 net/url. On hitting '_' that parser finds no scheme at all,
+                 redirect-URL validation fails, and GoTrue silently falls
+                 back to the project's Site URL (http://localhost:3000)
+                 instead of opening the app. Note this scheme deliberately
+                 does NOT match the applicationId (com.example.kids_management,
+                 which keeps its underscore); they are independent, and only
+                 the scheme is constrained by RFC 3986. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="com.example.kids_management" android:host="login-callback"/>
+                <data android:scheme="com.example.kidsmanagement" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

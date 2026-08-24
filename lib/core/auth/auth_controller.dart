@@ -51,9 +51,12 @@ class AuthController {
 
   // Sends a password-recovery email; the link deep-links back into the app
   // (see redirectTo scheme in AndroidManifest / Info.plist).
+  // The scheme has no underscore on purpose -- underscores are illegal in a
+  // URI scheme (RFC 3986), and Supabase Auth silently ignores a redirect_to
+  // it can't parse, sending the user to the Site URL instead of the app.
   Future<void> sendPasswordReset(String email) => _client.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'com.example.kids_management://login-callback/',
+        redirectTo: 'com.example.kidsmanagement://login-callback/',
       );
 }
 

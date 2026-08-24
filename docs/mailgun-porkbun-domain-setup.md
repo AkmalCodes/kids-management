@@ -83,7 +83,8 @@ useless for real users. A verified custom domain removes that limit.
 
 Sending domain: `mg.akmalcodes.quest`
 Deep-link scheme (unrelated to Mailgun, just noting it uses the same brand):
-`com.example.kids_management://login-callback/`
+`com.example.kidsmanagement://login-callback/` — **no underscore**, see the
+"Auth deep-link scheme" section in `CLAUDE.md` for why.
 
 ## Gotchas we hit
 
