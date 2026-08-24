@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Set your password — Kids Management</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="card">
+    <h1>Kids Management</h1>
+
+    <!-- Exactly one of these sections is visible at a time; main.js owns the
+         switching. Starts on the loader because parsing happens on load. -->
+    <section id="state-loading">
+      <p class="muted">Checking your link…</p>
+    </section>
+
+    <section id="state-form" hidden>
+      <p id="form-intro">Choose a password for your account.</p>
+      <form id="password-form" novalidate>
+        <label for="password">New password</label>
+        <input id="password" type="password" autocomplete="new-password" required>
+
+        <label for="confirmation">Confirm password</label>
+        <input id="confirmation" type="password" autocomplete="new-password" required>
+
+        <p id="form-error" class="error" role="alert" hidden></p>
+
+        <button id="submit" type="submit">Set password</button>
+      </form>
+    </section>
+
+    <section id="state-success" hidden>
+      <h2>Password set</h2>
+      <p>Open the Kids Management app and sign in with your email and new password.</p>
+    </section>
+
+    <section id="state-error" hidden>
+      <h2 id="error-title">This link doesn't work</h2>
+      <p id="error-message"></p>
+    </section>
+  </main>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
