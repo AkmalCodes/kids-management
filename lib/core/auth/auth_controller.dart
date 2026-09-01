@@ -49,14 +49,14 @@ class AuthController {
   // (which could otherwise let them change their own role).
   Future<void> completePasswordSetup() => _client.rpc('complete_password_setup');
 
-  // Sends a password-recovery email; the link deep-links back into the app
-  // (see redirectTo scheme in AndroidManifest / Info.plist).
-  // The scheme has no underscore on purpose -- underscores are illegal in a
-  // URI scheme (RFC 3986), and Supabase Auth silently ignores a redirect_to
-  // it can't parse, sending the user to the Site URL instead of the app.
+  // Sends a password-recovery email. The link goes to the web set-password
+  // page rather than a deep link into the app: a custom URL scheme has no
+  // fallback when the app is not installed, and you cannot know before the
+  // click whether it is. See
+  // docs/superpowers/specs/2026-08-24-web-set-password-page-design.md.
   Future<void> sendPasswordReset(String email) => _client.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'com.example.kidsmanagement://login-callback/',
+        redirectTo: 'https://kids.akmalcodes.quest/',
       );
 }
 

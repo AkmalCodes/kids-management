@@ -40,5 +40,19 @@ void main() {
 
       verify(() => mockAuth.signOut()).called(1);
     });
+
+    test('sendPasswordReset points recovery links at the web set-password page', () async {
+      when(() => mockAuth.resetPasswordForEmail(
+            any(),
+            redirectTo: any(named: 'redirectTo'),
+          )).thenAnswer((_) async {});
+
+      await service.sendPasswordReset('jane@example.com');
+
+      verify(() => mockAuth.resetPasswordForEmail(
+            'jane@example.com',
+            redirectTo: 'https://kids.akmalcodes.quest/',
+          )).called(1);
+    });
   });
 }

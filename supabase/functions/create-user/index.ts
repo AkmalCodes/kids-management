@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       type: "invite",
       email,
       options: {
-        redirectTo: "com.example.kidsmanagement://login-callback/",
+        redirectTo: "https://kids.akmalcodes.quest/",
       },
     });
   if (linkError || !linkData?.user) {
@@ -129,17 +129,13 @@ Deno.serve(async (req) => {
   // auth/v1/verify?type={verification_type}&token={hashed_token}&redirect_to={redirect_to}),
   // so reconstructing it here lets us control the redirect explicitly.
   //
-  // Earlier this comment blamed the SDK for "silently falling back to the
-  // Site URL (http://localhost:3000)". That diagnosis was wrong. The real
-  // cause was an underscore in the scheme: RFC 3986 permits only letters,
-  // digits, '+', '-' and '.' in a URI scheme, so GoTrue (Go's net/url)
-  // could not parse com.example.kids_management://..., failed redirect-URL
-  // validation, and fell back to the Site URL. Verified by sending the same
-  // request with three allow-listed schemes -- only the underscore-free one
-  // was honoured. Keep this scheme underscore-free.
+  // The target is the web set-password page, not a deep link into the app: a
+  // custom URL scheme silently dead-ends when the app is not installed, which
+  // is every desktop click and every not-yet-installed phone. The page works
+  // everywhere and clears must_set_password itself.
   const props = linkData.properties;
   const actionLink = `${supabaseUrl}/auth/v1/verify?type=${props.verification_type}&token=${props.hashed_token}&redirect_to=${
-    encodeURIComponent("com.example.kidsmanagement://login-callback/")
+    encodeURIComponent("https://kids.akmalcodes.quest/")
   }`;
 
   const emailError = await sendInviteEmail(email, actionLink);
