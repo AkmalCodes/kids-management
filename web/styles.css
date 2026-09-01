@@ -1,11 +1,41 @@
+/* Mirrors the Flutter app's theme so the page does not feel like a different
+   product mid-signup. Every value below is lifted from
+   lib/core/theme/app_theme.dart, or from the Material 3 palette that
+   ColorScheme.fromSeed(#FDB0C0) generates from it.
+
+   Those palette colours are algorithmic, not hand-picked -- they were read out
+   of Flutter directly rather than eyeballed. If AppTheme.seedColor ever
+   changes, these need regenerating the same way; they will not follow on
+   their own. */
+
+/* Self-hosted so this page makes no third-party requests. It is where people
+   type a new password, so it should not announce each visitor to a font CDN.
+   Nunito is SIL Open Font License, which permits self-hosting. One variable
+   file covers 400-700. */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/nunito-latin.woff2') format('woff2');
+}
+
 :root {
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --text: #1c1f23;
-  --muted: #5b6470;
-  --accent: #2f6fed;
-  --error: #c0392b;
-  --border: #d7dce3;
+  /* ColorScheme.fromSeed(seedColor: Color(0xFFFDB0C0)) */
+  --primary: #8D4A5A;
+  --on-primary: #FFFFFF;
+  --primary-container: #FFD9DF;
+  --on-primary-container: #713343;
+  --surface: #FFF8F7;            /* scaffoldBackgroundColor */
+  --on-surface: #22191B;
+  --on-surface-variant: #524346; /* muted/label text */
+  --surface-container-highest: #EFDEE0; /* inputDecorationTheme fillColor */
+  --surface-container-low: #FFF0F1;
+  --outline: #847375;
+  --error: #BA1A1A;
+
+  /* AppTheme.radius */
+  --radius: 16px;
 }
 
 * { box-sizing: border-box; }
@@ -17,59 +47,90 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--bg);
-  color: var(--text);
-  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
+/* The app frames content in rounded panels (see the AppBar's 20px bottom
+   radius and the 16px cards); this echoes that rather than a boxy sheet. */
 .card {
   width: 100%;
   max-width: 380px;
-  background: var(--card);
-  border-radius: 12px;
+  background: var(--surface-container-low);
+  border-radius: 20px;
   padding: 32px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(34, 25, 27, 0.08);
 }
 
-h1 { font-size: 20px; margin: 0 0 20px; }
-h2 { font-size: 18px; margin: 0 0 8px; }
+h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: var(--on-primary-container);
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
 p { margin: 0 0 16px; }
-.muted { color: var(--muted); }
-.error { color: var(--error); }
+.muted { color: var(--on-surface-variant); }
+.error { color: var(--error); font-weight: 600; }
 
 label {
   display: block;
   margin-bottom: 6px;
   font-size: 14px;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--on-surface-variant);
 }
 
+/* Filled and borderless, matching inputDecorationTheme: the rounded fill
+   itself signals "tappable", instead of an outline. Padding matches the
+   app's EdgeInsets.symmetric(horizontal: 16, vertical: 14). */
 input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 14px 16px;
   margin-bottom: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  font-family: inherit;
   font-size: 16px;
 }
 
+/* focusedBorder: BorderSide(color: primary, width: 2). Drawn as an inset
+   ring so the field does not shift size when focused. */
 input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-color: var(--accent);
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary);
 }
 
+/* elevatedButtonTheme: radius 16, vertical padding 16, weight 600. */
 button {
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: #fff;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-button:disabled { opacity: 0.6; cursor: default; }
+button:hover:not(:disabled) { background: var(--on-primary-container); }
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 
 [hidden] { display: none !important; }

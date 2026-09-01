@@ -105,12 +105,14 @@ npx wrangler pages project create kids-management --production-branch=main
 
 **Do not deploy the `web/` folder directly.** It contains `test/` and
 `package.json`, which are for Node and have no business being on a public
-website. Copy just the six site files to a temporary folder and deploy that:
+website. Copy just the six site files plus the `fonts/` directory to a
+temporary folder and deploy that:
 
 ```bash
 STAGE=/tmp/pages-dist
 rm -rf "$STAGE" && mkdir -p "$STAGE"
 cp web/index.html web/styles.css web/config.js web/main.js web/auth.js web/api.js "$STAGE/"
+cp -r web/fonts "$STAGE/"
 npx wrangler pages deploy "$STAGE" --project-name=kids-management --branch=main --commit-dirty=true
 ```
 
