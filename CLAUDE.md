@@ -17,29 +17,35 @@ Supabase).
   in this area needs the same step-by-step, explain-as-you-go treatment as
   that doc, not just a terse diff.
 
-## Auth deep-link scheme — do not add an underscore
+## Auth callbacks go to a web page, not a deep link
 
-The scheme is `com.example.kidsmanagement` (no underscore), which
-deliberately does **not** match the applicationId
-`com.example.kids_management`. RFC 3986 allows only letters, digits, `+`,
-`-` and `.` in a URI scheme. Supabase Auth (GoTrue, Go) parses
-`redirect_to` with Go's `net/url`; an underscore makes that parser find no
-scheme at all, redirect-URL validation fails, and GoTrue **silently** falls
-back to the project's Site URL (`http://localhost:3000`) instead of opening
-the app — no error anywhere. This cost two debugging sessions and was
-misdiagnosed once as a Supabase SDK bug.
+Invite and password-recovery emails point at `https://kids.akmalcodes.quest/`
+(see `docs/superpowers/specs/2026-08-24-web-set-password-page-design.md` and
+`docs/cloudflare-pages-setup.md`). The page sets the password in the browser and
+clears `must_set_password` itself.
 
-The scheme is duplicated in `AndroidManifest.xml`, `ios/Runner/Info.plist`,
-`lib/core/auth/auth_controller.dart`, `supabase/functions/create-user/index.ts`,
-and the Supabase dashboard's **Auth → URL Configuration → Redirect URLs**
-allow-list. All five must move together. After editing the Edge Function you
-must redeploy it (`npx supabase functions deploy create-user --project-ref
-rpefksoutqsbreiyppee --use-api`) — the deployed copy went stale through the
-`test_flutter` rename and kept emitting the old scheme.
+**There is no custom URL scheme registered any more.** It was removed from
+`AndroidManifest.xml`, `ios/Runner/Info.plist`, and the Supabase redirect
+allow-list. Do not reintroduce one without reading the history below.
 
-Custom-scheme links only resolve on a device/emulator with the app
-installed. Clicking an invite link in a desktop browser can never open the
-app — test invites on the Android device, not on Windows.
+**Why it was abandoned.** The scheme was `com.example.kids_management://`, and
+it never worked — not before the rename either. RFC 3986 allows only letters,
+digits, `+`, `-` and `.` in a URI scheme. Supabase Auth (GoTrue, Go) parses
+`redirect_to` with Go's `net/url`, which finds no scheme at all in a string
+containing `_`; validation then fails and GoTrue **silently** falls back to the
+Site URL. No error is raised anywhere. That cost two debugging sessions and was
+once misdiagnosed as a Supabase SDK bug.
+
+Renaming it underscore-free would not have been enough: a custom scheme has no
+fallback, so it dead-ends on every desktop click and on any phone without the
+app installed. That is why an https page replaced it outright. Removing the
+scheme also retired security finding **H1** — an unverified scheme can be
+registered by any app, which made invite tokens interceptable.
+
+If auth emails are ever repointed again, remember the deployed Edge Function is
+a separate artifact: after editing `create-user`, redeploy it
+(`npx supabase functions deploy create-user --project-ref rpefksoutqsbreiyppee
+--use-api`) or the old value keeps being sent.
 
 ## Project identity
 

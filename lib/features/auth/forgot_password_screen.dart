@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../shared/widgets/app_loader.dart';
 
-// Sends a password-recovery email. The link in that email deep-links back
-// into the app (same com.example.kidsmanagement://login-callback/ scheme as
-// invites), which fires a passwordRecovery auth event that routes to
-// SetPasswordScreen -- so this screen's only job is capturing the email
-// and kicking off the send.
+// Sends a password-recovery email. The link opens the web set-password page
+// (https://kids.akmalcodes.quest/), which sets the password in the browser --
+// this flow no longer re-enters the app at all, so there is no passwordRecovery
+// event to handle here. The user signs in normally afterwards. This screen's
+// only job is capturing the email and kicking off the send.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 

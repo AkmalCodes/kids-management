@@ -28,21 +28,6 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Used to take a check-in photo when marking a child present.</string>
-	<!-- Deep link scheme for Supabase auth callbacks (invite / password
-	     recovery); must match the redirectTo used when sending the email.
-	     No underscore: an underscore is illegal in a URI scheme (RFC 3986),
-	     so Supabase Auth fails to parse it and falls back to the Site URL
-	     instead of opening the app. See AndroidManifest.xml for the full
-	     explanation. -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.example.kidsmanagement</string>
-			</array>
-		</dict>
-	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
