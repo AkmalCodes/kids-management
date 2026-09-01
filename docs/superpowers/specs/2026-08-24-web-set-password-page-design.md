@@ -69,7 +69,14 @@ still accepted so links already in inboxes keep working.
 6. On submit, and only on submit:
    a. `POST /auth/v1/verify` with `{type, token_hash}` and the `apikey` header
       — no `Authorization`, since there is no session yet. This is the call
-      that consumes the token; it returns `access_token`.
+      that consumes the token; it returns `access_token`. **The result is
+      cached for the life of the page** (`createSessionProvider`): a submit can
+      fail *after* the token is spent — most often because Supabase rejects the
+      new password itself, e.g. "New password should be different from the old
+      password", which cannot be checked client-side. Re-verifying on the retry
+      would hit `otp_expired`, so a single typo would cost the user a whole new
+      email. A failed verification is not cached, so a network blip stays
+      recoverable.
    b. `PUT /auth/v1/user` with `apikey` + `Authorization: Bearer <access_token>`
       and body `{"password": "…"}`. The anon key is the same publishable key
       passed to the app as `--dart-define=SUPABASE_ANON_KEY` in

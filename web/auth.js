@@ -91,6 +91,26 @@ export function parseAuthParams(search, hash) {
   return { kind: 'missing' };
 }
 
+// Hands out the session for the API calls, verifying at most once.
+//
+// The token_hash from the email is SINGLE USE, but a submit can fail after it
+// has already been spent -- most often because Supabase rejects the new
+// password itself ("New password should be different from the old password"),
+// which is a rule we cannot check client-side. Naively re-verifying on the
+// retry hits otp_expired, so a corrected typo would cost the user a whole new
+// email. Verifying once and reusing the resulting session makes retries free.
+//
+// A failed verification is deliberately NOT cached, so a transient network
+// error does not permanently poison the page.
+export function createSessionProvider({ accessToken = null, verify }) {
+  let cached = accessToken;
+  return async () => {
+    if (cached) return cached;
+    cached = await verify();
+    return cached;
+  };
+}
+
 // Mirrors lib/features/auth/set_password_screen.dart:75,85 exactly. Keep the
 // two in sync -- the rules are deliberately trivial so this duplication stays
 // cheap, and the alternative (shipping a Flutter Web bundle to reuse the Dart

@@ -1,5 +1,5 @@
 import { SUPABASE_URL, ANON_KEY } from './config.js';
-import { parseAuthParams, validatePassword } from './auth.js';
+import { parseAuthParams, validatePassword, createSessionProvider } from './auth.js';
 import { setPassword, completePasswordSetup, verifyTokenHash } from './api.js';
 
 const sections = {
@@ -74,6 +74,18 @@ if (parsed.kind === 'error') {
   }
   show('form');
 
+  // A legacy fragment link arrives with a session already; a token_hash link
+  // gets one from the first successful verify and reuses it thereafter.
+  const getSession = createSessionProvider({
+    accessToken: parsed.kind === 'session' ? parsed.accessToken : null,
+    verify: () => verifyTokenHash({
+      supabaseUrl: SUPABASE_URL,
+      anonKey: ANON_KEY,
+      tokenHash: parsed.tokenHash,
+      type: parsed.type,
+    }),
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     showFormError('');
@@ -89,19 +101,12 @@ if (parsed.kind === 'error') {
     submitButton.textContent = 'Setting password…';
 
     try {
-      // A token_hash link carries no session yet -- exchange it now, at submit
-      // time. Deferring it to here is deliberate: this call consumes the
-      // single-use token, and doing it on page load would let a mail scanner's
-      // prefetch burn the token before the recipient ever typed anything.
-      // A legacy fragment link already carries a session, so it skips this.
-      const accessToken = parsed.kind === 'token_hash'
-        ? await verifyTokenHash({
-            supabaseUrl: SUPABASE_URL,
-            anonKey: ANON_KEY,
-            tokenHash: parsed.tokenHash,
-            type: parsed.type,
-          })
-        : parsed.accessToken;
+      // Exchanged at submit time, not on load: this consumes the single-use
+      // token, and doing it on load would let a mail scanner's prefetch burn it
+      // before the recipient typed anything. getSession() caches the result, so
+      // a submit that fails afterwards (a rejected password, say) can be
+      // retried without re-verifying an already-spent token.
+      const accessToken = await getSession();
 
       await setPassword({
         supabaseUrl: SUPABASE_URL,

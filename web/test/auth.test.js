@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAuthFragment, parseAuthParams, validatePassword } from '../auth.js';
+import { parseAuthFragment, parseAuthParams, validatePassword, createSessionProvider } from '../auth.js';
 
 test('parseAuthFragment reads an invite token', () => {
   const result = parseAuthFragment('#access_token=abc123&refresh_token=r1&type=invite');
@@ -105,4 +105,48 @@ test('parseAuthParams treats a token_hash with no type as missing type, not miss
   const r = parseAuthParams('?token_hash=abc', '');
   assert.equal(r.kind, 'token_hash');
   assert.equal(r.type, '');
+});
+
+// --- createSessionProvider --------------------------------------------------
+// The token_hash is single-use, but a submit can fail AFTER it is spent -- most
+// commonly because Supabase rejects the new password (e.g. same as the old
+// one). Re-verifying on retry would hit otp_expired and strand the user, so the
+// session obtained by the first successful verify is cached and reused.
+
+test('createSessionProvider verifies once and reuses the session on retry', async () => {
+  let calls = 0;
+  const provider = createSessionProvider({ verify: async () => { calls += 1; return 'session-abc'; } });
+
+  assert.equal(await provider(), 'session-abc');
+  assert.equal(await provider(), 'session-abc');
+  assert.equal(await provider(), 'session-abc');
+  assert.equal(calls, 1, 'verify must run only once across retries');
+});
+
+test('createSessionProvider uses a pre-existing session without verifying', async () => {
+  // Legacy fragment links arrive with a session already in hand.
+  let calls = 0;
+  const provider = createSessionProvider({
+    accessToken: 'from-fragment',
+    verify: async () => { calls += 1; return 'should-not-happen'; },
+  });
+
+  assert.equal(await provider(), 'from-fragment');
+  assert.equal(calls, 0);
+});
+
+test('createSessionProvider does not cache a failed verification', async () => {
+  // A transient failure (network blip) must not poison later attempts.
+  let calls = 0;
+  const provider = createSessionProvider({
+    verify: async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('network blip');
+      return 'session-xyz';
+    },
+  });
+
+  await assert.rejects(() => provider(), /network blip/);
+  assert.equal(await provider(), 'session-xyz');
+  assert.equal(calls, 2);
 });
