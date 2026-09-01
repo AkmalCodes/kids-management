@@ -107,9 +107,10 @@ Deno.serve(async (req) => {
   // inviteUserByEmail because Supabase's own SMTP-relay mailer was
   // silently stripping the HTML down to plain text, dropping the link
   // (recipients saw the words "Accept invitation" with no href).
-  // redirectTo makes that link deep-link back into the app (see the
-  // matching scheme in AndroidManifest.xml / Info.plist) instead of the
-  // project's default Site URL.
+  // redirectTo sends the recipient to the web set-password page instead of
+  // the project's default Site URL. It used to be a custom URL scheme that
+  // deep-linked into the app; that was removed because it dead-ends whenever
+  // the app is not installed, which includes every desktop click.
   const { data: linkData, error: linkError } = await adminClient.auth.admin
     .generateLink({
       type: "invite",
