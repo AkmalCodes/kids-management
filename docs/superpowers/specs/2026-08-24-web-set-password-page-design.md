@@ -125,6 +125,20 @@ Validation mirrors `set_password_screen.dart:75,85` exactly: at least 6
 characters, and confirmation must match. Keep the two in sync; the rules are
 deliberately trivial so duplication stays cheap.
 
+`validateFields` reports **per field**, so each input shows its own message
+rather than the form sharing one line and the user guessing which box is wrong.
+Both fields are required. At most one message per field, ordered by what is
+worth fixing first: empty before anything else, and too-short before a mismatch
+— there is no point reporting that a confirmation does not match a password
+that has to change anyway. Errors appear on the first submit attempt and then
+re-evaluate on every keystroke, so they clear as the user fixes them rather
+than nagging before they have finished typing.
+
+The submit button stays enabled while the form is invalid. A disabled button
+gives no reason; clicking an enabled one shows the messages and moves focus to
+the first bad field. Validation runs entirely client-side, so a typo can never
+reach the network — and therefore can never spend the single-use token.
+
 ## Security
 
 - The `token_hash` arrives as a **query parameter**, which is a deliberate

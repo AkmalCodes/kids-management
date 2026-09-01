@@ -1,5 +1,5 @@
 import { SUPABASE_URL, ANON_KEY } from './config.js';
-import { parseAuthParams, validatePassword, createSessionProvider } from './auth.js';
+import { parseAuthParams, validateFields, createSessionProvider } from './auth.js';
 import { setPassword, completePasswordSetup, verifyTokenHash } from './api.js';
 
 const sections = {
@@ -13,6 +13,8 @@ const form = document.getElementById('password-form');
 const passwordInput = document.getElementById('password');
 const confirmationInput = document.getElementById('confirmation');
 const formError = document.getElementById('form-error');
+const passwordError = document.getElementById('password-error');
+const confirmationError = document.getElementById('confirmation-error');
 const submitButton = document.getElementById('submit');
 const formIntro = document.getElementById('form-intro');
 const errorTitle = document.getElementById('error-title');
@@ -27,6 +29,38 @@ function show(name) {
 function showFormError(message) {
   formError.textContent = message;
   formError.hidden = !message;
+}
+
+// Paints one field's error state. aria-invalid drives both the ring colour
+// (see styles.css) and what a screen reader announces, so the two cannot
+// disagree.
+function showFieldError(input, node, message) {
+  node.textContent = message || '';
+  node.hidden = !message;
+  if (message) {
+    input.setAttribute('aria-invalid', 'true');
+  } else {
+    input.removeAttribute('aria-invalid');
+  }
+}
+
+function clearAllErrors() {
+  showFieldError(passwordInput, passwordError, null);
+  showFieldError(confirmationInput, confirmationError, null);
+  showFormError('');
+}
+
+// Returns true when the form may be submitted. Called on submit, and again on
+// every keystroke once the user has attempted a submit -- errors that appear
+// before someone has finished typing are just nagging, but once they have been
+// shown, they should clear the moment the input becomes valid.
+let hasAttemptedSubmit = false;
+function validateForm() {
+  const { password: pwError, confirmation: cfError } =
+    validateFields(passwordInput.value, confirmationInput.value);
+  showFieldError(passwordInput, passwordError, pwError);
+  showFieldError(confirmationInput, confirmationError, cfError);
+  return !pwError && !cfError;
 }
 
 function showFatal(title, message) {
@@ -86,16 +120,26 @@ if (parsed.kind === 'error') {
     }),
   });
 
+  for (const input of [passwordInput, confirmationInput]) {
+    input.addEventListener('input', () => {
+      if (hasAttemptedSubmit) validateForm();
+    });
+  }
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     showFormError('');
+    hasAttemptedSubmit = true;
 
-    const password = passwordInput.value;
-    const validationError = validatePassword(password, confirmationInput.value);
-    if (validationError) {
-      showFormError(validationError);
+    // Nothing leaves the page until both fields pass. The button stays
+    // enabled rather than being disabled while invalid: a dead button gives
+    // no reason, whereas clicking it points at the field that needs fixing.
+    if (!validateForm()) {
+      (passwordError.hidden ? confirmationInput : passwordInput).focus();
       return;
     }
+
+    const password = passwordInput.value;
 
     submitButton.disabled = true;
     submitButton.textContent = 'Setting password…';

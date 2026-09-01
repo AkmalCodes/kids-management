@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAuthFragment, parseAuthParams, validatePassword, createSessionProvider } from '../auth.js';
+import { parseAuthFragment, parseAuthParams, validateFields, createSessionProvider } from '../auth.js';
 
 test('parseAuthFragment reads an invite token', () => {
   const result = parseAuthFragment('#access_token=abc123&refresh_token=r1&type=invite');
@@ -38,20 +38,45 @@ test('parseAuthFragment treats a fragment with no access_token as missing', () =
   assert.deepEqual(parseAuthFragment('#type=invite'), { kind: 'missing' });
 });
 
-test('validatePassword accepts a valid matching password', () => {
-  assert.equal(validatePassword('secret123', 'secret123'), null);
+test('validateFields accepts a valid matching password', () => {
+  assert.deepEqual(validateFields('secret123', 'secret123'), { password: null, confirmation: null });
 });
 
-test('validatePassword rejects fewer than 6 characters', () => {
-  assert.equal(validatePassword('abc12', 'abc12'), 'At least 6 characters');
+test('validateFields requires the password field', () => {
+  const r = validateFields('', '');
+  assert.equal(r.password, 'Enter a password');
 });
 
-test('validatePassword rejects a mismatch', () => {
-  assert.equal(validatePassword('secret123', 'secret124'), 'Passwords do not match');
+test('validateFields requires the confirmation field', () => {
+  const r = validateFields('secret123', '');
+  assert.equal(r.password, null);
+  assert.equal(r.confirmation, 'Re-enter your password to confirm');
 });
 
-test('validatePassword rejects an empty password', () => {
-  assert.equal(validatePassword('', ''), 'At least 6 characters');
+test('validateFields reports a short password on the password field', () => {
+  const r = validateFields('abc12', 'abc12');
+  assert.equal(r.password, 'At least 6 characters');
+  // The mismatch check must not also fire -- one message per field, and the
+  // length problem is the one worth fixing first.
+  assert.equal(r.confirmation, null);
+});
+
+test('validateFields reports a mismatch on the confirmation field', () => {
+  // Reported against the confirmation, not the password: the password is the
+  // value the user meant, the confirmation is the one they mistyped.
+  const r = validateFields('secret123', 'secret124');
+  assert.equal(r.password, null);
+  assert.equal(r.confirmation, 'Passwords do not match');
+});
+
+test('validateFields reports the missing confirmation rather than a mismatch', () => {
+  const r = validateFields('secret123', '');
+  assert.equal(r.confirmation, 'Re-enter your password to confirm');
+});
+
+test('validateFields treats whitespace-only input as empty', () => {
+  const r = validateFields('   ', '   ');
+  assert.equal(r.password, 'Enter a password');
 });
 
 // --- parseAuthParams: the token_hash flow -----------------------------------

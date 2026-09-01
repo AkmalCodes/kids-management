@@ -111,12 +111,37 @@ export function createSessionProvider({ accessToken = null, verify }) {
   };
 }
 
-// Mirrors lib/features/auth/set_password_screen.dart:75,85 exactly. Keep the
-// two in sync -- the rules are deliberately trivial so this duplication stays
-// cheap, and the alternative (shipping a Flutter Web bundle to reuse the Dart
-// validator) was rejected in the spec.
-export function validatePassword(password, confirmation) {
-  if (!password || password.length < 6) return 'At least 6 characters';
-  if (password !== confirmation) return 'Passwords do not match';
-  return null;
+// Validates both fields and reports a message PER FIELD, so each input can
+// show its own error rather than the form sharing one line and the user having
+// to guess which box is wrong.
+//
+// The length and match rules mirror lib/features/auth/set_password_screen.dart
+// exactly (at least 6 characters; confirmation must match). Keep the two in
+// sync -- the rules are deliberately trivial so this duplication stays cheap,
+// and reusing the Dart validator would mean shipping a Flutter Web bundle,
+// which the spec rejected.
+//
+// At most one message per field, ordered by what is worth fixing first: an
+// empty field is reported as required before anything else, and a too-short
+// password is reported before a mismatch (there is no point telling someone
+// their confirmation does not match a password they still have to lengthen).
+export function validateFields(password, confirmation) {
+  const pw = String(password ?? '').trim();
+  const cf = String(confirmation ?? '').trim();
+
+  const result = { password: null, confirmation: null };
+
+  if (!pw) {
+    result.password = 'Enter a password';
+  } else if (pw.length < 6) {
+    result.password = 'At least 6 characters';
+  }
+
+  if (!cf) {
+    result.confirmation = 'Re-enter your password to confirm';
+  } else if (!result.password && password !== confirmation) {
+    result.confirmation = 'Passwords do not match';
+  }
+
+  return result;
 }

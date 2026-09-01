@@ -112,6 +112,23 @@ input:focus {
   box-shadow: inset 0 0 0 2px var(--primary);
 }
 
+/* Invalid fields get the error colour as their ring, so the box itself shows
+   which input is wrong -- not just the text beneath it. Driven by aria-invalid
+   rather than a class, so the visual state and the accessible state cannot
+   drift apart. */
+input[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 2px var(--error);
+}
+
+/* Sits directly under its input. The input's own margin is removed when an
+   error is showing so the message reads as attached to that field. */
+.field-error {
+  margin: -10px 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--error);
+}
+
 /* elevatedButtonTheme: radius 16, vertical padding 16, weight 600. */
 button {
   width: 100%;
