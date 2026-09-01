@@ -107,10 +107,10 @@ Deno.serve(async (req) => {
   // inviteUserByEmail because Supabase's own SMTP-relay mailer was
   // silently stripping the HTML down to plain text, dropping the link
   // (recipients saw the words "Accept invitation" with no href).
-  // redirectTo sends the recipient to the web set-password page instead of
-  // the project's default Site URL. It used to be a custom URL scheme that
-  // deep-linked into the app; that was removed because it dead-ends whenever
-  // the app is not installed, which includes every desktop click.
+  // redirectTo only shapes the action_link that generateLink returns, and we
+  // no longer use action_link -- the link we email is built by hand below from
+  // properties.hashed_token. It is kept, and kept pointing at the page, so the
+  // two never disagree if action_link is ever used again.
   const { data: linkData, error: linkError } = await adminClient.auth.admin
     .generateLink({
       type: "invite",
@@ -124,20 +124,23 @@ Deno.serve(async (req) => {
   }
   const newUserId = linkData.user.id;
 
-  // Build the verify URL ourselves rather than using action_link directly.
-  // hashed_token + verification_type are exactly what action_link is built
-  // from (per GoTrue's own doc comment:
-  // auth/v1/verify?type={verification_type}&token={hashed_token}&redirect_to={redirect_to}),
-  // so reconstructing it here lets us control the redirect explicitly.
+  // Link the recipient at the web set-password page carrying the token hash,
+  // rather than at GoTrue's /auth/v1/verify.
   //
-  // The target is the web set-password page, not a deep link into the app: a
-  // custom URL scheme silently dead-ends when the app is not installed, which
-  // is every desktop click and every not-yet-installed phone. The page works
-  // everywhere and clears must_set_password itself.
+  // Two things ruled out the alternatives. A custom URL scheme dead-ends
+  // whenever the app is not installed, which is every desktop click. And
+  // /auth/v1/verify is a GET that CONSUMES the single-use token, so mail
+  // scanners prefetching the link burned it before the recipient clicked --
+  // they were shown "link has expired" for a link they had never used.
+  //
+  // Fetching the page consumes nothing, so a prefetch is inert; web/main.js
+  // exchanges the token for a session only on form submit. The recovery email
+  // template (docs/email-templates/reset-password.html) builds the identical
+  // shape, so invites and recovery now share one mechanism.
   const props = linkData.properties;
-  const actionLink = `${supabaseUrl}/auth/v1/verify?type=${props.verification_type}&token=${props.hashed_token}&redirect_to=${
-    encodeURIComponent("https://kids.akmalcodes.quest/")
-  }`;
+  const actionLink = `https://kids.akmalcodes.quest/?token_hash=${
+    encodeURIComponent(props.hashed_token)
+  }&type=invite`;
 
   const emailError = await sendInviteEmail(email, actionLink);
   if (emailError) {

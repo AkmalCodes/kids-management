@@ -1,6 +1,6 @@
 import { SUPABASE_URL, ANON_KEY } from './config.js';
-import { parseAuthFragment, validatePassword } from './auth.js';
-import { setPassword, completePasswordSetup } from './api.js';
+import { parseAuthParams, validatePassword } from './auth.js';
+import { setPassword, completePasswordSetup, verifyTokenHash } from './api.js';
 
 const sections = {
   loading: document.getElementById('state-loading'),
@@ -35,12 +35,25 @@ function showFatal(title, message) {
   show('error');
 }
 
-const parsed = parseAuthFragment(window.location.hash);
+const parsed = parseAuthParams(window.location.search, window.location.hash);
 
-// Strip the fragment as soon as it has been read, so the token stops showing
-// in the address bar, browser history, and any shared screen. replaceState
-// rewrites the current entry rather than adding one, so Back still works.
-history.replaceState(null, '', window.location.pathname + window.location.search);
+// Strip every auth parameter as soon as it has been read, from BOTH the query
+// string and the fragment, so the token stops showing in the address bar,
+// browser history, and any shared screen. replaceState rewrites the current
+// entry rather than adding one, so Back still works.
+//
+// The query string matters as much as the fragment now: the email link carries
+// token_hash as a query parameter, and unlike a fragment that IS sent to the
+// server on every subsequent navigation. Any unrelated parameter is preserved.
+{
+  const url = new URL(window.location.href);
+  for (const key of ['token_hash', 'type', 'access_token', 'refresh_token',
+                     'error', 'error_code', 'error_description', 'code']) {
+    url.searchParams.delete(key);
+  }
+  url.hash = '';
+  history.replaceState(null, '', url.pathname + (url.search || '') );
+}
 
 if (parsed.kind === 'error') {
   // Every dead-link case GoTrue signals -- expired, already used, tampered --
@@ -76,10 +89,24 @@ if (parsed.kind === 'error') {
     submitButton.textContent = 'Setting password…';
 
     try {
+      // A token_hash link carries no session yet -- exchange it now, at submit
+      // time. Deferring it to here is deliberate: this call consumes the
+      // single-use token, and doing it on page load would let a mail scanner's
+      // prefetch burn the token before the recipient ever typed anything.
+      // A legacy fragment link already carries a session, so it skips this.
+      const accessToken = parsed.kind === 'token_hash'
+        ? await verifyTokenHash({
+            supabaseUrl: SUPABASE_URL,
+            anonKey: ANON_KEY,
+            tokenHash: parsed.tokenHash,
+            type: parsed.type,
+          })
+        : parsed.accessToken;
+
       await setPassword({
         supabaseUrl: SUPABASE_URL,
         anonKey: ANON_KEY,
-        accessToken: parsed.accessToken,
+        accessToken,
         password,
       });
 
@@ -90,7 +117,7 @@ if (parsed.kind === 'error') {
         await completePasswordSetup({
           supabaseUrl: SUPABASE_URL,
           anonKey: ANON_KEY,
-          accessToken: parsed.accessToken,
+          accessToken,
         });
       }
 

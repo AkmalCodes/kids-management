@@ -38,24 +38,45 @@ invites stop using the scheme, that attack surface disappears.
 - **Any web sign-in.** The page handles exactly two token types and nothing
   else. It is not a web version of the app.
 
-## Flow
+## Flow (revised 2026-09-01 — token_hash)
+
+**Superseded design:** the email originally linked at GoTrue's
+`/auth/v1/verify`, which redirected here with a session in the URL fragment.
+That is a `GET` which **consumes the single-use token**, and mail providers and
+security scanners prefetch links — so tokens were spent before the recipient
+clicked, and they saw "this link has expired" for a link they had never used.
+Observed in production on recovery; invites used the same shape and were
+vulnerable to the same failure.
+
+The email now links at this page carrying `?token_hash=…&type=…`. Fetching a
+static page consumes nothing, so a prefetch is inert. The page exchanges the
+token by `POST /auth/v1/verify` with `{type, token_hash}` **only on form
+submit**, so a deliberate human action is the only thing that can spend it.
+Invite and recovery now share this one mechanism. The legacy fragment shape is
+still accepted so links already in inboxes keep working.
 
 1. A director invites someone. `create-user` calls `generateLink`, then builds
-   the action link with `redirect_to=https://kids.akmalcodes.quest/`.
+   the link by hand from `properties.hashed_token`:
+   `https://kids.akmalcodes.quest/?token_hash=<hash>&type=invite`.
+   Recovery emails are built the same way by the Supabase template
+   (`docs/email-templates/reset-password.html`) from `{{ .TokenHash }}`.
 2. Mailgun sends that link (see `docs/mailgun-porkbun-domain-setup.md`).
-3. The recipient clicks. GoTrue verifies the one-time token and issues a 302
-   to `https://kids.akmalcodes.quest/#access_token=…&refresh_token=…&type=invite`.
-4. The page reads `location.hash`, then immediately calls
-   `history.replaceState` to strip it from the address bar.
-5. The page shows the password form.
-6. On submit: `PUT https://rpefksoutqsbreiyppee.supabase.co/auth/v1/user`
-   with headers `apikey: <anon key>` and `Authorization: Bearer <access_token>`,
-   body `{"password": "…"}`. The anon key is the same publishable key already
-   passed to the app as `--dart-define=SUPABASE_ANON_KEY` in
-   `.vscode/launch.json`, also readable from the Supabase dashboard.
+3. The recipient clicks — or a scanner prefetches it, harmlessly. The page is
+   static; loading it consumes nothing.
+4. The page reads `token_hash` and `type` from the query string, then calls
+   `history.replaceState` to strip them from the address bar.
+5. The page shows the password form. **No network call has happened yet.**
+6. On submit, and only on submit:
+   a. `POST /auth/v1/verify` with `{type, token_hash}` and the `apikey` header
+      — no `Authorization`, since there is no session yet. This is the call
+      that consumes the token; it returns `access_token`.
+   b. `PUT /auth/v1/user` with `apikey` + `Authorization: Bearer <access_token>`
+      and body `{"password": "…"}`. The anon key is the same publishable key
+      passed to the app as `--dart-define=SUPABASE_ANON_KEY` in
+      `.vscode/launch.json`.
 7. **If `type=invite`**, then also
-   `POST https://rpefksoutqsbreiyppee.supabase.co/rest/v1/rpc/complete_password_setup`
-   with the same two headers. See below — this step is mandatory.
+   `POST /rest/v1/rpc/complete_password_setup` with the same two headers.
+   See below — this step is mandatory.
 8. Success screen: "Password set — open Kids Management and sign in."
 
 The recipient signs into the app with email + the password they just chose.
@@ -81,17 +102,17 @@ gating on type keeps the intent explicit.
 | State | Trigger | Shows |
 | --- | --- | --- |
 | Parsing | initial load | brief loader |
-| Form | fragment has `access_token` | password + confirm fields |
+| Form | query has `token_hash` (or legacy fragment `access_token`) | password + confirm fields |
 | Submitting | form submitted | disabled form, loader |
-| Success | both API calls succeeded | "open the app and sign in" |
-| Error — expired | fragment has `error=` | "This link has expired. Ask your director for a new invite." |
-| Error — no token | fragment has neither | "This link is invalid or has already been used." |
+| Success | verify + set-password (+ RPC) all succeeded | "open the app and sign in" |
+| Error — expired | `error=` in query **or** fragment | "This link has expired. Ask your director for a new invite." |
+| Error — no token | neither carrier has anything | "This link is invalid or has already been used." |
 
-The expired case is real and observed: GoTrue redirects with
-`#error=access_denied&error_code=otp_expired&error_description=…` rather than
-failing the request. Verified by `curl` against `/auth/v1/verify` with a bogus
-token. Without handling it the page would render an empty form that fails on
-submit with no explanation.
+The expired case is real and observed: GoTrue signals a dead link by redirecting
+with `error=access_denied&error_code=otp_expired&…` rather than failing the
+request, and it uses the query string, the fragment, or both depending on the
+flow — so the parser checks both. A spent `token_hash` instead surfaces at
+submit time, as the error message returned by `POST /auth/v1/verify`.
 
 Validation mirrors `set_password_screen.dart:75,85` exactly: at least 6
 characters, and confirmation must match. Keep the two in sync; the rules are
@@ -99,12 +120,16 @@ deliberately trivial so duplication stays cheap.
 
 ## Security
 
-- Tokens arrive in the URL **fragment**. Browsers never transmit a fragment in
-  an HTTP request, so the token is never sent anywhere except in the explicit
-  `Authorization` headers above. This is why the fragment, not a query
-  parameter, is the right carrier.
-- `history.replaceState` clears the fragment immediately after parsing, so
-  tokens do not linger in the address bar, browser history, or a shared screen.
+- The `token_hash` arrives as a **query parameter**, which is a deliberate
+  trade. A fragment is the more private carrier — browsers never transmit it —
+  but a fragment cannot be obtained without a link that consumes the token on
+  `GET`, which is the prefetch problem described above. The `token_hash` is
+  single-use, short-lived, and exchanged in a `POST` body over HTTPS.
+- `history.replaceState` strips `token_hash`, `type`, and any error parameters
+  from **both** the query string and the fragment immediately after parsing,
+  so nothing lingers in the address bar, browser history, or a shared screen.
+  Unrelated query parameters are preserved. This matters more than it did with
+  a fragment: a query string is re-sent to the server on later navigations.
 - The embedded anon key is public by design — it already ships inside the APK
   and grants nothing on its own; RLS is what enforces access.
 - The page is static. It has no backend of its own, stores nothing, and sets no

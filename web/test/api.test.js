@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setPassword, completePasswordSetup } from '../api.js';
+import { setPassword, completePasswordSetup, verifyTokenHash } from '../api.js';
 
 const BASE = 'https://example.supabase.co';
 const KEY = 'anon-key';
@@ -103,5 +103,53 @@ test('completePasswordSetup throws on failure', async () => {
       fetchImpl,
     }),
     /JWT expired/,
+  );
+});
+
+// --- verifyTokenHash --------------------------------------------------------
+// Exchanges the single-use token_hash from the email link for a session. This
+// is what actually consumes the token, and it runs only on form submit.
+
+test('verifyTokenHash POSTs type and token_hash and returns the access token', async () => {
+  const fetchImpl = fakeFetch({ body: { access_token: 'session-token', token_type: 'bearer' } });
+
+  const token = await verifyTokenHash({
+    supabaseUrl: BASE, anonKey: KEY, tokenHash: 'hash-1', type: 'recovery', fetchImpl,
+  });
+
+  assert.equal(token, 'session-token');
+  const { url, options } = fetchImpl.calls[0];
+  assert.equal(url, `${BASE}/auth/v1/verify`);
+  assert.equal(options.method, 'POST');
+  assert.equal(options.headers.apikey, KEY);
+  assert.deepEqual(JSON.parse(options.body), { type: 'recovery', token_hash: 'hash-1' });
+});
+
+test('verifyTokenHash sends no Authorization header', async () => {
+  // There is no session yet -- that is the whole point of this call. Sending a
+  // stale bearer token here would be meaningless at best.
+  const fetchImpl = fakeFetch({ body: { access_token: 'x' } });
+  await verifyTokenHash({ supabaseUrl: BASE, anonKey: KEY, tokenHash: 'h', type: 'invite', fetchImpl });
+  assert.equal(fetchImpl.calls[0].options.headers.Authorization, undefined);
+});
+
+test('verifyTokenHash throws the API message when the token is spent', async () => {
+  const fetchImpl = fakeFetch({
+    ok: false, status: 403,
+    body: { error_code: 'otp_expired', msg: 'Email link is invalid or has expired' },
+  });
+
+  await assert.rejects(
+    () => verifyTokenHash({ supabaseUrl: BASE, anonKey: KEY, tokenHash: 'spent', type: 'recovery', fetchImpl }),
+    /invalid or has expired/,
+  );
+});
+
+test('verifyTokenHash throws when the response carries no access token', async () => {
+  const fetchImpl = fakeFetch({ body: { something_else: true } });
+
+  await assert.rejects(
+    () => verifyTokenHash({ supabaseUrl: BASE, anonKey: KEY, tokenHash: 'h', type: 'recovery', fetchImpl }),
+    /did not return a session/i,
   );
 });
