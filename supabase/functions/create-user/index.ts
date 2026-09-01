@@ -101,55 +101,40 @@ Deno.serve(async (req) => {
   // does below, never anything driven by unvalidated request input.
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-  // generateLink creates the auth user and hands back the invite URL, but
-  // -- unlike inviteUserByEmail -- does NOT send any email itself; we send
-  // it ourselves below via Mailgun's API. Switched away from
-  // inviteUserByEmail because Supabase's own SMTP-relay mailer was
-  // silently stripping the HTML down to plain text, dropping the link
-  // (recipients saw the words "Accept invitation" with no href).
-  // redirectTo only shapes the action_link that generateLink returns, and we
-  // no longer use action_link -- the link we email is built by hand below from
-  // properties.hashed_token. It is kept, and kept pointing at the page, so the
-  // two never disagree if action_link is ever used again.
-  const { data: linkData, error: linkError } = await adminClient.auth.admin
-    .generateLink({
-      type: "invite",
-      email,
-      options: {
-        redirectTo: "https://kids.akmalcodes.quest/",
-      },
+  // inviteUserByEmail creates the auth user AND sends the invite email, using
+  // the "Invite user" template from the Supabase dashboard.
+  //
+  // This function used to mint the link with generateLink and send the email
+  // itself through Mailgun's HTTP API, because Supabase's built-in shared
+  // relay had been mangling the HTML and dropping the link. That relay is no
+  // longer in play: the project now sends through Mailgun over SMTP (see
+  // docs/cloudflare-pages-setup.md and the SMTP settings in Auth -> Emails),
+  // which is the same Mailgun account and sending domain the HTTP API used.
+  // Proven by the recovery email, which arrives intact through that path.
+  //
+  // So the hand-rolled sending code was deleted. Invites and password recovery
+  // now leave by one door and are styled in one place -- the dashboard
+  // templates -- instead of one being HTML embedded in this file.
+  //
+  // redirectTo is where the recipient lands after the page exchanges their
+  // token. The link in the email itself is built by the template from
+  // {{ .TokenHash }}, pointing at the page rather than at /auth/v1/verify:
+  // that endpoint is a GET which CONSUMES the single-use token, so mail
+  // scanners prefetching it burned the link before the recipient ever clicked.
+  const { data: inviteData, error: inviteError } = await adminClient.auth.admin
+    .inviteUserByEmail(email, {
+      redirectTo: "https://kids.akmalcodes.quest/",
     });
-  if (linkError || !linkData?.user) {
-    return jsonResponse({ error: linkError?.message ?? "Invite failed" }, 400);
+  if (inviteError || !inviteData?.user) {
+    // GoTrue may have created the user even when delivery failed, so say so
+    // rather than implying nothing happened. Re-inviting the same address is
+    // the recovery path, and it is safe.
+    return jsonResponse(
+      { error: inviteError?.message ?? "Invite failed" },
+      inviteError?.status ?? 400,
+    );
   }
-  const newUserId = linkData.user.id;
-
-  // Link the recipient at the web set-password page carrying the token hash,
-  // rather than at GoTrue's /auth/v1/verify.
-  //
-  // Two things ruled out the alternatives. A custom URL scheme dead-ends
-  // whenever the app is not installed, which is every desktop click. And
-  // /auth/v1/verify is a GET that CONSUMES the single-use token, so mail
-  // scanners prefetching the link burned it before the recipient clicked --
-  // they were shown "link has expired" for a link they had never used.
-  //
-  // Fetching the page consumes nothing, so a prefetch is inert; web/main.js
-  // exchanges the token for a session only on form submit. The recovery email
-  // template (docs/email-templates/reset-password.html) builds the identical
-  // shape, so invites and recovery now share one mechanism.
-  const props = linkData.properties;
-  const actionLink = `https://kids.akmalcodes.quest/?token_hash=${
-    encodeURIComponent(props.hashed_token)
-  }&type=invite`;
-
-  const emailError = await sendInviteEmail(email, actionLink);
-  if (emailError) {
-    // The auth user + link already exist at this point -- don't leave the
-    // director thinking nothing happened. A retry would just mint a
-    // second (still valid) link rather than fix anything, so surface this
-    // distinctly instead of the generic "Invite failed" above.
-    return jsonResponse({ error: `Account created but email failed to send: ${emailError}` }, 502);
-  }
+  const newUserId = inviteData.user.id;
 
   const { error: insertProfileError } = await adminClient.from("profiles").insert({
     id: newUserId,
@@ -190,46 +175,4 @@ function jsonResponse(body: unknown, status: number): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-// Sends the invite email ourselves via Mailgun's HTTP API (see the comment
-// above generateLink for why this replaced Supabase's SMTP relay).
-// Returns null on success, or an error message string on failure.
-async function sendInviteEmail(toEmail: string, actionLink: string): Promise<string | null> {
-  const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY")!;
-  const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN")!;
-
-  const html = `
-    <h2>You've been invited</h2>
-    <p>You've been invited to create a Childcare Manager account. Follow the link below to accept and set your password.</p>
-    <p><a href="${actionLink}">Accept invitation</a></p>
-  `;
-
-  const form = new FormData();
-  form.append("from", `Childcare Manager <no-reply@${mailgunDomain}>`);
-  form.append("to", toEmail);
-  form.append("subject", "You've been invited");
-  form.append("html", html);
-  // Mailgun's click-tracking is on by default: it rewrites every <a href>
-  // to go through a Mailgun tracking subdomain first, then redirects to
-  // the real link. Gmail's spam filter distrusts that redirect hop on an
-  // unfamiliar domain and was stripping the link entirely. Turning
-  // tracking off keeps our actual actionLink verbatim in the HTML.
-  form.append("o:tracking-clicks", "no");
-
-  const response = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
-    method: "POST",
-    headers: {
-      // Mailgun HTTP API uses Basic auth: username is always the literal
-      // string "api", password is the private API key.
-      Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}`,
-    },
-    body: form,
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    return `Mailgun ${response.status}: ${body}`;
-  }
-  return null;
 }

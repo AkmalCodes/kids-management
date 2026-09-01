@@ -50,6 +50,15 @@ app — test invites on the Android device, not on Windows.
   package/bundle id (Android manifest + Gradle, iOS Info.plist + pbxproj,
   Kotlin `MainActivity` package path, Supabase edge function redirect URLs,
   `.iml` files).
-- Supabase edge function `create-user` sends invite/reset emails directly
-  via Mailgun's HTTP API (not Supabase's built-in email) — see comments in
-  `supabase/functions/create-user/index.ts`.
+- **All auth email leaves by one door:** Supabase's mailer, configured with
+  Mailgun SMTP (Auth → Emails → SMTP Settings; sender
+  `Childcare Manager <no-reply@mg.akmalcodes.quest>`). Bodies are the dashboard
+  templates, mirrored in `docs/email-templates/` since dashboard config is
+  invisible to git. `create-user` used to send invites itself via Mailgun's
+  HTTP API — that was a workaround for the built-in shared relay mangling HTML,
+  and was removed once SMTP made it unnecessary.
+- **Email links point at the web page, never at `/auth/v1/verify`.** That
+  endpoint is a GET which consumes the single-use token, and mail scanners
+  prefetch links, so recipients got "link has expired" on links they had never
+  clicked. Templates build `https://kids.akmalcodes.quest/?token_hash={{ .TokenHash }}&type=…`
+  instead; the page exchanges the token only on form submit.
