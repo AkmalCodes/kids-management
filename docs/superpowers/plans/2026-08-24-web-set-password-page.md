@@ -388,7 +388,11 @@ Expected: PASS — `# pass 5`, `# fail 0`.
 
 - [ ] **Step 5: Run the whole web suite**
 
-Run: `node --test web/test/`
+Run: `npm test --prefix web`
+
+(Not `node --test web/test/` — on Windows, Node treats a bare directory path
+there as a single test file and reports a spurious failure. The `test` script in
+`web/package.json` uses the glob form, which works everywhere.)
 Expected: PASS — `# pass 15`, `# fail 0`.
 
 - [ ] **Step 6: Commit**
@@ -1079,7 +1083,7 @@ git commit -m "security: remove the custom auth URL scheme, retiring H1"
 ## Done when
 
 - `https://kids.akmalcodes.quest/` serves over https and handles all five page states.
-- `node --test web/test/` passes (15 tests).
+- `npm test --prefix web` passes (15 tests).
 - `flutter analyze` is clean and `flutter test` passes (208 tests — the 207 existing plus the new redirect assertion).
 - A real invite, clicked on a desktop browser, sets a password; that user then signs into the app and is **not** returned to the set-password screen.
 - No custom URL scheme remains in the Android manifest, the iOS plist, or the Supabase allow-list.
