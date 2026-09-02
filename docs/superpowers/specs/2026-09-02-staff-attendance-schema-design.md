@@ -11,44 +11,44 @@ it — the same grid pattern already built for the teacher's Attendance tab
 (see `docs/superpowers/specs/2026-09-01-teacher-attendance-grid-design.md`),
 applied to the director's People screen.
 
-That screen work is blocked on two facts, both discovered while scoping it:
+That screen work is blocked on one fact, discovered while scoping it:
+**there is no way to record a teacher's own attendance.** The `attendance`
+table is children-only: `child_id UUID NOT NULL`, `UNIQUE (child_id, date)`.
+A teacher tile in the director's grid would have no data to show a badge
+from.
 
-1. **There is no way to record a teacher's own attendance.** The
-   `attendance` table is children-only: `child_id UUID NOT NULL`,
-   `UNIQUE (child_id, date)`. A teacher tile in the director's grid would
-   have no data to show a badge from.
-2. **Directors cannot mark *child* attendance either**, today. The existing
-   RLS —
-
-   ```sql
-   CREATE POLICY "attendance_insert" ON attendance FOR INSERT
-     WITH CHECK (
-       current_role_name() = 'teacher'
-       AND EXISTS (SELECT 1 FROM children WHERE children.id = attendance.child_id AND children.teacher_id = auth.uid())
-     );
-   ```
-
-   — only ever matches `role = 'teacher'`. A director calling the same
-   insert is rejected. The user confirmed directors should be able to mark
-   students' attendance too, which this RLS does not currently allow.
-
-This spec covers only the schema and RLS layer needed to unblock both. The
+This spec covers only the schema and RLS layer needed to unblock that. The
 grid screen itself — the director's People/Attendance merge — is a separate
 spec once this lands.
+
+**Considered and decided against: widening `attendance` so directors can
+mark child attendance.** An earlier pass of this spec included that change —
+directors currently cannot insert/update `attendance` rows at all
+(`attendance_insert`/`attendance_update` only ever match `role = 'teacher'`).
+Explicitly reversed: child attendance marking stays teacher-only, exactly as
+it works today. Recorded here rather than silently dropped, since the reason
+("the director wasn't able to before, so leave it as it is") is a real
+product decision, not an oversight.
 
 ## Goals
 
 - A teacher can mark their own attendance; a director can mark any teacher's,
   scoped to their own center.
-- A director can mark any child's attendance in their own center (currently
-  impossible).
 - Nothing here regresses the existing teacher-marks-their-own-class-children
-  path.
+  path on `attendance`.
+- `attendance` (child) RLS is untouched — directors still cannot mark child
+  attendance, matching today's behaviour exactly.
 
 ## Non-goals
 
 - **The director's grid/merge screen.** Depends on this spec; specced
-  separately once this is built and testable.
+  separately once this is built and testable. Consequence of the decision
+  above: on the children side of that future grid, a director will be able
+  to *see* status (via `attendance_select`, already director-readable) but
+  not mark it — only a teacher can. The grid's tap/long-press design for
+  children needs to account for that asymmetry when it's specced.
+- **Widening child attendance for directors.** Considered, decided against —
+  see Problem above.
 - **Photos on staff attendance.** Child attendance photos exist for
   handoff/safety verification with a parent — that reasoning does not apply
   to staff. Status and notes only.
@@ -126,36 +126,18 @@ CREATE POLICY "staff_attendance_update" ON staff_attendance FOR UPDATE
 `my_center()` is the existing SECURITY DEFINER helper from the M1
 multi-center hardening pass — reused, not reinvented.
 
-## Widening child attendance for directors
+## `attendance` (child) table — unchanged
 
-```sql
-DROP POLICY "attendance_insert" ON attendance;
-CREATE POLICY "attendance_insert" ON attendance FOR INSERT
-  WITH CHECK (
-    (current_role_name() = 'teacher' AND EXISTS (SELECT 1 FROM children WHERE children.id = attendance.child_id AND children.teacher_id = auth.uid()))
-    OR (current_role_name() = 'director' AND child_center(attendance.child_id) = my_center())
-  );
+No migration against `attendance` in this spec. `attendance_insert` and
+`attendance_update` stay exactly as they are today — teacher-only. See
+Problem above for why a widening was considered and dropped.
 
-DROP POLICY "attendance_update" ON attendance;
-CREATE POLICY "attendance_update" ON attendance FOR UPDATE
-  USING (
-    (current_role_name() = 'teacher' AND created_by = auth.uid())
-    OR (current_role_name() = 'director' AND child_center(attendance.child_id) = my_center())
-  );
-```
-
-`child_center(child_id)` is the existing SECURITY DEFINER helper added to
-dodge RLS recursion on `children_parents` (documented in the main design
-spec's M1 bug-fix note) — the same helper the `attendance_select` policy
-already uses, applied here to the two policies that were missed when
-`attendance_select` was widened.
-
-`SELECT` on `attendance` is untouched: it already includes
-`current_role_name() = 'director'` with no center scoping. That is a
-pre-existing gap (a director can read another center's attendance rows via
-this table today) but is out of scope here — this spec only widens what
-directors can *write*, matching exactly what was asked. Worth a note in the
-main design spec's security-findings section so it isn't lost.
+One pre-existing fact worth recording while it's fresh, though this spec
+does not touch it: `attendance_select` already includes
+`current_role_name() = 'director'` with **no center scoping**, so a director
+can read another center's attendance rows today. Unrelated to this feature
+and not fixed here — noted for the main design spec's security-findings
+section so it isn't lost.
 
 ## App layer
 
@@ -170,10 +152,9 @@ New files, mirroring the existing `Attendance`/`AttendanceController` pair:
   actorUid, existingId, notes})` — same method shapes as
   `AttendanceController`, no photo methods.
 
-`AttendanceController.markAttendance` also gets a `notes` parameter that
-callers can now meaningfully set for the director path (see the sibling
-teacher-grid spec's notes discussion) — already true of the existing method
-signature, not a new change here.
+`AttendanceController` itself is untouched — its `notes` parameter already
+exists and needs no change here, since child attendance marking stays
+teacher-only.
 
 ## The testable surface for this task
 
@@ -207,10 +188,8 @@ whole project, not something to bootstrap inside this one feature.
 - a director cannot insert a row for a `staff_id` in a different center
 - a director cannot insert a row where `staff_id` belongs to a parent or
   another director (the `profiles.role = 'teacher'` check)
-- a director can now insert/update `attendance` (child) rows in their own
-  center; still cannot in a different center
-- the existing teacher-marks-own-class-children path on `attendance` is
-  unchanged (regression check)
+- a director still cannot insert/update `attendance` (child) rows at all
+  (regression check — confirms this migration touched nothing on that table)
 
 **Dart**, mocktail against `StaffAttendanceController`, mirroring
 `test/core/controllers/attendance_controller_test.dart`'s existing shape.
