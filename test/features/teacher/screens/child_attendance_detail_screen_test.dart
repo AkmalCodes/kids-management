@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'package:kids_management/core/models/child.dart';
 import 'package:kids_management/core/controllers/attendance_controller.dart';
 import 'package:kids_management/core/controllers/photo_capture_controller.dart';
 import 'package:kids_management/features/teacher/screens/child_attendance_detail_screen.dart';
+import 'package:kids_management/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockAttendanceController extends Mock implements AttendanceController {}
 
@@ -57,6 +59,37 @@ Attendance _saved(AttendanceStatus status) => Attendance(
   createdBy: 'teacher-1',
   updatedBy: 'teacher-1',
 );
+
+Attendance _withPhotos({
+  String? photoPath,
+  String? belongingsPhotoPath,
+  AttendanceStatus status = AttendanceStatus.present,
+}) => Attendance(
+  id: 'att-1',
+  childId: 'child-1',
+  centerId: 'center-1',
+  date: '2026-09-01',
+  status: status,
+  notes: '',
+  photoPath: photoPath,
+  belongingsPhotoPath: belongingsPhotoPath,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'teacher-1',
+  updatedBy: 'teacher-1',
+);
+
+// Reaches the InkWell inside a photo slot so a test can assert whether the
+// slot is tappable. A disabled slot passes a null onTap rather than swapping
+// the widget out, so inspecting the callback is the only way to tell.
+InkWell _inkWellIn(WidgetTester tester, Key slotKey) => tester.widget<InkWell>(
+      find.descendant(of: find.byKey(slotKey), matching: find.byType(InkWell)),
+    );
+
+// Tapping the slot's Key hits the whole Column -- label included -- whose
+// centre can miss the tappable area. Target the InkWell itself.
+Finder _slotTapTarget(Key slotKey) =>
+    find.descendant(of: find.byKey(slotKey), matching: find.byType(InkWell));
 
 void main() {
   setUpAll(() {
@@ -228,5 +261,230 @@ void main() {
           existingId: 'att-1',
           notes: 'Ate well today',
         )).called(1);
+  });
+
+  // --- photo handling ------------------------------------------------------
+  // Ported from mark_attendance_screen_test.dart when the expand-in-place card
+  // was replaced by this screen. The photo flows moved here but their tests
+  // were dropped in the move, leaving the app's only photo-editing surface
+  // uncovered.
+
+  testWidgets('photo slots are disabled until a status has been set for the day',
+      (tester) async {
+    // A photo attaches to an attendance row, so with no row there is nothing
+    // to attach it to.
+    await pumpScreen(tester, initial: null);
+    await tester.pumpAndSettle();
+
+    expect(_inkWellIn(tester, const Key('checkin-photo')).onTap, isNull);
+    expect(_inkWellIn(tester, const Key('belongings-photo')).onTap, isNull);
+  });
+
+  testWidgets('photo slots become tappable once a status exists', (tester) async {
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    expect(_inkWellIn(tester, const Key('checkin-photo')).onTap, isNotNull);
+    expect(_inkWellIn(tester, const Key('belongings-photo')).onTap, isNotNull);
+  });
+
+  testWidgets('tapping an empty photo slot offers camera and gallery, no remove',
+      (tester) async {
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Remove photo'), findsNothing);
+  });
+
+  testWidgets('tapping a filled photo slot also offers remove', (tester) async {
+    // getSignedPhotoUrl never resolves, so the thumbnail spins forever and
+    // pumpAndSettle would hang -- finite pumps let the sheet animate in.
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+
+    await pumpScreen(tester, initial: _withPhotos(photoPath: 'child-1/2026-09-01.jpg'));
+    await tester.pump();
+
+    await tester.tap(_slotTapTarget(const Key('checkin-photo')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Remove photo'), findsOneWidget);
+  });
+
+  testWidgets('does not overflow the photo row on a narrow screen', (tester) async {
+    // Regression guard for a RenderFlex overflow on the Belongings label --
+    // the row's two halves must share the available width (Expanded plus
+    // ellipsizing text) rather than each sizing to its own content.
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('taking a check-in photo from the camera uploads and attaches it',
+      (tester) async {
+    final file = XFile('/tmp/shot.jpg');
+    when(() => mockPhotoCapture.captureFromCamera()).thenAnswer((_) async => file);
+    when(() => mockAttendance.uploadCheckInPhoto(
+          childId: any(named: 'childId'),
+          date: any(named: 'date'),
+          photo: any(named: 'photo'),
+        )).thenAnswer((_) async => 'child-1/2026-09-01.jpg');
+    when(() => mockAttendance.attachCheckInPhoto(
+          id: any(named: 'id'),
+          photoPath: any(named: 'photoPath'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _withPhotos(photoPath: 'child-1/2026-09-01.jpg'));
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+
+    Attendance? reported;
+    await pumpScreen(
+      tester,
+      initial: _saved(AttendanceStatus.present),
+      onChanged: (a) => reported = a,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // id is the attendance row's, not the child's -- easy to transpose.
+    verify(() => mockAttendance.uploadCheckInPhoto(
+          childId: 'child-1',
+          date: '2026-09-01',
+          photo: file,
+        )).called(1);
+    verify(() => mockAttendance.attachCheckInPhoto(
+          id: 'att-1',
+          photoPath: 'child-1/2026-09-01.jpg',
+          actorUid: 'teacher-1',
+        )).called(1);
+    expect(reported?.photoPath, 'child-1/2026-09-01.jpg');
+  });
+
+  testWidgets('choosing a belongings photo from the gallery uploads and attaches it',
+      (tester) async {
+    final file = XFile('/tmp/bag.jpg');
+    when(() => mockPhotoCapture.pickFromGallery()).thenAnswer((_) async => file);
+    when(() => mockAttendance.uploadBelongingsPhoto(
+          childId: any(named: 'childId'),
+          date: any(named: 'date'),
+          photo: any(named: 'photo'),
+        )).thenAnswer((_) async => 'child-1/bag.jpg');
+    when(() => mockAttendance.attachBelongingsPhoto(
+          id: any(named: 'id'),
+          belongingsPhotoPath: any(named: 'belongingsPhotoPath'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _withPhotos(belongingsPhotoPath: 'child-1/bag.jpg'));
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('belongings-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    verify(() => mockAttendance.attachBelongingsPhoto(
+          id: 'att-1',
+          belongingsPhotoPath: 'child-1/bag.jpg',
+          actorUid: 'teacher-1',
+        )).called(1);
+  });
+
+  testWidgets('removing a check-in photo clears it from the row', (tester) async {
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+    when(() => mockAttendance.removeCheckInPhoto(
+          id: any(named: 'id'),
+          photoPath: any(named: 'photoPath'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _saved(AttendanceStatus.present));
+
+    await pumpScreen(tester, initial: _withPhotos(photoPath: 'child-1/2026-09-01.jpg'));
+    await tester.pump();
+
+    await tester.tap(_slotTapTarget(const Key('checkin-photo')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Remove photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    verify(() => mockAttendance.removeCheckInPhoto(
+          id: 'att-1',
+          photoPath: 'child-1/2026-09-01.jpg',
+          actorUid: 'teacher-1',
+        )).called(1);
+  });
+
+  testWidgets('shows an error message when the photo upload fails', (tester) async {
+    // Pins the try/catch that had already been dropped once -- without a test,
+    // a thrown upload vanishes into the error zone and the user sees nothing.
+    when(() => mockPhotoCapture.captureFromCamera())
+        .thenAnswer((_) async => XFile('/tmp/shot.jpg'));
+    when(() => mockAttendance.uploadCheckInPhoto(
+          childId: any(named: 'childId'),
+          date: any(named: 'date'),
+          photo: any(named: 'photo'),
+        )).thenThrow(Exception('network down'));
+
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.textContaining('Could not save photo'), findsOneWidget);
+  });
+
+  testWidgets('cancelling the camera uploads nothing', (tester) async {
+    when(() => mockPhotoCapture.captureFromCamera()).thenAnswer((_) async => null);
+
+    await pumpScreen(tester, initial: _saved(AttendanceStatus.present));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('checkin-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => mockAttendance.uploadCheckInPhoto(
+          childId: any(named: 'childId'),
+          date: any(named: 'date'),
+          photo: any(named: 'photo'),
+        ));
+  });
+
+  testWidgets('shows the thumbnail once a check-in photo is attached',
+      (tester) async {
+    when(() => mockAttendance.getSignedPhotoUrl(any()))
+        .thenAnswer((_) => Completer<String>().future);
+
+    await pumpScreen(tester, initial: _withPhotos(photoPath: 'child-1/2026-09-01.jpg'));
+    await tester.pump();
+
+    expect(find.byType(SignedPhotoThumbnail), findsOneWidget);
   });
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kids_management/core/auth/auth_controller.dart';
 import 'package:kids_management/core/models/app_user.dart';
@@ -9,7 +8,6 @@ import 'package:kids_management/core/models/attendance.dart';
 import 'package:kids_management/core/models/child.dart';
 import 'package:kids_management/core/controllers/attendance_controller.dart';
 import 'package:kids_management/core/controllers/child_controller.dart';
-import 'package:kids_management/core/controllers/photo_capture_controller.dart';
 import 'package:kids_management/features/teacher/screens/mark_attendance_screen.dart';
 import 'package:kids_management/features/teacher/widgets/attendance_grid_tile.dart';
 import 'package:kids_management/features/teacher/screens/child_attendance_detail_screen.dart';
@@ -17,8 +15,6 @@ import 'package:kids_management/features/teacher/screens/child_attendance_detail
 class MockChildController extends Mock implements ChildController {}
 
 class MockAttendanceController extends Mock implements AttendanceController {}
-
-class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -51,17 +47,14 @@ Child _child({String id = 'child-1', String name = 'Alice'}) => Child(
 void main() {
   setUpAll(() {
     registerFallbackValue(AttendanceStatus.present);
-    registerFallbackValue(XFile(''));
   });
 
   late MockChildController mockChildren;
   late MockAttendanceController mockAttendance;
-  late MockPhotoCaptureController mockPhotoCapture;
 
   setUp(() {
     mockChildren = MockChildController();
     mockAttendance = MockAttendanceController();
-    mockPhotoCapture = MockPhotoCaptureController();
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
@@ -70,7 +63,6 @@ void main() {
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
             childControllerProvider.overrideWithValue(mockChildren),
             attendanceControllerProvider.overrideWithValue(mockAttendance),
-            photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
           ],
           child: const MaterialApp(home: Scaffold(body: MarkAttendanceScreen())),
         ),
