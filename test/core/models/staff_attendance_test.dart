@@ -45,5 +45,25 @@ void main() {
       final withoutNotes = Map<String, dynamic>.from(json)..remove('notes');
       expect(StaffAttendance.fromJson(withoutNotes).notes, '');
     });
+
+    test('fromJson parses clock_in_at and clock_out_at when present', () {
+      final withClocks = Map<String, dynamic>.from(json)
+        ..['clock_in_at'] = '2026-09-02T06:30:00.000Z'
+        ..['clock_out_at'] = '2026-09-02T15:00:00.000Z';
+      final record = StaffAttendance.fromJson(withClocks);
+      expect(record.clockInAt, DateTime.utc(2026, 9, 2, 6, 30));
+      expect(record.clockOutAt, DateTime.utc(2026, 9, 2, 15, 0));
+    });
+
+    test('fromJson leaves clock times null when the columns are null or absent', () {
+      final withNulls = Map<String, dynamic>.from(json)
+        ..['clock_in_at'] = null
+        ..['clock_out_at'] = null;
+      expect(StaffAttendance.fromJson(withNulls).clockInAt, isNull);
+      expect(StaffAttendance.fromJson(withNulls).clockOutAt, isNull);
+      // `json` itself has neither key -- absent must behave like null.
+      expect(StaffAttendance.fromJson(json).clockInAt, isNull);
+      expect(StaffAttendance.fromJson(json).clockOutAt, isNull);
+    });
   });
 }
