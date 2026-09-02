@@ -248,7 +248,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                   mainAxisSpacing: 16,
                   // Taller than wide: the tile is a square avatar plus a name
                   // line beneath it.
-                  childAspectRatio: 0.78,
+                  childAspectRatio: 0.72,
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) {

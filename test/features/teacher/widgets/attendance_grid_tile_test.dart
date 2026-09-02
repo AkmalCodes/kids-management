@@ -42,11 +42,15 @@ Future<void> _pump(
   Attendance? attendance,
   VoidCallback? onTap,
   VoidCallback? onLongPress,
+  Child? child,
+  double textScale = 1.0,
 }) =>
     tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
-          home: Scaffold(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+            child: Scaffold(
             body: Center(
               // The tile is built for a GridView cell, which bounds its width.
               // Reproduce that here: unbounded width makes AspectRatio(1) fill
@@ -54,7 +58,7 @@ Future<void> _pump(
               // 400pt-wide phone at crossAxisCount 4, childAspectRatio 0.78.
               child: SizedBox(
                 width: 84,
-                height: 108,
+                height: 117,
                 child: AttendanceGridTile(
                   child: _child(),
                   attendance: attendance,
@@ -63,6 +67,7 @@ Future<void> _pump(
                 ),
               ),
             ),
+          ),
           ),
         ),
       ),
@@ -116,5 +121,40 @@ void main() {
     await tester.pump();
     expect(longPresses, 1);
     expect(taps, 1);
+  });
+
+  // --- layout robustness ---------------------------------------------------
+  // A fixed square photo box plus a name line overflowed the real cell by
+  // ~1.4px on a device, and the tests at the time did not catch it because
+  // they never asserted the absence of an overflow exception.
+
+  testWidgets('does not overflow with a long name', (tester) async {
+    await _pump(
+      tester,
+      child: _child(name: 'Muhammad Aariz Danish bin Abdul Rahman'),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('does not overflow at large accessibility text scale',
+      (tester) async {
+    await _pump(
+      tester,
+      child: _child(name: 'Muhammad Aariz Danish bin Abdul Rahman'),
+      textScale: 2.0,
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the photo fills the frame rather than sitting in it as a circle',
+      (tester) async {
+    // The bug this guards: SignedAvatar is CircleAvatar-based, so putting it
+    // in a square frame drew a circle with the corners left empty. A tile
+    // must not reintroduce a CircleAvatar here.
+    await _pump(tester);
+
+    expect(find.byType(CircleAvatar), findsNothing);
   });
 }
