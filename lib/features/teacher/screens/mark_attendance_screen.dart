@@ -5,13 +5,9 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/controllers/attendance_controller.dart';
 import '../../../core/controllers/child_controller.dart';
-import '../../../core/controllers/photo_capture_controller.dart';
-import '../../../shared/widgets/attendance_status_chip.dart';
-import '../../../shared/widgets/signed_avatar.dart';
-import '../../../shared/widgets/signed_photo_thumbnail.dart';
 import '../../../shared/widgets/app_loader.dart';
-
-enum _PhotoAction { camera, gallery, delete }
+import '../widgets/attendance_grid_tile.dart';
+import 'child_attendance_detail_screen.dart';
 
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
@@ -38,11 +34,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  // Only one child's card is expanded at a time -- expanding a different
-  // one collapses whichever was open, so this holds a single id rather
-  // than a set.
-  String? _expandedChildId;
-
   @override
   void initState() {
     super.initState();
@@ -62,12 +53,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         _searchController.clear();
         _query = '';
       }
-    });
-  }
-
-  void _toggleExpanded(String childId) {
-    setState(() {
-      _expandedChildId = _expandedChildId == childId ? null : childId;
     });
   }
 
@@ -111,203 +96,70 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
           status: status,
           actorUid: user.id,
           existingId: existing?.id,
+          // markAttendance writes the notes column unconditionally on every
+          // call (default ''), so an update that omits this would silently
+          // blank out any note the teacher already saved on this record.
+          notes: existing?.notes ?? '',
         );
     await _applyUpdate(child.id, updated);
   }
 
-  // Both photo kinds are entirely optional and independent of each other
-  // and of status -- this only requires an existing attendance record so
-  // there's an id to attach the photo to (the slot's tap target is
-  // disabled until then).
-  Future<void> _pickAndSavePhoto(
-    Child child,
-    Attendance existing, {
-    required bool isBelongings,
-    required bool fromGallery,
-  }) async {
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) return;
-    final captureService = ref.read(photoCaptureControllerProvider);
-    final photo = fromGallery
-        ? await captureService.pickFromGallery()
-        : await captureService.captureFromCamera();
-    if (photo == null) return;
-    final service = ref.read(attendanceControllerProvider);
-    try {
-      final Attendance updated;
-      if (isBelongings) {
-        final path = await service.uploadBelongingsPhoto(
-          childId: child.id,
+  Future<void> _openDetail(Child child, Attendance? existing) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChildAttendanceDetailScreen(
+          child: child,
           date: _today,
-          photo: photo,
-        );
-        updated = await service.attachBelongingsPhoto(
-          id: existing.id,
-          belongingsPhotoPath: path,
-          actorUid: user.id,
-        );
-      } else {
-        final path = await service.uploadCheckInPhoto(
-          childId: child.id,
-          date: _today,
-          photo: photo,
-        );
-        updated = await service.attachCheckInPhoto(
-          id: existing.id,
-          photoPath: path,
-          actorUid: user.id,
-        );
-      }
-      await _applyUpdate(child.id, updated);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save photo: $e')),
-      );
-    }
+          initialAttendance: existing,
+          // The detail screen reports every save back, so the grid behind it
+          // is already correct when the user returns -- no re-fetch, no flash
+          // of stale badges.
+          onChanged: (updated) => _applyUpdate(child.id, updated),
+        ),
+      ),
+    );
   }
 
-  Future<void> _deletePhoto(
-    Child child,
-    Attendance existing, {
-    required bool isBelongings,
-  }) async {
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) return;
-    final service = ref.read(attendanceControllerProvider);
-    try {
-      final updated = isBelongings
-          ? await service.removeBelongingsPhoto(
-              id: existing.id,
-              belongingsPhotoPath: existing.belongingsPhotoPath!,
-              actorUid: user.id,
-            )
-          : await service.removeCheckInPhoto(
-              id: existing.id,
-              photoPath: existing.photoPath!,
-              actorUid: user.id,
-            );
-      await _applyUpdate(child.id, updated);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete photo: $e')),
-      );
-    }
-  }
-
-  // Offers take/retake, choose from gallery, and (only once a photo
-  // exists) delete -- one entry point covers both the "nothing yet" and
-  // "already have one" states.
-  Future<void> _showPhotoOptions(
-    Child child,
-    Attendance existing, {
-    required bool isBelongings,
-    required bool hasPhoto,
-  }) async {
-    final action = await showModalBottomSheet<_PhotoAction>(
+  // Long-press is the shortcut for the common case. Everything reachable here
+  // is also reachable by tapping through to the detail screen, so the gesture
+  // being undiscoverable costs nothing.
+  Future<void> _showActions(Child child, Attendance? existing) async {
+    final action = await showModalBottomSheet<String>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text(hasPhoto ? 'Retake photo' : 'Take photo'),
-              onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.camera),
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Open details'),
+              onTap: () => Navigator.of(sheetContext).pop('details'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.gallery),
+              leading: const Icon(Icons.check_circle_outline),
+              title: const Text('Mark present'),
+              onTap: () => Navigator.of(sheetContext).pop('present'),
             ),
-            if (hasPhoto)
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Delete photo'),
-                onTap: () => Navigator.of(sheetContext).pop(_PhotoAction.delete),
-              ),
+            ListTile(
+              leading: const Icon(Icons.cancel_outlined),
+              title: const Text('Mark absent'),
+              onTap: () => Navigator.of(sheetContext).pop('absent'),
+            ),
           ],
         ),
       ),
     );
-    if (action == null || !mounted) return;
+    if (!mounted || action == null) return;
+
     switch (action) {
-      case _PhotoAction.camera:
-        await _pickAndSavePhoto(child, existing, isBelongings: isBelongings, fromGallery: false);
-      case _PhotoAction.gallery:
-        await _pickAndSavePhoto(child, existing, isBelongings: isBelongings, fromGallery: true);
-      case _PhotoAction.delete:
-        await _deletePhoto(child, existing, isBelongings: isBelongings);
+      case 'details':
+        await _openDetail(child, existing);
+      case 'present':
+        await _setStatus(child, AttendanceStatus.present, existing);
+      case 'absent':
+        await _setStatus(child, AttendanceStatus.absent, existing);
     }
   }
-
-  // Fixed-size regardless of whether it shows the placeholder icon or an
-  // existing thumbnail, so the row's total width -- and therefore whether
-  // it fits on one line -- never changes depending on photo state.
-  static const _photoSlotSize = 36.0;
-
-  Widget _photoSlot({
-    required Key key,
-    required IconData icon,
-    required String? photoPath,
-    required VoidCallback? onTap,
-  }) {
-    final content = photoPath != null
-        ? SignedPhotoThumbnail(photoPath: photoPath, radius: _photoSlotSize / 2)
-        : Icon(
-            icon,
-            size: 20,
-            color: onTap == null ? Theme.of(context).disabledColor : null,
-          );
-    return SizedBox(
-      key: key,
-      width: _photoSlotSize,
-      height: _photoSlotSize,
-      child: Material(
-        type: MaterialType.transparency,
-        shape: const CircleBorder(),
-        child: InkWell(customBorder: const CircleBorder(), onTap: onTap, child: content),
-      ),
-    );
-  }
-
-  // Icon/thumbnail + label kept together as one Row so a plain (non-Wrap)
-  // Row for both slots never breaks a label away from its own icon. The
-  // label is Flexible + ellipsized (not sized to its own intrinsic width)
-  // so this fits within whatever width its parent Expanded gives it,
-  // instead of forcing the outer Row to overflow on a narrow card.
-  Widget _photoSlotWithLabel({
-    required Key key,
-    required IconData icon,
-    required String label,
-    required String? photoPath,
-    required VoidCallback? onTap,
-  }) {
-    return Row(
-      children: [
-        _photoSlot(key: key, icon: icon, photoPath: photoPath, onTap: onTap),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  static const _statusChoices = [AttendanceStatus.present, AttendanceStatus.absent];
-
-  String _statusLabel(AttendanceStatus status) => switch (status) {
-    AttendanceStatus.present => 'Present',
-    AttendanceStatus.absent => 'Absent',
-    AttendanceStatus.late => 'Late',
-    AttendanceStatus.excused => 'Excused',
-  };
 
   static const _weekdayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -316,117 +168,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     final mm = date.month.toString().padLeft(2, '0');
     final yy = (date.year % 100).toString().padLeft(2, '0');
     return '$dd/$mm/$yy ${_weekdayAbbreviations[date.weekday - 1]}';
-  }
-
-  // The child's profile picture (from ChildDetailScreen), or a placeholder
-  // icon. The day's check-in/belongings photos are separate and shown in
-  // the expanded card, not here.
-  Widget _avatar(Child child) {
-    return SignedAvatar(
-      urlProvider:
-          child.avatarPath == null ? null : signedChildAvatarUrlProvider(child.avatarPath!),
-      radius: 16,
-    );
-  }
-
-  Widget _childCard(BuildContext context, Child child, Attendance? existing) {
-    final isExpanded = _expandedChildId == child.id;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: () => _toggleExpanded(child.id),
-              child: Row(
-                children: [
-                  _avatar(child),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(child.name, style: Theme.of(context).textTheme.titleMedium),
-                  ),
-                  if (!isExpanded) ...[
-                    existing == null
-                        ? const Chip(label: Text('Not marked'), side: BorderSide.none)
-                        : AttendanceStatusChip(status: existing.status),
-                    const SizedBox(width: 4),
-                  ],
-                  AnimatedRotation(
-                    turns: isExpanded ? -0.25 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.chevron_left),
-                  ),
-                ],
-              ),
-            ),
-            if (isExpanded) ...[
-              const SizedBox(height: 12),
-              // Wrap (not SegmentedButton) so status chips flow onto a
-              // second line on a narrow card instead of being squeezed
-              // down to a width too small for their own label text.
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final status in _statusChoices)
-                    ChoiceChip(
-                      label: Text(_statusLabel(status)),
-                      selected: existing?.status == status,
-                      showCheckmark: false,
-                      onSelected: (_) => _setStatus(child, status, existing),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Plain Row (not Wrap): both slots are a fixed size
-              // regardless of photo state (see _photoSlot), and each half
-              // is Expanded with an ellipsizing label (see
-              // _photoSlotWithLabel), so this always fits on one line no
-              // matter how narrow the card is.
-              Row(
-                children: [
-                  Expanded(
-                    child: _photoSlotWithLabel(
-                      key: Key('checkin-photo-${child.id}'),
-                      icon: Icons.camera_alt_outlined,
-                      label: 'Check-in photo',
-                      photoPath: existing?.photoPath,
-                      onTap: existing == null
-                          ? null
-                          : () => _showPhotoOptions(
-                                child,
-                                existing,
-                                isBelongings: false,
-                                hasPhoto: existing.photoPath != null,
-                              ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _photoSlotWithLabel(
-                      key: Key('belongings-photo-${child.id}'),
-                      icon: Icons.checkroom_outlined,
-                      label: 'Belongings photo',
-                      photoPath: existing?.belongingsPhotoPath,
-                      onTap: existing == null
-                          ? null
-                          : () => _showPhotoOptions(
-                                child,
-                                existing,
-                                isBelongings: true,
-                                hasPhoto: existing.belongingsPhotoPath != null,
-                              ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -499,13 +240,26 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
               if (filtered.isEmpty) {
                 return Center(child: Text('No students match "$_query".'));
               }
-              return ListView.builder(
+              return GridView.builder(
                 padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 16,
+                  // Taller than wide: the tile is a square avatar plus a name
+                  // line beneath it.
+                  childAspectRatio: 0.78,
+                ),
                 itemCount: filtered.length,
-                itemBuilder: (context, i) {
-                  final child = filtered[i];
+                itemBuilder: (context, index) {
+                  final child = filtered[index];
                   final existing = data.attendanceByChild[child.id];
-                  return _childCard(context, child, existing);
+                  return AttendanceGridTile(
+                    child: child,
+                    attendance: existing,
+                    onTap: () => _openDetail(child, existing),
+                    onLongPress: () => _showActions(child, existing),
+                  );
                 },
               );
             },
