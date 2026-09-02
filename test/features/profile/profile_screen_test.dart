@@ -5,8 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kids_management/core/auth/auth_controller.dart';
 import 'package:kids_management/core/models/app_user.dart';
+import 'package:kids_management/core/models/attendance.dart';
 import 'package:kids_management/core/controllers/photo_capture_controller.dart';
 import 'package:kids_management/core/controllers/profile_controller.dart';
+import 'package:kids_management/core/controllers/staff_attendance_controller.dart';
 import 'package:kids_management/features/profile/change_password_screen.dart';
 import 'package:kids_management/features/profile/person_detail_screen.dart';
 import 'package:kids_management/features/profile/profile_screen.dart';
@@ -16,6 +18,8 @@ class MockAuthController extends Mock implements AuthController {}
 class MockProfileController extends Mock implements ProfileController {}
 
 class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
+
+class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
 
 AppUser _user({String? avatarPath}) => AppUser(
   id: 'uid-1',
@@ -33,30 +37,44 @@ AppUser _user({String? avatarPath}) => AppUser(
 void main() {
   setUpAll(() {
     registerFallbackValue(XFile(''));
+    registerFallbackValue(AttendanceStatus.present);
   });
 
   late MockAuthController mockAuth;
   late MockProfileController mockProfile;
   late MockPhotoCaptureController mockPhotoCapture;
+  late MockStaffAttendanceController mockStaffAttendance;
 
   setUp(() {
     mockAuth = MockAuthController();
     mockProfile = MockProfileController();
     mockPhotoCapture = MockPhotoCaptureController();
+    mockStaffAttendance = MockStaffAttendanceController();
     when(() => mockAuth.currentEmail).thenReturn('alice@example.com');
+    when(() => mockStaffAttendance.fetchForDate(any())).thenAnswer((_) async => []);
   });
 
-  Future<void> pumpScreen(WidgetTester tester, {String? avatarPath}) => tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authControllerProvider.overrideWithValue(mockAuth),
-            currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath))),
-            profileControllerProvider.overrideWithValue(mockProfile),
-            photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
-          ],
-          child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
-        ),
-      );
+  Future<void> pumpScreen(WidgetTester tester, {String? avatarPath}) async {
+    // The default 800x600 test viewport is an artificial constraint, not a
+    // real device limit -- StaffAttendanceToggle's extra height pushed
+    // Change password/Sign out below it. A real phone screen is taller;
+    // give this ListView room to actually fit rather than fight the test
+    // harness's default with scroll gymnastics.
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(800, 1000));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWithValue(mockAuth),
+          currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath))),
+          profileControllerProvider.overrideWithValue(mockProfile),
+          photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
+          staffAttendanceControllerProvider.overrideWithValue(mockStaffAttendance),
+        ],
+        child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
+      ),
+    );
+  }
 
   testWidgets('shows the account name, email and role', (tester) async {
     await pumpScreen(tester);

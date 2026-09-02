@@ -8,6 +8,7 @@ import '../../shared/widgets/avatar_source_sheet.dart';
 import '../../shared/widgets/signed_avatar.dart';
 import 'change_password_screen.dart';
 import 'person_detail_screen.dart';
+import 'widgets/staff_attendance_toggle.dart';
 import '../../shared/widgets/app_loader.dart';
 
 // Shared account-settings tab for every role. Shows the user's avatar,
@@ -76,6 +77,7 @@ class ProfileScreen extends ConsumerWidget {
               label: 'Role',
               value: user.role[0].toUpperCase() + user.role.substring(1),
             ),
+            const StaffAttendanceToggle(),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
