@@ -692,6 +692,7 @@ lib/
       profile_screen.dart           -- shared account settings tab, all roles (§6.7)
       change_password_screen.dart   -- change password while signed in (§6.7)
       person_detail_screen.dart     -- view/edit a person's name/phone/photo; self or director-edits-other (§6.6/§6.7)
+      staff_attendance_screen.dart  -- teacher's own clock-in/clock-out for today, reached from Profile (§6.7)
     parent/
       parent_shell.dart
       screens/

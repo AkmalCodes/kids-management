@@ -38,6 +38,23 @@ StaffAttendance _row({DateTime? clockInAt, DateTime? clockOutAt}) => StaffAttend
   updatedBy: 'teacher-1',
 );
 
+// A different teacher's row for the same day. fetchForDate returns every staff
+// member's row, so the screen must ignore this one.
+StaffAttendance _foreignRow() => StaffAttendance(
+  id: 'sa-2',
+  staffId: 'teacher-2',
+  centerId: 'center-1',
+  date: '2026-09-02',
+  status: AttendanceStatus.present,
+  notes: '',
+  clockInAt: DateTime.utc(2026, 9, 2, 9, 0),
+  clockOutAt: DateTime.utc(2026, 9, 2, 17, 0),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
 void main() {
   late MockStaffAttendanceController mockController;
 
@@ -61,6 +78,7 @@ void main() {
           centerId: any(named: 'centerId'),
           date: any(named: 'date'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
           existingId: any(named: 'existingId'),
         )).thenAnswer((_) async => result);
   }
@@ -69,6 +87,7 @@ void main() {
     when(() => mockController.clockOut(
           id: any(named: 'id'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
         )).thenAnswer((_) async => result);
   }
 
@@ -100,6 +119,7 @@ void main() {
           centerId: any(named: 'centerId'),
           date: any(named: 'date'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
           existingId: any(named: 'existingId'),
         ));
   });
@@ -120,6 +140,7 @@ void main() {
           centerId: any(named: 'centerId'),
           date: any(named: 'date'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
           existingId: any(named: 'existingId'),
         ));
   });
@@ -137,13 +158,25 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
 
-    verify(() => mockController.clockIn(
+    // Capture the `at` argument: this is the recorded-timestamp contract -- the
+    // value passed here is exactly what the confirm dialog showed and what the
+    // controller will store, so it must be a real now()-ish DateTime, not a
+    // second now() read later inside the controller.
+    final captured = verify(() => mockController.clockIn(
           staffId: 'teacher-1',
           centerId: 'center-1',
           date: any(named: 'date'),
           actorUid: 'teacher-1',
+          at: captureAny(named: 'at'),
           existingId: null,
-        )).called(1);
+        )).captured;
+    expect(captured, hasLength(1));
+    final at = captured.single as DateTime;
+    expect(
+      DateTime.now().difference(at).abs(),
+      lessThan(const Duration(seconds: 2)),
+      reason: 'clockIn(at:) must be the moment the teacher confirmed',
+    );
   });
 
   testWidgets('confirming Clock in passes existingId when a row already exists',
@@ -166,6 +199,7 @@ void main() {
           centerId: 'center-1',
           date: any(named: 'date'),
           actorUid: 'teacher-1',
+          at: any(named: 'at'),
           existingId: 'sa-1',
         )).called(1);
   });
@@ -203,7 +237,20 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
 
-    verify(() => mockController.clockOut(id: 'sa-1', actorUid: 'teacher-1')).called(1);
+    // Capture `at` here too -- the clock-out timestamp is payroll data on the
+    // same footing as clock-in.
+    final captured = verify(() => mockController.clockOut(
+          id: 'sa-1',
+          actorUid: 'teacher-1',
+          at: captureAny(named: 'at'),
+        )).captured;
+    expect(captured, hasLength(1));
+    final at = captured.single as DateTime;
+    expect(
+      DateTime.now().difference(at).abs(),
+      lessThan(const Duration(seconds: 2)),
+      reason: 'clockOut(at:) must be the moment the teacher confirmed',
+    );
   });
 
   testWidgets('once both times are set, no buttons remain and both render as text',
@@ -232,6 +279,7 @@ void main() {
           centerId: any(named: 'centerId'),
           date: any(named: 'date'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
           existingId: any(named: 'existingId'),
         )).thenThrow(Exception('network down'));
 
@@ -253,6 +301,7 @@ void main() {
     when(() => mockController.clockOut(
           id: any(named: 'id'),
           actorUid: any(named: 'actorUid'),
+          at: any(named: 'at'),
         )).thenThrow(Exception('network down'));
 
     await pump(tester);
@@ -271,6 +320,75 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FilledButton), findsNothing);
+  });
+
+  testWidgets('a failed initial load shows an error + Retry, not a bare Clock in',
+      (tester) async {
+    when(() => mockController.fetchForDate(any()))
+        .thenThrow(Exception('network down'));
+
+    await pump(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load today's attendance."), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
+    // The bug this guards: an errored load used to fall through to the data
+    // branch and render exactly like "nothing recorded yet".
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.text('--:--'), findsNothing);
+  });
+
+  testWidgets('tapping Retry after a failed load recovers the normal state',
+      (tester) async {
+    var calls = 0;
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async {
+      calls++;
+      if (calls == 1) throw Exception('network down');
+      return [];
+    });
+
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text("Couldn't load today's attendance."), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load today's attendance."), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Clock in'), findsOneWidget);
+  });
+
+  testWidgets("only shows this staff member's own record, not another teacher's",
+      (tester) async {
+    // fetchForDate returns the whole day's roster: a foreign teacher's row
+    // (clocked in 09:00, out 17:00) plus this teacher's own (clocked in 06:30).
+    when(() => mockController.fetchForDate(any())).thenAnswer(
+      (_) async => [
+        _foreignRow(),
+        _row(clockInAt: DateTime.utc(2026, 9, 2, 6, 30)),
+      ],
+    );
+
+    await pump(tester);
+    await tester.pumpAndSettle();
+
+    // This teacher's own clock-in time renders...
+    expect(
+      find.textContaining(_hhmm(DateTime.utc(2026, 9, 2, 6, 30).toLocal())),
+      findsWidgets,
+    );
+    // ...and the foreign row's times do not leak in.
+    expect(
+      find.textContaining(_hhmm(DateTime.utc(2026, 9, 2, 9, 0).toLocal())),
+      findsNothing,
+    );
+    expect(
+      find.textContaining(_hhmm(DateTime.utc(2026, 9, 2, 17, 0).toLocal())),
+      findsNothing,
+    );
+    // This teacher has clocked in but not out -> Clock out button, not a
+    // locked (button-less) day as the foreign fully-clocked row would imply.
+    expect(find.widgetWithText(FilledButton, 'Clock out'), findsOneWidget);
   });
 }
 

@@ -25,9 +25,9 @@ class StaffAttendanceScreen extends ConsumerStatefulWidget {
 class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
   // Captured once, like mark_attendance_screen.dart's _today: a clock action
   // taken right before midnight must target the day that was on screen when
-  // it built, not whatever "today" becomes mid-tap.
-  final DateTime _todayDate = DateTime.now();
-  late final String _today = _todayDate.toIso8601String().substring(0, 10);
+  // it built, not whatever "today" becomes mid-tap. Local (not .toUtc()): the
+  // calendar date the teacher is working is the local one.
+  late final String _today = DateTime.now().toIso8601String().substring(0, 10);
 
   late Future<StaffAttendance?> _record;
   bool _busy = false;
@@ -73,7 +73,11 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
   Future<void> _clockIn(StaffAttendance? existing) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null || user.centerId == null) return;
-    if (!await _confirm('Confirm clock-in at ${hourMinute(DateTime.now())}?')) return;
+    // Capture now() once: the value shown in the confirm dialog is the value
+    // handed to the controller, so the recorded time can't drift from what the
+    // teacher confirmed (payroll data).
+    final now = DateTime.now();
+    if (!await _confirm('Confirm clock-in at ${hourMinute(now)}?')) return;
     setState(() => _busy = true);
     try {
       final updated = await ref.read(staffAttendanceControllerProvider).clockIn(
@@ -81,6 +85,7 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
             centerId: user.centerId!,
             date: _today,
             actorUid: user.id,
+            at: now,
             existingId: existing?.id,
           );
       if (!mounted) return;
@@ -100,12 +105,15 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
   Future<void> _clockOut(StaffAttendance existing) async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    if (!await _confirm('Confirm clock-out at ${hourMinute(DateTime.now())}?')) return;
+    // Same capture-once rule as _clockIn: confirmed time == recorded time.
+    final now = DateTime.now();
+    if (!await _confirm('Confirm clock-out at ${hourMinute(now)}?')) return;
     setState(() => _busy = true);
     try {
       final updated = await ref.read(staffAttendanceControllerProvider).clockOut(
             id: existing.id,
             actorUid: user.id,
+            at: now,
           );
       if (!mounted) return;
       setState(() {
@@ -123,6 +131,16 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watched here at the top of build(), not inside the FutureBuilder closure:
+    // watching from a nested builder is a riverpod_lint smell and rebuild-order
+    // hazard. A null row from _load means "nothing recorded yet" for a normal
+    // teacher, but _load also returns null for a non-teacher or a teacher with
+    // no center_id -- and clockIn needs a center. Gate the Clock in button on
+    // exactly the predicate _load guards on, so such a user sees the times
+    // (all --:--) but no dead button.
+    final u = ref.watch(currentUserProvider).value;
+    final canClockIn = u != null && u.role == 'teacher' && u.centerId != null;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Attendance')),
       body: FutureBuilder<StaffAttendance?>(
@@ -131,15 +149,31 @@ class _StaffAttendanceScreenState extends ConsumerState<StaffAttendanceScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: AppLoader());
           }
+          if (snapshot.hasError) {
+            // Without this branch a failed load falls through to the data
+            // branch with snapshot.data == null, which renders identically to
+            // "nothing recorded yet" -- a silent lie. Show the failure + a
+            // retry instead.
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Couldn't load today's attendance."),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _record = _load();
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
           final row = snapshot.data;
           final clockedIn = row?.clockInAt != null;
           final clockedOut = row?.clockOutAt != null;
-          // A null row means "nothing recorded yet" for a normal teacher, but
-          // _load also returns null for a teacher with no center_id -- and
-          // clockIn requires one. Gate the Clock in button on it so a
-          // centerless teacher sees the times (all --:--) but no dead button.
-          final canClockIn =
-              ref.watch(currentUserProvider).value?.centerId != null;
 
           return ListView(
             padding: const EdgeInsets.all(24),

@@ -5,8 +5,8 @@
 -- and why the CHECK constraint is worth having.
 --
 -- Additive only: extends the staff_attendance table from
--- docs/superpowers/specs/2026-09-02-staff-attendance-schema.sql. Does not touch
--- status, RLS, or anything else about that table.
+-- docs/superpowers/plans/2026-09-02-staff-attendance-schema.md (which holds the
+-- CREATE TABLE). Does not touch status, RLS, or anything else about that table.
 --
 -- Run this once, by hand, in the Supabase SQL editor (Project -> SQL Editor).
 -- Re-running will error on "column already exists" rather than silently
