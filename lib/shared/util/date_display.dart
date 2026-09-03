@@ -23,3 +23,13 @@ String isoWithWeekday(String isoDate) {
   if (d == null) return isoDate;
   return '${weekdayName(d)}, $isoDate';
 }
+
+// 24-hour `HH:mm` for a DateTime, e.g. 06:05 or 14:32. Hand-rolled on
+// purpose: this project has no `intl` dependency and pulling one in for a
+// single format string isn't worth it. Caller passes an already-localised
+// DateTime (`.toLocal()`); this does no timezone conversion.
+String hourMinute(DateTime d) {
+  final h = d.hour.toString().padLeft(2, '0');
+  final m = d.minute.toString().padLeft(2, '0');
+  return '$h:$m';
+}
