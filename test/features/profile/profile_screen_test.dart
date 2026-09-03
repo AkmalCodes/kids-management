@@ -12,6 +12,7 @@ import 'package:kids_management/core/controllers/staff_attendance_controller.dar
 import 'package:kids_management/features/profile/change_password_screen.dart';
 import 'package:kids_management/features/profile/person_detail_screen.dart';
 import 'package:kids_management/features/profile/profile_screen.dart';
+import 'package:kids_management/features/profile/staff_attendance_screen.dart';
 
 class MockAuthController extends Mock implements AuthController {}
 
@@ -21,9 +22,9 @@ class MockPhotoCaptureController extends Mock implements PhotoCaptureController 
 
 class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
 
-AppUser _user({String? avatarPath}) => AppUser(
+AppUser _user({String? avatarPath, String role = 'teacher'}) => AppUser(
   id: 'uid-1',
-  role: 'teacher',
+  role: role,
   name: 'Alice',
   phone: '',
   centerId: 'center-1',
@@ -54,19 +55,20 @@ void main() {
     when(() => mockStaffAttendance.fetchForDate(any())).thenAnswer((_) async => []);
   });
 
-  Future<void> pumpScreen(WidgetTester tester, {String? avatarPath}) async {
+  Future<void> pumpScreen(WidgetTester tester, {String? avatarPath, String role = 'teacher'}) async {
     // The default 800x600 test viewport is an artificial constraint, not a
-    // real device limit -- StaffAttendanceToggle's extra height pushed
-    // Change password/Sign out below it. A real phone screen is taller;
-    // give this ListView room to actually fit rather than fight the test
-    // harness's default with scroll gymnastics.
+    // real device limit -- the stack of profile actions (Attendance, Profile
+    // details, Change password, Sign out) runs past 600px and pushes the
+    // lower buttons offscreen. A real phone screen is taller; give this
+    // ListView room to actually fit rather than fight the test harness's
+    // default with scroll gymnastics.
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 1000));
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWithValue(mockAuth),
-          currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath))),
+          currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath, role: role))),
           profileControllerProvider.overrideWithValue(mockProfile),
           photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
           staffAttendanceControllerProvider.overrideWithValue(mockStaffAttendance),
@@ -144,5 +146,23 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => mockAuth.signOut()).called(1);
+  });
+
+  testWidgets('a teacher sees an Attendance button that opens StaffAttendanceScreen',
+      (tester) async {
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Attendance'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StaffAttendanceScreen), findsOneWidget);
+  });
+
+  testWidgets('a non-teacher does not see the Attendance button', (tester) async {
+    await pumpScreen(tester, role: 'parent');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Attendance'), findsNothing);
   });
 }
