@@ -1,7 +1,7 @@
 # Staff clock-in/out — design
 
 **Date:** 2026-09-02
-**Status:** approved, not yet implemented
+**Status:** implemented 2026-09-02
 
 ## Problem
 
@@ -103,8 +103,9 @@ future director-marks-absent path uses.
 
 ## Screen
 
-New file: `lib/features/profile/screens/staff_attendance_screen.dart`,
-colocated with `change_password_screen.dart` and `person_detail_screen.dart`
+Shipped at: `lib/features/profile/staff_attendance_screen.dart` (colocated with `change_password_screen.dart`, not in a `screens/` subdir).
+
+Planned location was `lib/features/profile/screens/staff_attendance_screen.dart`, but the implementation colocates it with `change_password_screen.dart` and `person_detail_screen.dart`
 — this project's existing convention for screens reached by pushing from
 `ProfileScreen`.
 

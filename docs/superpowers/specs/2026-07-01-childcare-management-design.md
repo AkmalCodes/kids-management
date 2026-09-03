@@ -235,6 +235,28 @@ CREATE TABLE attendance (
 ```
 > Both photo fields are entirely optional and independent of status and of each other — marking a child Present never requires a photo. Photos are attached via dedicated `attachCheckInPhoto`/`attachBelongingsPhoto` calls that touch only their own column, so a later status change never clobbers a photo taken earlier. One photo of each kind per child per day (overwritten via `upsert` on retake), not a multi-photo gallery — kept simple given Storage's per-file cost.
 
+### `staff_attendance`
+```sql
+CREATE TABLE staff_attendance (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  staff_id    UUID REFERENCES profiles(id) NOT NULL,
+  center_id   UUID REFERENCES centers(id) NOT NULL,
+  date        DATE NOT NULL,
+  status      TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused')),
+  notes       TEXT DEFAULT '',
+  clock_in_at TIMESTAMPTZ,
+  clock_out_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by  UUID REFERENCES auth.users(id),
+  updated_by  UUID REFERENCES auth.users(id),
+  UNIQUE (staff_id, date),
+  CONSTRAINT staff_attendance_clock_order
+    CHECK (clock_out_at IS NULL OR (clock_in_at IS NOT NULL AND clock_out_at > clock_in_at))
+);
+```
+> Records a teacher's daily attendance. The `status` field mirrors the child `attendance` table; `notes` is optional context. Initially carries just status and notes (§6.6 follow-up); **`clock_in_at` and `clock_out_at`** were added by a later design (see `docs/superpowers/specs/2026-09-02-staff-clock-in-out-design.md`) as nullable TIMESTAMPTZ columns with a CHECK constraint enforcing `clock_out_at > clock_in_at`. A teacher sets both via **Profile → Attendance** (`StaffAttendanceScreen`), each behind a confirm step, and a day locks once both are set. Director RLS: reads/writes any teacher in their center; teacher RLS: reads/writes own row.
+
 ### Storage: `attendance-photos` bucket
 Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(objects.name)[1]` recovers the child for RLS checks — must be qualified as `objects.name` since `children` also has its own `name` column that would otherwise shadow it inside the `EXISTS` subquery. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
 
