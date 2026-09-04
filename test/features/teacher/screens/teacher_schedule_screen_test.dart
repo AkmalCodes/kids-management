@@ -27,7 +27,7 @@ AppUser _teacher() => AppUser(
 ClassGroup _classGroup() => ClassGroup(
   id: 'class-1',
   name: 'Sunflowers',
-  teacherId: 'teacher-1',
+  teacherIds: const ['teacher-1'],
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),

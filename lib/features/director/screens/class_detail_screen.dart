@@ -91,7 +91,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
       final updated = await ref.read(classControllerProvider).updateClass(
             id: widget.classGroup.id,
             name: _nameController.text.trim(),
-            teacherId: _teacherId,
+            teacherIds: _teacherId == null ? const [] : [_teacherId!],
             actorUid: user.id,
           );
       if (!mounted) return;

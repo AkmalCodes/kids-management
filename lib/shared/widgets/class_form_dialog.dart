@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/models/app_user.dart';
 
-typedef ClassFormResult = ({String name, String? teacherId});
+typedef ClassFormResult = ({String name, List<String> teacherIds});
 
 // Create/edit-a-class dialog: name + a teacher dropdown. Returns null on
 // cancel. Shared by ManageClassesScreen's create and edit flows.
@@ -95,7 +95,13 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
-            Navigator.of(context).pop((name: _nameController.text.trim(), teacherId: _teacherId));
+            Navigator.of(context).pop((
+              name: _nameController.text.trim(),
+              // Typed literals: the record has no context type at this pop()
+              // call, so an untyped `const []` would infer List<dynamic> and
+              // break the ClassFormResult (List<String>) shape at runtime.
+              teacherIds: _teacherId == null ? const <String>[] : <String>[_teacherId!],
+            ));
           },
           child: const Text('Save'),
         ),

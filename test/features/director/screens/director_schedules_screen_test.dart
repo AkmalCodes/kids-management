@@ -12,7 +12,7 @@ class MockClassController extends Mock implements ClassController {}
 ClassGroup _classGroup(String id, String name) => ClassGroup(
   id: id,
   name: name,
-  teacherId: 'teacher-1',
+  teacherIds: const ['teacher-1'],
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),

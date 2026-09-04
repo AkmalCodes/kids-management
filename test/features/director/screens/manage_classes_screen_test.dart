@@ -41,7 +41,7 @@ AppUser _teacher(String id, String name) => AppUser(
 ClassGroup _class(String id, String name, {String? teacherId}) => ClassGroup(
   id: id,
   name: name,
-  teacherId: teacherId,
+  teacherIds: teacherId == null ? const [] : [teacherId],
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
@@ -50,6 +50,10 @@ ClassGroup _class(String id, String name, {String? teacherId}) => ClassGroup(
 );
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(<String>[]);
+  });
+
   late MockClassController mockClasses;
   late MockTeacherController mockTeachers;
 
@@ -107,7 +111,7 @@ void main() {
   testWidgets('creating a class calls createClass and refreshes', (tester) async {
     when(() => mockClasses.createClass(
           name: any(named: 'name'),
-          teacherId: any(named: 'teacherId'),
+          teacherIds: any(named: 'teacherIds'),
           centerId: any(named: 'centerId'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async => _class('class-1', 'Sunflowers'));
@@ -123,7 +127,7 @@ void main() {
 
     verify(() => mockClasses.createClass(
           name: 'Sunflowers',
-          teacherId: null,
+          teacherIds: const [],
           centerId: 'center-1',
           actorUid: 'director-1',
         )).called(1);
@@ -138,7 +142,7 @@ void main() {
     when(() => mockClasses.updateClass(
           id: any(named: 'id'),
           name: any(named: 'name'),
-          teacherId: any(named: 'teacherId'),
+          teacherIds: any(named: 'teacherIds'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async => _class('class-1', 'Tulips'));
 
@@ -158,7 +162,7 @@ void main() {
     verify(() => mockClasses.updateClass(
           id: 'class-1',
           name: 'Tulips',
-          teacherId: null,
+          teacherIds: const [],
           actorUid: 'director-1',
         )).called(1);
   });

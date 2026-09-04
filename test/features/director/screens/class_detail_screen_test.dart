@@ -44,7 +44,7 @@ AppUser _teacher(String id, String name) => AppUser(
 ClassGroup _class() => ClassGroup(
   id: 'class-1',
   name: 'Sunflowers',
-  teacherId: null,
+  teacherIds: const [],
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
@@ -55,6 +55,7 @@ ClassGroup _class() => ClassGroup(
 void main() {
   setUpAll(() {
     registerFallbackValue(XFile(''));
+    registerFallbackValue(<String>[]);
   });
 
   late MockClassController mockClasses;
@@ -105,7 +106,7 @@ void main() {
     when(() => mockClasses.updateClass(
           id: any(named: 'id'),
           name: any(named: 'name'),
-          teacherId: any(named: 'teacherId'),
+          teacherIds: any(named: 'teacherIds'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async => _class());
 
@@ -119,7 +120,7 @@ void main() {
     verify(() => mockClasses.updateClass(
           id: 'class-1',
           name: 'Tulips',
-          teacherId: null,
+          teacherIds: const [],
           actorUid: 'director-1',
         )).called(1);
   });

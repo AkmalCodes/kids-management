@@ -53,7 +53,7 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
     try {
       await ref.read(classControllerProvider).createClass(
             name: result.name,
-            teacherId: result.teacherId,
+            teacherIds: result.teacherIds,
             centerId: user.centerId!,
             actorUid: user.id,
           );

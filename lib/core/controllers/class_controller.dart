@@ -22,8 +22,11 @@ class ClassController {
 
   // Classes this teacher is assigned to (their own schedule = their class's).
   Future<List<ClassGroup>> fetchForTeacher(String teacherId) async {
-    final rows =
-        await _client.from('classes').select().eq('teacher_uid', teacherId).order('name');
+    final rows = await _client
+        .from('classes')
+        .select()
+        .contains('teacher_uids', [teacherId])
+        .order('name');
     return (rows as List)
         .map((row) => ClassGroup.fromJson(row as Map<String, dynamic>))
         .toList();
@@ -40,13 +43,13 @@ class ClassController {
   // Director-only (classes_insert/update RLS). Return the saved row.
   Future<ClassGroup> createClass({
     required String name,
-    required String? teacherId,
+    required List<String> teacherIds,
     required String centerId,
     required String actorUid,
   }) async {
     final row = await _client.from('classes').insert({
       'name': name,
-      'teacher_uid': teacherId,
+      'teacher_uids': teacherIds,
       'center_id': centerId,
       'created_by': actorUid,
       'updated_by': actorUid,
@@ -57,12 +60,12 @@ class ClassController {
   Future<ClassGroup> updateClass({
     required String id,
     required String name,
-    required String? teacherId,
+    required List<String> teacherIds,
     required String actorUid,
   }) async {
     final row = await _client.from('classes').update({
       'name': name,
-      'teacher_uid': teacherId,
+      'teacher_uids': teacherIds,
       'updated_by': actorUid,
     }).eq('id', id).select().single();
     return ClassGroup.fromJson(row);
