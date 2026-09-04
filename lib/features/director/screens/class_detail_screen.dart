@@ -9,6 +9,7 @@ import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
+import '../../../shared/widgets/teacher_multi_select.dart';
 import '../../../shared/widgets/app_loader.dart';
 
 // Director-only view/edit of one class. Reached by tapping a class in
@@ -30,7 +31,7 @@ class ClassDetailScreen extends ConsumerStatefulWidget {
 class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late String? _teacherId;
+  late List<String> _teacherIds;
   late String? _avatarPath;
   late Future<List<AppUser>> _teachersFuture;
   bool _saving = false;
@@ -42,7 +43,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.classGroup.name);
-    _teacherId = widget.classGroup.teacherId;
+    _teacherIds = [...widget.classGroup.teacherIds];
     _avatarPath = widget.classGroup.avatarPath;
     _teachersFuture = ref.read(teacherControllerProvider).fetchAll();
   }
@@ -91,7 +92,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
       final updated = await ref.read(classControllerProvider).updateClass(
             id: widget.classGroup.id,
             name: _nameController.text.trim(),
-            teacherIds: _teacherId == null ? const [] : [_teacherId!],
+            teacherIds: _teacherIds,
             actorUid: user.id,
           );
       if (!mounted) return;
@@ -112,7 +113,7 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
   void _cancelEdit() {
     _nameController.text = widget.classGroup.name;
     setState(() {
-      _teacherId = widget.classGroup.teacherId;
+      _teacherIds = [...widget.classGroup.teacherIds];
       _editing = false;
     });
   }
@@ -179,36 +180,34 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
               editing: _editing,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a name' : null,
             ),
-            // Teacher: dropdown while editing; resolved name when viewing.
+            // Teacher(s): multi-select while editing; joined names when viewing.
             FutureBuilder<List<AppUser>>(
               future: _teachersFuture,
               builder: (context, snapshot) {
                 final teachers = snapshot.data ?? [];
                 if (!_editing) {
-                  var name = 'Unassigned';
-                  if (_teacherId != null) {
-                    name = '…'; // still loading the teacher list
-                    for (final t in teachers) {
-                      if (t.id == _teacherId) name = t.name;
+                  final assigned = widget.classGroup.teacherIds;
+                  String value;
+                  if (assigned.isEmpty) {
+                    value = 'Unassigned';
+                  } else if (snapshot.data == null) {
+                    value = '…'; // still loading the teacher list
+                  } else {
+                    String nameFor(String id) {
+                      for (final t in teachers) {
+                        if (t.id == id) return t.name;
+                      }
+                      return 'Unknown teacher';
                     }
+
+                    value = assigned.map(nameFor).join(', ');
                   }
-                  return _readOnlyRow(context, label: 'Teacher', value: name);
+                  return _readOnlyRow(context, label: 'Teacher', value: value);
                 }
-                // Keep the current teacher selectable even before the list
-                // loads / if they aren't in the fetched set.
-                final ids = teachers.map((t) => t.id).toSet();
-                return DropdownButtonFormField<String?>(
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
-                  initialValue:
-                      (_teacherId != null && ids.contains(_teacherId)) ? _teacherId : null,
-                  decoration: const InputDecoration(labelText: 'Teacher'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Unassigned')),
-                    for (final t in teachers)
-                      DropdownMenuItem(value: t.id, child: Text(t.name)),
-                  ],
-                  onChanged: (value) => setState(() => _teacherId = value),
+                return TeacherMultiSelect(
+                  allTeachers: teachers,
+                  selectedIds: _teacherIds,
+                  onChanged: (ids) => setState(() => _teacherIds = ids),
                 );
               },
             ),

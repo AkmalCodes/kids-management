@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../core/models/app_user.dart';
+import 'teacher_multi_select.dart';
 
 typedef ClassFormResult = ({String name, List<String> teacherIds});
 
-// Create/edit-a-class dialog: name + a teacher dropdown. Returns null on
+// Create/edit-a-class dialog: name + a multi-teacher picker. Returns null on
 // cancel. Shared by ManageClassesScreen's create and edit flows.
 Future<ClassFormResult?> showClassFormDialog(
   BuildContext context, {
   required String title,
   required List<AppUser> teachers,
   String initialName = '',
-  String? initialTeacherId,
+  List<String> initialTeacherIds = const [],
 }) {
   return showDialog<ClassFormResult>(
     context: context,
@@ -18,7 +19,7 @@ Future<ClassFormResult?> showClassFormDialog(
       title: title,
       teachers: teachers,
       initialName: initialName,
-      initialTeacherId: initialTeacherId,
+      initialTeacherIds: initialTeacherIds,
     ),
   );
 }
@@ -28,13 +29,13 @@ class _ClassFormDialog extends StatefulWidget {
     required this.title,
     required this.teachers,
     required this.initialName,
-    required this.initialTeacherId,
+    required this.initialTeacherIds,
   });
 
   final String title;
   final List<AppUser> teachers;
   final String initialName;
-  final String? initialTeacherId;
+  final List<String> initialTeacherIds;
 
   @override
   State<_ClassFormDialog> createState() => _ClassFormDialogState();
@@ -43,15 +44,16 @@ class _ClassFormDialog extends StatefulWidget {
 class _ClassFormDialogState extends State<_ClassFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late String? _teacherId;
+  // Local working copy; TeacherMultiSelect reports the full new list back.
+  late List<String> _teacherIds;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
     final ids = widget.teachers.map((t) => t.id).toSet();
-    // Keep a valid initial selection only if that teacher is in the list.
-    _teacherId = ids.contains(widget.initialTeacherId) ? widget.initialTeacherId : null;
+    // Keep only initial ids that still map to a teacher in the list.
+    _teacherIds = widget.initialTeacherIds.where(ids.contains).toList();
   }
 
   @override
@@ -75,17 +77,10 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a name' : null,
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              isExpanded: true,
-              borderRadius: BorderRadius.circular(16),
-              initialValue: _teacherId,
-              decoration: const InputDecoration(labelText: 'Teacher'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Unassigned')),
-                for (final t in widget.teachers)
-                  DropdownMenuItem(value: t.id, child: Text(t.name)),
-              ],
-              onChanged: (value) => setState(() => _teacherId = value),
+            TeacherMultiSelect(
+              allTeachers: widget.teachers,
+              selectedIds: _teacherIds,
+              onChanged: (ids) => setState(() => _teacherIds = ids),
             ),
           ],
         ),
@@ -97,10 +92,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
             if (!_formKey.currentState!.validate()) return;
             Navigator.of(context).pop((
               name: _nameController.text.trim(),
-              // Typed literals: the record has no context type at this pop()
-              // call, so an untyped `const []` would infer List<dynamic> and
-              // break the ClassFormResult (List<String>) shape at runtime.
-              teacherIds: _teacherId == null ? const <String>[] : <String>[_teacherId!],
+              teacherIds: _teacherIds,
             ));
           },
           child: const Text('Save'),

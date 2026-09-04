@@ -102,7 +102,40 @@ void main() {
     expect(find.widgetWithText(TextFormField, 'Sunflowers'), findsOneWidget);
   });
 
-  testWidgets('saving writes the edited name and teacher via updateClass', (tester) async {
+  testWidgets('saving with a teacher picked writes teacherIds via updateClass',
+      (tester) async {
+    when(() => mockClasses.updateClass(
+          id: any(named: 'id'),
+          name: any(named: 'name'),
+          teacherIds: any(named: 'teacherIds'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _class());
+
+    await pumpScreen(tester);
+    await enterEdit(tester);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Sunflowers'), 'Tulips');
+
+    // Drive the real TeacherMultiSelect: open its "Add teacher" dropdown and
+    // pick Ms. Rose (the one teacher fetchAll() returns).
+    await tester.tap(find.byType(DropdownButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ms. Rose').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockClasses.updateClass(
+          id: 'class-1',
+          name: 'Tulips',
+          teacherIds: ['teacher-1'],
+          actorUid: 'director-1',
+        )).called(1);
+  });
+
+  testWidgets('saving with no teacher selected writes teacherIds: const []',
+      (tester) async {
     when(() => mockClasses.updateClass(
           id: any(named: 'id'),
           name: any(named: 'name'),
