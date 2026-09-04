@@ -772,15 +772,16 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
 ### 6.3 Attendance
-- Teacher opens the attendance screen, sees today's date (`DD/MM/YY Day`) next to the header and a searchable list of children in their class (search bar at the top filters by name, same pattern as the Director's teacher search in §6.2)
-- Each child's card starts collapsed, showing only avatar, name, and current status; tapping expands it to the full marking view (status chips, photo capture) and collapses whichever other card was open — only one expanded at a time
-- Marks each child: Present / Absent (Late/Excused still exist in the `status` enum and DB check constraint, but aren't offered as choices on this screen)
+Teacher marks attendance via a grid of tiles (see `docs/superpowers/specs/2026-09-01-teacher-attendance-grid-design.md` for full design):
+- Grid displays children as square avatar tiles in rows, each showing a status badge (green check = present, red X = absent, amber question = unmarked)
+- Each tile displays a shortened name label (`shortLabelName`: first word + last initial, e.g. "Ammar H.") on a single line, keeping avatars uniformly sized regardless of name length
+- **Tap** a tile to open the detail screen for that child (photo slots, status buttons, notes, expandable child details)
+- **Long-press** a tile for a quick menu: Open details, Mark present, Mark absent (short-cut for common case)
+- Search bar filters the grid by name
 - One record per child per day — re-opening the screen shows existing marks for editing
 - Status taps and photo captures update the UI from the write's returned row instead of re-fetching the whole roster (same round-trip-avoidance as `ScheduleController`'s create/update)
 - Once a status is set, the teacher can optionally take a check-in photo and/or a photo of the child's belongings/clothes for the day — both are entirely optional, unrelated to status, and independent of each other. One photo of each kind per child per day
-- Tapping a photo slot opens a menu: Take/Retake photo (camera), Choose from gallery, and — once a photo exists — Delete photo (removes both the Storage object and the column reference). Both slots are a fixed size regardless of whether they show the placeholder icon or an existing thumbnail, so the row's layout doesn't shift depending on photo state
-- The photo row's two halves are `Expanded` with an ellipsizing `Flexible` label (not sized to their own intrinsic content width) so the row can't overflow on a narrow screen; same fix applied to the header's date text next to "Attendance" — both surfaced after switching the app font (now Nunito; see folder structure note on `app_theme.dart` below) rendered text wider than the previous default. Covered by a regression test that pumps the screen at a 320px-wide surface
-- Signed URLs (see below) are cached per photo path in a Riverpod `FutureProvider.family` (`signedPhotoUrlProvider`) for the app's session, so re-expanding a card reuses the already-fetched URL instead of re-hitting Storage
+- Signed URLs are cached per photo path in a Riverpod `FutureProvider.family` for the app's session, so repeated access reuses the already-fetched URL instead of re-hitting Storage
 - Both photos are visible to parents (child's attendance history) and directors (attendance tab), fetched via a signed URL since the Storage bucket is private
 - Director can filter and view attendance across all children and dates
 

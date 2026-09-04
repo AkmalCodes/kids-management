@@ -4,6 +4,7 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/controllers/child_controller.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../../../shared/util/name_display.dart';
 
 // One child in the attendance grid: avatar, name, and a badge showing today's
 // status. Purely presentational -- it takes the record it should render and
@@ -30,6 +31,7 @@ class AttendanceGridTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final label = shortLabelName(child.name);
 
     return InkWell(
       onTap: onTap,
@@ -37,10 +39,11 @@ class AttendanceGridTile extends ConsumerWidget {
       borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [
-          // Expanded rather than a fixed AspectRatio: the name takes its
-          // natural height first and the photo absorbs whatever is left. A
-          // fixed square overflowed by ~1px at normal text size, and would
-          // have overflowed much harder under accessibility text scaling.
+          // Expanded rather than a fixed AspectRatio: the name below takes a
+          // fixed single line (shortLabelName + maxLines: 1) and the photo
+          // absorbs the rest, so every avatar comes out the same size. A
+          // fixed square here overflowed by ~1px at normal text size and much
+          // harder under accessibility text scaling.
           Expanded(
             child: Center(
               child: AspectRatio(
@@ -76,10 +79,12 @@ class AttendanceGridTile extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            child.name,
-            // Two lines because real names are long -- one line ellipsized
-            // most of them away.
-            maxLines: 2,
+            // shortLabelName caps the name at "First L." so it can never
+            // wrap. The   fallback keeps the slot one line tall if a
+            // name is somehow blank -- an empty Text collapses to zero
+            // height, which would make that one tile's avatar bigger.
+            label.isEmpty ? ' ' : label,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(

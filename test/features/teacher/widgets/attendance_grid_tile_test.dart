@@ -60,7 +60,7 @@ Future<void> _pump(
                 width: 84,
                 height: 117,
                 child: AttendanceGridTile(
-                  child: _child(),
+                  child: child ?? _child(),
                   attendance: attendance,
                   onTap: onTap ?? () {},
                   onLongPress: onLongPress ?? () {},
@@ -77,6 +77,30 @@ void main() {
   testWidgets('shows the child name', (tester) async {
     await _pump(tester);
     expect(find.text('Alice'), findsOneWidget);
+  });
+
+  testWidgets('renders the shortened name label, not the full name',
+      (tester) async {
+    await _pump(tester, child: _child(name: 'Ammar Ali Hassan'));
+    expect(find.text('Ammar H.'), findsOneWidget);
+    expect(find.text('Ammar Ali Hassan'), findsNothing);
+  });
+
+  testWidgets('avatar is the same size regardless of name length',
+      (tester) async {
+    // The regression this guards: the name Text used to be maxLines: 2 and
+    // sat outside the Expanded, so a name that wrapped stole vertical space
+    // and shrank the avatar for that one tile.
+    await _pump(tester, child: _child(name: 'Alice'));
+    final shortNameAvatar = tester.getSize(find.byType(AspectRatio));
+
+    await _pump(
+      tester,
+      child: _child(name: 'Muhammad Aariz Danish bin Abdul Rahman'),
+    );
+    final longNameAvatar = tester.getSize(find.byType(AspectRatio));
+
+    expect(longNameAvatar, shortNameAvatar);
   });
 
   testWidgets('a present record shows the present badge', (tester) async {

@@ -61,7 +61,9 @@ only, ordered as `fetchForTeacher` returns them (by name).
 Four tiles per row. Each tile is a square avatar with rounded corners and a
 **translucent pink border** — `colorScheme.primary` at low opacity, so it reads
 as part of the app's palette rather than a hard outline. The child's name sits
-beneath, ellipsized.
+beneath as a shortened label (`shortLabelName`: first word plus last initial,
+e.g. "Ammar H.") on a single line, so a long name can't wrap and distort the
+avatar size.
 
 A **status badge** sits inset from the bottom-right corner, with padding so it
 floats over the avatar rather than touching its edge:
