@@ -6,9 +6,6 @@ class ClassGroup {
   final String name;
   final List<String> teacherIds; // teacher_uids: every teacher on this class
 
-  // Temporary bridge for call sites not yet moved to multi-select (removed
-  // in the co-teachers plan's Task 5). Prefer teacherIds.
-  String? get teacherId => teacherIds.isEmpty ? null : teacherIds.first;
   final String centerId;
   // Class photo in the private 'class-avatars' bucket, null if unset. Not a
   // ready URL — exchange for a signed URL to display (see

@@ -29,10 +29,5 @@ void main() {
       final noKey = row()..remove('teacher_uids');
       expect(ClassGroup.fromJson(noKey).teacherIds, isEmpty);
     });
-
-    test('the teacherId bridge getter returns the first id, or null when empty', () {
-      expect(ClassGroup.fromJson(row(teacherUids: ['t-1', 't-2'])).teacherId, 't-1');
-      expect(ClassGroup.fromJson(row(teacherUids: <String>[])).teacherId, isNull);
-    });
   });
 }

@@ -38,10 +38,10 @@ AppUser _teacher(String id, String name) => AppUser(
   updatedBy: 'director-1',
 );
 
-ClassGroup _class(String id, String name, {String? teacherId}) => ClassGroup(
+ClassGroup _class(String id, String name, {List<String> teacherIds = const []}) => ClassGroup(
   id: id,
   name: name,
-  teacherIds: teacherId == null ? const [] : [teacherId],
+  teacherIds: teacherIds,
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
@@ -88,7 +88,7 @@ void main() {
 
   testWidgets('lists classes with their assigned teacher name', (tester) async {
     when(() => mockClasses.fetchAll()).thenAnswer(
-      (_) async => [_class('class-1', 'Sunflowers', teacherId: 'teacher-1')],
+      (_) async => [_class('class-1', 'Sunflowers', teacherIds: ['teacher-1'])],
     );
     when(() => mockTeachers.fetchAll())
         .thenAnswer((_) async => [_teacher('teacher-1', 'Ms. Rose')]);
@@ -97,6 +97,41 @@ void main() {
 
     expect(find.text('Sunflowers'), findsOneWidget);
     expect(find.text('Ms. Rose'), findsOneWidget);
+  });
+
+  testWidgets('shows multiple teacher names joined with comma for two teachers', (tester) async {
+    when(() => mockClasses.fetchAll()).thenAnswer(
+      (_) async => [_class('class-1', 'Sunflowers', teacherIds: ['teacher-1', 'teacher-2'])],
+    );
+    when(() => mockTeachers.fetchAll()).thenAnswer(
+      (_) async => [
+        _teacher('teacher-1', 'Rose'),
+        _teacher('teacher-2', 'Ben'),
+      ],
+    );
+
+    await pumpScreen(tester);
+
+    expect(find.text('Sunflowers'), findsOneWidget);
+    expect(find.text('Rose, Ben'), findsOneWidget);
+  });
+
+  testWidgets('shows +N for three or more teachers', (tester) async {
+    when(() => mockClasses.fetchAll()).thenAnswer(
+      (_) async => [_class('class-1', 'Sunflowers', teacherIds: ['teacher-1', 'teacher-2', 'teacher-3'])],
+    );
+    when(() => mockTeachers.fetchAll()).thenAnswer(
+      (_) async => [
+        _teacher('teacher-1', 'Alice'),
+        _teacher('teacher-2', 'Bob'),
+        _teacher('teacher-3', 'Charlie'),
+      ],
+    );
+
+    await pumpScreen(tester);
+
+    expect(find.text('Sunflowers'), findsOneWidget);
+    expect(find.text('Alice, Bob +1'), findsOneWidget);
   });
 
   testWidgets('shows a fallback subtitle when no teacher is assigned', (tester) async {

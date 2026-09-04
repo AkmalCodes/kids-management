@@ -119,9 +119,14 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
             itemCount: data.classes.length,
             itemBuilder: (context, i) {
               final classGroup = data.classes[i];
-              final teacherName = classGroup.teacherId == null
+              final names = classGroup.teacherIds
+                  .map((id) => data.teachersById[id] ?? 'Unknown teacher')
+                  .toList();
+              final teacherLine = names.isEmpty
                   ? 'No teacher assigned'
-                  : (data.teachersById[classGroup.teacherId] ?? 'Unknown teacher');
+                  : names.length <= 2
+                      ? names.join(', ')
+                      : '${names.take(2).join(', ')} +${names.length - 2}';
               return ListTile(
                 leading: SignedAvatar(
                   radius: 20,
@@ -130,7 +135,7 @@ class _ManageClassesScreenState extends ConsumerState<ManageClassesScreen> {
                       : signedClassAvatarUrlProvider(classGroup.avatarPath!),
                 ),
                 title: Text(classGroup.name),
-                subtitle: Text(teacherName),
+                subtitle: Text(teacherLine),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _edit(classGroup),
                 onLongPress: () => showRowActionsSheet(
