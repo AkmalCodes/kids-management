@@ -174,7 +174,7 @@ CREATE TABLE children (
 CREATE TABLE classes (
   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name        TEXT NOT NULL,
-  teacher_uid UUID REFERENCES auth.users(id),  -- the teacher assigned to this class
+  teacher_uids UUID[] NOT NULL DEFAULT '{}',  -- any number of teachers, all equal (see 2026-09-04-co-teachers-design.md)
   center_id   UUID REFERENCES centers(id) NOT NULL,
   avatar_path TEXT,  -- class photo in the private 'class-avatars' bucket (§6.8), null if unset
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -183,7 +183,7 @@ CREATE TABLE classes (
   updated_by  UUID REFERENCES auth.users(id)
 );
 ```
-> **Additive design (decided, not the only option):** `class_id` was added *alongside* the existing `children.teacher_id` rather than replacing it — `teacher_id` still drives attendance/daily-report visibility (a teacher sees "their" children), while `class_id → classes.teacher_uid` drives what schedule a parent sees. There is deliberate redundancy (teacher_id, class_name, and class_id all touch "who teaches this child"); consolidating is a future decision. Class creation/assignment has no UI yet — done via SQL (a director class-management screen is a planned follow-up). RLS: directors manage classes; teachers see their own; a parent sees the class their child is in.
+> **Additive design (decided, not the only option):** `class_id` was added *alongside* the existing `children.teacher_id` rather than replacing it — `teacher_id` still drives attendance/daily-report visibility (a teacher sees "their" children), while `class_id → classes.teacher_uids` drives what schedule a parent sees. There is deliberate redundancy (teacher_id, class_name, and class_id all touch "who teaches this child"); consolidating is a future decision. Class creation/assignment has no UI yet — done via SQL (a director class-management screen is a planned follow-up). RLS: directors manage classes; teachers see their own; a parent sees the class their child is in.
 
 ### `children_parents` (junction — one child can have up to 2 parents)
 ```sql
@@ -424,9 +424,9 @@ CREATE POLICY "schedule_entries_select" ON schedule_entries FOR SELECT
       SELECT 1 FROM children_parents
       WHERE children_parents.child_id = schedule_entries.ref_id AND children_parents.parent_id = auth.uid()
     ))
-    -- §6.8: class-owned schedules — the class's teacher, and parents of a child in it
+    -- §6.8: class-owned schedules — a teacher on the class, and parents of a child in it
     OR (type = 'class' AND EXISTS (
-      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND classes.teacher_uid = auth.uid()
+      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND auth.uid() = ANY(classes.teacher_uids)
     ))
     OR (type = 'class' AND EXISTS (
       SELECT 1 FROM classes cl
@@ -440,7 +440,7 @@ CREATE POLICY "schedule_entries_insert" ON schedule_entries FOR INSERT
     current_role_name() = 'director'
     OR (current_role_name() = 'teacher' AND type = 'teacher' AND ref_id = auth.uid())  -- legacy
     OR (type = 'class' AND EXISTS (
-      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND classes.teacher_uid = auth.uid()
+      SELECT 1 FROM classes WHERE classes.id = schedule_entries.ref_id AND auth.uid() = ANY(classes.teacher_uids)
     ))
   );
 CREATE POLICY "schedule_entries_update" ON schedule_entries FOR UPDATE
@@ -527,15 +527,15 @@ CREATE POLICY "subjects_delete" ON subjects FOR DELETE
 --     (WITH CHECK) — so a teacher can never self-approve;
 --   • a director may set ANY status on ANY plan.
 -- DELETE: teacher own, or director.
--- Own plans + director; PLUS approved plans readable by a connected role (the
--- class's teacher or a parent of a child in the class) so an attached plan
+-- Own plans + director; PLUS approved plans readable by a connected role (a
+-- teacher on the class or a parent of a child in the class) so an attached plan
 -- opens from the schedule (§6.5 incr. 2). Unapproved stay teacher/director-only.
 CREATE POLICY "lesson_plans_select" ON lesson_plans FOR SELECT
   USING (
     teacher_id = auth.uid()
     OR current_role_name() = 'director'
     OR (status = 'approved' AND EXISTS (
-      SELECT 1 FROM classes c WHERE c.id = lesson_plans.class_id AND c.teacher_uid = auth.uid()
+      SELECT 1 FROM classes c WHERE c.id = lesson_plans.class_id AND auth.uid() = ANY(c.teacher_uids)
     ))
     OR (status = 'approved' AND EXISTS (
       SELECT 1 FROM children ch
@@ -558,7 +558,7 @@ LANGUAGE sql STABLE SECURITY DEFINER AS $$
     AND lp.status = 'approved'
     AND (
       current_role_name() = 'director'
-      OR EXISTS (SELECT 1 FROM classes c WHERE c.id = p_class_id AND c.teacher_uid = auth.uid())
+      OR EXISTS (SELECT 1 FROM classes c WHERE c.id = p_class_id AND auth.uid() = ANY(c.teacher_uids))
       OR EXISTS (
         SELECT 1 FROM children ch
         JOIN children_parents cp ON cp.child_id = ch.id
@@ -837,11 +837,11 @@ Every role has a **Profile** tab (shared `ProfileScreen`) showing their avatar, 
 
 ### 6.8 Classes — partially built (schema + parent-schedule link)
 A `classes` table groups children under an assigned teacher, added **additively** alongside the existing `children.teacher_id` (see the `classes` schema note in §4 for the reasoning).
-- ✅ Schema: `classes` (id, name, teacher_uid, center_id, avatar_path) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
+- ✅ Schema: `classes` (id, name, teacher_uids, center_id, avatar_path) + `children.class_id` + RLS (directors manage; teachers see own; parents see their child's class).
 - ✅ **Class-owned schedules** (`type='class'`, `ref_id=class_id`): director edits per class (Schedules tab = class list), teacher edits their assigned class's schedule, parent reads their child's class schedule. Chosen over teacher-owned so multiple teachers per class (future) has one schedule. Old `type='teacher'` entries are orphaned.
 - ✅ **Class-management UI** (People tab → **Classes** sub-tab, `ManageClassesScreen`): director lists classes (avatar + assigned teacher's name), and creates a class via the shared `showClassFormDialog` (name + teacher dropdown). **Tapping a class opens `ClassDetailScreen`** (a full screen like children/teachers, not a dialog): edit the **class photo** (class-avatars bucket), name, and teacher, via `ClassController.updateClass` / `uploadClassAvatar` / `setClassAvatarPath`. Create stays a dialog because there's no `class_id` to key the photo path until the row exists — add a picture by opening the new class afterwards. Assigning **children** to a class stays on `ChildDetailScreen` (the class dropdown). This removes the SQL-only step for classes.
 - ✅ **Deleting a class** is built (long-press a class → Delete, via the `delete_class` function, §6.6). Undecided: whether `class_id` should ultimately supersede `teacher_id` / `class_name` (kept redundant for now — `teacher_id` still drives attendance/daily-report RLS).
-- 🔭 **Future — multiple teachers per class:** a class may eventually have >1 teacher. Plan: a `class_teachers (class_id, teacher_id)` junction (many-to-many), backfilled from `classes.teacher_uid`. This is why schedules are being moved to belong to the **class**, not the teacher (below) — so "whose schedule does the parent see" has one answer regardless of teacher count.
+- ✅ **Done (2026-09-04) — multiple teachers per class:** implemented via `classes.teacher_uids UUID[]` (array column) rather than a `class_teachers` junction — array-membership RLS scales smoothly to any teacher count. `children.teacher_id` remains unchanged and separate, as designed (see §6.8 and 2026-09-04-co-teachers-design.md).
 - 🔭 **Future (not designed yet):** how **lessons** relate to classes and schedule events — deferred brainstorm.
 
 ---

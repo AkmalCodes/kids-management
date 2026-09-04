@@ -11,6 +11,14 @@
 --       daily-report-images storage buckets
 -- (M5 is the create-user Edge Function — deploy it separately.)
 -- =====================================================================
+--
+-- NOTE (2026-09-04): The policies for classes / schedule_entries / lesson_plans
+-- and class-avatars storage in this file (teacher_uid = auth.uid() patterns)
+-- were superseded by the co-teachers migration (2026-09-04-co-teachers.sql),
+-- which rewrote those policies to use auth.uid() = ANY(teacher_uids). This file
+-- is a historical record of the M-series hardening pass; the live definitions
+-- are in the co-teachers migration.
+-- =====================================================================
 
 -- Helper: the caller's own center. SECURITY DEFINER so it can read profiles
 -- regardless of RLS; search_path pinned (M4).

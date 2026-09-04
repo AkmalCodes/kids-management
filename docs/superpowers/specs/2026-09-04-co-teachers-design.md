@@ -1,7 +1,7 @@
 # Co-teachers on a class — design
 
 **Date:** 2026-09-04
-**Status:** approved, not yet implemented
+**Status:** implemented 2026-09-04
 
 ## Problem
 
