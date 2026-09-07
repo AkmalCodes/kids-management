@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kids_management/core/models/attendance.dart';
 import 'package:kids_management/core/models/child.dart';
 import 'package:kids_management/features/teacher/widgets/attendance_grid_tile.dart';
+import 'package:kids_management/features/teacher/widgets/grid_person_tile.dart';
 
 Child _child({String name = 'Alice', String? avatarPath}) => Child(
   id: 'child-1',
@@ -180,5 +181,10 @@ void main() {
     await _pump(tester);
 
     expect(find.byType(CircleAvatar), findsNothing);
+  });
+
+  testWidgets('is built on the shared GridPersonTile', (tester) async {
+    await _pump(tester);
+    expect(find.byType(GridPersonTile), findsOneWidget);
   });
 }

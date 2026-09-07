@@ -4,7 +4,7 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/controllers/child_controller.dart';
 import '../../../shared/widgets/app_loader.dart';
-import '../../../shared/util/name_display.dart';
+import 'grid_person_tile.dart';
 
 // One child in the attendance grid: avatar, name, and a badge showing today's
 // status. Purely presentational -- it takes the record it should render and
@@ -31,67 +31,27 @@ class AttendanceGridTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-    final label = shortLabelName(child.name);
-
-    return InkWell(
+    return GridPersonTile(
+      name: child.name,
       onTap: onTap,
       onLongPress: onLongPress,
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        children: [
-          // Expanded rather than a fixed AspectRatio: the name below takes a
-          // fixed single line (shortLabelName + maxLines: 1) and the photo
-          // absorbs the rest, so every avatar comes out the same size. A
-          // fixed square here overflowed by ~1px at normal text size and much
-          // harder under accessibility text scaling.
-          Expanded(
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    // Translucent so it reads as part of the palette rather
-                    // than a hard outline around every child.
-                    border: Border.all(
-                      color: colors.primary.withValues(alpha: 0.25),
-                      width: 2,
-                    ),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        // 14 not 16: sits inside the 2px border so the photo
-                        // does not bleed over the rounded corner.
-                        borderRadius: BorderRadius.circular(14),
-                        child: _photo(colors, ref),
-                      ),
-                      // Inset rather than flush to the corner, so the badge
-                      // floats over the photo instead of colliding with the
-                      // rounded edge.
-                      Positioned(right: 6, bottom: 6, child: _badge(colors)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+      badge: _badge(colors),
+      // The child avatar: a rounded square with a translucent border, the
+      // photo clipped inside. Deliberately NOT a CircleAvatar (that bug is
+      // what the border+ClipRRect here fixed) -- the circular variant is the
+      // teacher tile's job.
+      avatar: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: colors.primary.withValues(alpha: 0.25),
+            width: 2,
           ),
-          const SizedBox(height: 6),
-          Text(
-            // shortLabelName caps the name at "First L." so it can never
-            // wrap. The   fallback keeps the slot one line tall if a
-            // name is somehow blank -- an empty Text collapses to zero
-            // height, which would make that one tile's avatar bigger.
-            label.isEmpty ? ' ' : label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: _photo(colors, ref),
+        ),
       ),
     );
   }
