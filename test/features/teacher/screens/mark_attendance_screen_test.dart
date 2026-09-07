@@ -6,15 +6,25 @@ import 'package:kids_management/core/auth/auth_controller.dart';
 import 'package:kids_management/core/models/app_user.dart';
 import 'package:kids_management/core/models/attendance.dart';
 import 'package:kids_management/core/models/child.dart';
+import 'package:kids_management/core/models/staff_attendance.dart';
 import 'package:kids_management/core/controllers/attendance_controller.dart';
 import 'package:kids_management/core/controllers/child_controller.dart';
+import 'package:kids_management/core/controllers/teacher_controller.dart';
+import 'package:kids_management/core/controllers/staff_attendance_controller.dart';
 import 'package:kids_management/features/teacher/screens/mark_attendance_screen.dart';
 import 'package:kids_management/features/teacher/widgets/attendance_grid_tile.dart';
+import 'package:kids_management/features/teacher/widgets/staff_grid_tile.dart';
 import 'package:kids_management/features/teacher/screens/child_attendance_detail_screen.dart';
+import 'package:kids_management/features/profile/staff_attendance_screen.dart';
+import 'package:kids_management/features/profile/person_detail_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
 
 class MockAttendanceController extends Mock implements AttendanceController {}
+
+class MockTeacherController extends Mock implements TeacherController {}
+
+class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -44,6 +54,37 @@ Child _child({String id = 'child-1', String name = 'Alice'}) => Child(
   updatedBy: 'director-1',
 );
 
+// A co-teacher returned by TeacherController.fetchCoTeachers -- role teacher,
+// HR fields null (the projection that read omits them).
+AppUser _coTeacher(String id, String name) => AppUser(
+  id: id,
+  role: 'teacher',
+  name: name,
+  phone: '',
+  centerId: 'center-1',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
+// The signed-in teacher's own staff_attendance row for today. Mirrors the
+// _row helper in staff_attendance_screen_test.dart.
+StaffAttendance _staffRow({DateTime? clockInAt, DateTime? clockOutAt}) => StaffAttendance(
+  id: 'sa-1',
+  staffId: 'teacher-1',
+  centerId: 'center-1',
+  date: DateTime.now().toIso8601String().substring(0, 10),
+  status: AttendanceStatus.present,
+  notes: '',
+  clockInAt: clockInAt,
+  clockOutAt: clockOutAt,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'teacher-1',
+  updatedBy: 'teacher-1',
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(AttendanceStatus.present);
@@ -51,10 +92,23 @@ void main() {
 
   late MockChildController mockChildren;
   late MockAttendanceController mockAttendance;
+  late MockTeacherController mockTeacherCtl;
+  late MockStaffAttendanceController mockStaffAtt;
 
   setUp(() {
     mockChildren = MockChildController();
     mockAttendance = MockAttendanceController();
+    mockTeacherCtl = MockTeacherController();
+    mockStaffAtt = MockStaffAttendanceController();
+    // Defaults so tests that only care about one grid don't have to stub the
+    // other three _load() calls. `_load` awaits all of childController,
+    // attendanceController, teacherController and staffAttendanceController;
+    // an unstubbed one throws, the FutureBuilder never gets data, and the
+    // AppLoader's indeterminate spinner makes pumpAndSettle time out. Any test
+    // that needs specific data just re-stubs the relevant one.
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+    when(() => mockTeacherCtl.fetchCoTeachers(any())).thenAnswer((_) async => []);
+    when(() => mockStaffAtt.fetchForDate(any())).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester) => tester.pumpWidget(
@@ -63,6 +117,8 @@ void main() {
             currentUserProvider.overrideWith((ref) => Stream.value(_teacher())),
             childControllerProvider.overrideWithValue(mockChildren),
             attendanceControllerProvider.overrideWithValue(mockAttendance),
+            teacherControllerProvider.overrideWithValue(mockTeacherCtl),
+            staffAttendanceControllerProvider.overrideWithValue(mockStaffAtt),
           ],
           child: const MaterialApp(home: Scaffold(body: MarkAttendanceScreen())),
         ),
@@ -260,5 +316,61 @@ void main() {
     expect(find.byType(AttendanceGridTile), findsOneWidget);
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Bob'), findsNothing);
+  });
+
+  testWidgets('renders both section dividers', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('TEACHERS'), findsOneWidget);
+    expect(find.text('CHILDREN'), findsOneWidget);
+  });
+
+  testWidgets("the signed-in teacher's own tile is first and shows the clock badge",
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+    when(() => mockStaffAtt.fetchForDate(any())).thenAnswer(
+      (_) async => [_staffRow(clockInAt: DateTime.utc(2026, 9, 7, 6, 30))],
+    );
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    // one StaffGridTile (self), badge = working (clocked in, not out)
+    expect(find.byType(StaffGridTile), findsOneWidget);
+    expect(find.byIcon(Icons.access_time_filled), findsOneWidget);
+  });
+
+  testWidgets('a co-teacher renders with no badge', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+    when(() => mockTeacherCtl.fetchCoTeachers('teacher-1')).thenAnswer(
+      (_) async => [_coTeacher('t-2', 'Ben Ng')],
+    );
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffGridTile), findsNWidgets(2)); // self + co-teacher
+    // self is notClockedIn (no row) -> Icons.schedule once; co-teacher -> none
+    expect(find.byIcon(Icons.schedule), findsOneWidget);
+  });
+
+  testWidgets('tapping the own tile opens the clock-in/out screen', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(StaffGridTile).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffAttendanceScreen), findsOneWidget);
+  });
+
+  testWidgets('tapping a co-teacher tile opens their read-only profile', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+    when(() => mockTeacherCtl.fetchCoTeachers('teacher-1')).thenAnswer(
+      (_) async => [_coTeacher('t-2', 'Ben Ng')],
+    );
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(StaffGridTile).last);
+    await tester.pumpAndSettle();
+    expect(find.byType(PersonDetailScreen), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsNothing);
   });
 }

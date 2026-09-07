@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/models/app_user.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
+import '../../../core/models/staff_attendance.dart';
 import '../../../core/controllers/attendance_controller.dart';
 import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/staff_attendance_controller.dart';
+import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/app_loader.dart';
 import '../widgets/attendance_grid_tile.dart';
+import '../widgets/staff_grid_tile.dart';
+import '../../profile/staff_attendance_screen.dart';
+import '../../profile/person_detail_screen.dart';
 import 'child_attendance_detail_screen.dart';
 
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
@@ -17,9 +24,16 @@ class MarkAttendanceScreen extends ConsumerStatefulWidget {
 }
 
 class _RosterData {
-  const _RosterData({required this.children, required this.attendanceByChild});
+  const _RosterData({
+    required this.children,
+    required this.attendanceByChild,
+    required this.teachers, // signed-in teacher first, then co-teachers by name
+    required this.myClockState,
+  });
   final List<Child> children;
   final Map<String, Attendance> attendanceByChild;
+  final List<AppUser> teachers;
+  final StaffClockState myClockState;
 }
 
 class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
@@ -59,13 +73,36 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   Future<_RosterData> _load() async {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) {
-      return const _RosterData(children: [], attendanceByChild: {});
+      return const _RosterData(
+        children: [],
+        attendanceByChild: {},
+        teachers: [],
+        myClockState: StaffClockState.notClockedIn,
+      );
     }
     final children = await ref.read(childControllerProvider).fetchForTeacher(user.id);
     final records = await ref.read(attendanceControllerProvider).fetchForDate(_today);
+    final coTeachers = await ref.read(teacherControllerProvider).fetchCoTeachers(user.id);
+    final staffRows = await ref.read(staffAttendanceControllerProvider).fetchForDate(_today);
+
+    StaffAttendance? mine;
+    for (final r in staffRows) {
+      if (r.staffId == user.id) {
+        mine = r;
+        break;
+      }
+    }
+    final myClockState = mine?.clockOutAt != null
+        ? StaffClockState.done
+        : mine?.clockInAt != null
+            ? StaffClockState.working
+            : StaffClockState.notClockedIn;
+
     return _RosterData(
       children: children,
       attendanceByChild: {for (final r in records) r.childId: r},
+      teachers: [user, ...coTeachers],
+      myClockState: myClockState,
     );
   }
 
@@ -81,6 +118,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         _RosterData(
           children: data.children,
           attendanceByChild: {...data.attendanceByChild, childId: updated},
+          teachers: data.teachers,
+          myClockState: data.myClockState,
         ),
       );
     });
@@ -118,6 +157,27 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openTeacher(AppUser me, AppUser teacher) async {
+    if (teacher.id == me.id) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const StaffAttendanceScreen()),
+      );
+      // The clock screen has no onChanged callback; re-load so the own-tile
+      // badge reflects a clock-in done while it was open.
+      if (mounted) {
+        setState(() {
+          _future = _load();
+        });
+      }
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PersonDetailScreen(person: teacher, readOnly: true),
+        ),
+      );
+    }
   }
 
   // Long-press is the shortcut for the common case. Everything reachable here
@@ -231,41 +291,112 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 return const Center(child: AppLoader());
               }
               final data = snapshot.data!;
-              if (data.children.isEmpty) {
-                return const Center(child: Text('No children assigned to you yet.'));
-              }
-              final filtered = data.children
+              final me = data.teachers.isEmpty ? null : data.teachers.first;
+              final filteredChildren = data.children
                   .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
                   .toList();
-              if (filtered.isEmpty) {
-                return Center(child: Text('No students match "$_query".'));
-              }
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 16,
-                  // Taller than wide: the tile is a square avatar plus a name
-                  // line beneath it.
-                  childAspectRatio: 0.72,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final child = filtered[index];
-                  final existing = data.attendanceByChild[child.id];
-                  return AttendanceGridTile(
-                    child: child,
-                    attendance: existing,
-                    onTap: () => _openDetail(child, existing),
-                    onLongPress: () => _showActions(child, existing),
-                  );
-                },
+
+              const gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 16,
+                // Taller than wide: the tile is a square avatar plus a name
+                // line beneath it.
+                childAspectRatio: 0.72,
+              );
+
+              return CustomScrollView(
+                slivers: [
+                  const SliverToBoxAdapter(child: _SectionDivider('Teachers')),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverGrid(
+                      gridDelegate: gridDelegate,
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) {
+                          final t = data.teachers[i];
+                          return StaffGridTile(
+                            teacher: t,
+                            clockState: (me != null && t.id == me.id)
+                                ? data.myClockState
+                                : null,
+                            onTap: () => _openTeacher(me!, t),
+                          );
+                        },
+                        childCount: data.teachers.length,
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: _SectionDivider('Children')),
+                  if (data.children.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('No children assigned to you yet.')),
+                      ),
+                    )
+                  else if (filteredChildren.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(child: Text('No students match "$_query".')),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.all(16),
+                      sliver: SliverGrid(
+                        gridDelegate: gridDelegate,
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) {
+                            final child = filteredChildren[i];
+                            final existing = data.attendanceByChild[child.id];
+                            return AttendanceGridTile(
+                              child: child,
+                              attendance: existing,
+                              onTap: () => _openDetail(child, existing),
+                              onLongPress: () => _showActions(child, existing),
+                            );
+                          },
+                          childCount: filteredChildren.length,
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+// A centred, uppercase caption between two rules -- "——— TEACHERS ———". Splits
+// the scroll view into its two grids without a heavyweight header.
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          letterSpacing: 1.5,
+          fontWeight: FontWeight.w600,
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(label.toUpperCase(), style: style),
+          ),
+          const Expanded(child: Divider()),
+        ],
+      ),
     );
   }
 }
