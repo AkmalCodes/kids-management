@@ -12,18 +12,26 @@
 --    (possibly empty) array -- callers never branch on null.
 ALTER TABLE classes ADD COLUMN teacher_uids UUID[] NOT NULL DEFAULT '{}';
 
+-- GIN index so the array-membership tests (auth.uid() = ANY(teacher_uids),
+-- .contains('teacher_uids', [...])) that every rewritten policy and the Dart
+-- queries below rely on can use an index instead of a seq scan.
+CREATE INDEX IF NOT EXISTS classes_teacher_uids_gin ON classes USING GIN (teacher_uids);
+
 -- 2. Backfill: wrap each existing single teacher in a one-element array.
 UPDATE classes SET teacher_uids = ARRAY[teacher_uid] WHERE teacher_uid IS NOT NULL;
 
 -- 3. Helper: does the current user share a class with `target`? SECURITY
 --    DEFINER so the classes lookup here is not itself re-filtered by classes
---    RLS. Mirrors the style of my_center() / current_role_name().
+--    RLS. Mirrors the style of my_center() / current_role_name() -- including
+--    the center_id = my_center() guard every other hardened predicate carries,
+--    so a stray cross-center id in teacher_uids can never widen a profile read.
 CREATE OR REPLACE FUNCTION shares_class_with(target UUID)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.classes c
     WHERE auth.uid() = ANY(c.teacher_uids)
       AND target = ANY(c.teacher_uids)
+      AND c.center_id = public.my_center()
   );
 $$;
 

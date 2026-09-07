@@ -55,6 +55,11 @@ Create `docs/superpowers/specs/2026-09-04-co-teachers.sql`:
 --    (possibly empty) array -- callers never branch on null.
 ALTER TABLE classes ADD COLUMN teacher_uids UUID[] NOT NULL DEFAULT '{}';
 
+-- GIN index so the array-membership tests (auth.uid() = ANY(teacher_uids),
+-- .contains('teacher_uids', [...])) that every rewritten policy and the Dart
+-- queries rely on can use an index instead of a seq scan.
+CREATE INDEX IF NOT EXISTS classes_teacher_uids_gin ON classes USING GIN (teacher_uids);
+
 -- 2. Backfill: wrap each existing single teacher in a one-element array.
 UPDATE classes SET teacher_uids = ARRAY[teacher_uid] WHERE teacher_uid IS NOT NULL;
 
@@ -67,6 +72,7 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
     SELECT 1 FROM public.classes c
     WHERE auth.uid() = ANY(c.teacher_uids)
       AND target = ANY(c.teacher_uids)
+      AND c.center_id = public.my_center()
   );
 $$;
 
@@ -187,6 +193,25 @@ Tell the user, in these words or close to them:
 
 Hand the user this sequence (they run it — "user drives" convention). Each block is a separate query. Between blocks, say what to look for.
 
+> **RLS is not enforced by `set_config('request.jwt.claims', …)` alone.** The
+> Supabase SQL editor runs as `postgres`, which has `BYPASSRLS`; setting the
+> JWT claim changes what `auth.uid()` returns but every policy is still skipped,
+> so every "expect zero rows" below would pass vacuously. Each impersonation
+> block therefore runs inside a transaction as the non-privileged
+> `authenticated` role and rolls back at the end:
+>
+> ```sql
+> begin;
+> set local role authenticated;
+> set local "request.jwt.claims" = '...';   -- or select set_config(..., true)
+> -- checks here actually go through RLS
+> rollback;
+> ```
+>
+> `set local` + `rollback` means nothing leaks between blocks and no test data
+> is left behind. The service-role mutation blocks (add/remove an id) stay
+> outside any transaction and run as `postgres` on purpose.
+
 ```sql
 -- 1. The column swap took.
 select column_name, data_type from information_schema.columns
@@ -206,47 +231,82 @@ select p.id, p.name, p.role, p.center_id from profiles p where p.role = 'teacher
 ```
 
 ```sql
--- 3. A teacher in teacher_uids can see the class, its class schedule, its
---    approved lesson plans. Impersonate them:
+-- 3. A teacher who IS in teacher_uids can see the class, its class schedule,
+--    its approved lesson plans, its plan subjects (SECURITY DEFINER fn), can
+--    insert a class schedule entry, and can read its avatar row. Run as the
+--    real authenticated role so RLS actually applies:
+begin;
+set local role authenticated;
 select set_config('request.jwt.claims',
   json_build_object('sub', '<teacher-in-array-uuid>', 'role', 'authenticated')::text, true);
+
 select id, name from classes where id = '<class-id>';
 select count(*) from schedule_entries where type = 'class' and ref_id = '<class-id>';
 select count(*) from lesson_plans where class_id = '<class-id>' and status = 'approved';
+
+-- class_plan_subjects is SECURITY DEFINER, so DROP COLUMN never dependency-
+-- tracked it -- the highest-risk untested object. Expect the class's approved
+-- plans (one row per approved plan), no error.
+select * from class_plan_subjects('<class-id>');
+
+-- schedule_entries_insert, type='class' teacher branch. Expect success (0 rows
+-- affected message is fine; an RLS violation is the failure). Fill the other
+-- NOT NULL / required columns for your schema.
+insert into schedule_entries (type, ref_id, center_id, title, starts_at, ends_at, created_by)
+values ('class', '<class-id>', '<center-id>', 'RLS probe',
+        now(), now() + interval '30 min', '<teacher-in-array-uuid>');
+
+-- class_avatars_select storage policy. Expect one row if the class has a photo,
+-- zero if it has never had one uploaded (not a failure).
+select name from storage.objects
+where bucket_id = 'class-avatars' and name like '<class-id>/%';
+
+rollback;
 ```
-Expected: the class row returns; the counts run without error.
+Expected: the class row returns; the counts run without error; `class_plan_subjects` returns the approved plans; the insert succeeds; the avatar row shows if the class has a photo. `rollback` discards the probe insert.
 
 ```sql
--- 4. A teacher NOT in the array cannot see the class.
+-- 4. A teacher NOT in the array cannot see the class (this is the check that
+--    matters -- it is only meaningful under `set local role authenticated`).
+begin;
+set local role authenticated;
 select set_config('request.jwt.claims',
   json_build_object('sub', '<other-teacher-uuid>', 'role', 'authenticated')::text, true);
 select id, name from classes where id = '<class-id>';
+select * from class_plan_subjects('<class-id>');
+rollback;
 ```
-Expected: zero rows.
+Expected: zero rows from both.
 
 ```sql
--- 5. Add that second teacher to the array (as the service role) and re-check.
-select set_config('request.jwt.claims', null, true);
+-- 5. Add that second teacher to the array (as the service role, no transaction
+--    role change) and re-check under RLS.
 update classes set teacher_uids = array_append(teacher_uids, '<other-teacher-uuid>') where id = '<class-id>';
+
+begin;
+set local role authenticated;
 select set_config('request.jwt.claims',
   json_build_object('sub', '<other-teacher-uuid>', 'role', 'authenticated')::text, true);
 select id, name from classes where id = '<class-id>';
 -- ...and now this teacher can read the first teacher's profile:
 select id, name from profiles where id = '<teacher-in-array-uuid>';
+rollback;
 ```
 Expected: the class row now returns for the second teacher; so does the first teacher's profile row.
 
 ```sql
 -- 6. A teacher sharing NO class with them still can't read that profile.
+begin;
+set local role authenticated;
 select set_config('request.jwt.claims',
   json_build_object('sub', '<a-third-unrelated-teacher-uuid>', 'role', 'authenticated')::text, true);
 select id, name from profiles where id = '<teacher-in-array-uuid>';
+rollback;
 ```
 Expected: zero rows.
 
 ```sql
 -- 7. Removing an id revokes access. (service role)
-select set_config('request.jwt.claims', null, true);
 update classes set teacher_uids = array_remove(teacher_uids, '<other-teacher-uuid>') where id = '<class-id>';
 ```
 

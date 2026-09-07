@@ -10,6 +10,7 @@ import 'package:kids_management/core/controllers/class_controller.dart';
 import 'package:kids_management/core/controllers/photo_capture_controller.dart';
 import 'package:kids_management/core/controllers/teacher_controller.dart';
 import 'package:kids_management/features/director/screens/class_detail_screen.dart';
+import 'package:kids_management/shared/widgets/teacher_multi_select.dart';
 
 class MockClassController extends Mock implements ClassController {}
 
@@ -156,6 +157,23 @@ void main() {
           teacherIds: const [],
           actorUid: 'director-1',
         )).called(1);
+  });
+
+  testWidgets(
+      'teacher fetch failure shows an inline error and no TeacherMultiSelect',
+      (tester) async {
+    // Override the setUp default: fetchAll() rejects.
+    when(() => mockTeachers.fetchAll())
+        .thenAnswer((_) async => throw Exception('network down'));
+
+    await pumpScreen(tester);
+    await enterEdit(tester);
+
+    // Both modes: a short inline message instead of "…" / "Unknown teacher".
+    expect(find.text("Couldn't load teachers"), findsOneWidget);
+    // Edit mode must NOT render the multi-select against an empty list -- a
+    // director could otherwise delete a chip they can't identify.
+    expect(find.byType(TeacherMultiSelect), findsNothing);
   });
 
   testWidgets('changing the photo uploads it and writes the class avatar path',

@@ -185,6 +185,14 @@ class _ClassDetailScreenState extends ConsumerState<ClassDetailScreen> {
               future: _teachersFuture,
               builder: (context, snapshot) {
                 final teachers = snapshot.data ?? [];
+                // Fetch failed: don't fall through to the null-data path (which
+                // would show "…" forever in view mode, or render every chip as
+                // "Unknown teacher" with a dead Add control in edit mode -- the
+                // director could delete a teacher they can't identify).
+                if (snapshot.hasError) {
+                  return _readOnlyRow(context,
+                      label: 'Teacher', value: "Couldn't load teachers");
+                }
                 if (!_editing) {
                   final assigned = widget.classGroup.teacherIds;
                   String value;

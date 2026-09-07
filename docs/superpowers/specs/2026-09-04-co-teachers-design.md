@@ -128,9 +128,14 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
     SELECT 1 FROM public.classes c
     WHERE auth.uid() = ANY(c.teacher_uids)
       AND target = ANY(c.teacher_uids)
+      AND c.center_id = public.my_center()
   );
 $$;
 ```
+
+The `c.center_id = public.my_center()` guard matches every other hardened
+predicate in this project — a stray cross-center id in `teacher_uids` can then
+never widen a profile read.
 
 New `profiles_select`:
 
@@ -151,14 +156,41 @@ schema-qualified names — matching every other helper in the hardening SQL.
 
 This project has no automated RLS test suite (verified — no pgTAP, no
 policy-test file). The migration ships as one ordered `.sql` file plus a
-step-by-step walkthrough the user runs in the Supabase SQL editor,
-impersonating a teacher via `set_config('request.jwt.claims', …)` — the same
-method used for `docs/superpowers/specs/2026-09-02-staff-attendance-schema.md`
-Task 1. The walkthrough must confirm, at minimum:
+step-by-step walkthrough the user runs in the Supabase SQL editor.
+
+**Impersonation must switch role, not just the JWT claim.** The SQL editor
+connects as `postgres`, which has `BYPASSRLS`; `set_config('request.jwt.claims',
+…)` alone changes what `auth.uid()` returns but every policy is still skipped,
+so every negative assertion would pass vacuously. Each impersonation block runs
+as the non-privileged `authenticated` role inside a rolled-back transaction:
+
+```sql
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  json_build_object('sub','<teacher-uuid>','role','authenticated')::text, true);
+-- checks for this teacher here -- these now actually go through RLS
+rollback;
+```
+
+`set local` + `rollback` keeps nothing between blocks and leaves no probe data
+behind. Service-role mutations (adding/removing an id from `teacher_uids`) stay
+outside any transaction and run as `postgres` deliberately.
+
+The walkthrough must confirm, at minimum — every teacher check under
+`set local role authenticated`:
 
 - a teacher in `teacher_uids` can `SELECT` the class, its `type='class'`
   schedule entries, and its approved lesson plans;
-- a teacher **not** in `teacher_uids` cannot;
+- that same teacher gets the class's approved plans from
+  `class_plan_subjects('<class-id>')` — a SECURITY DEFINER function, so
+  `DROP COLUMN teacher_uid` never dependency-tracked it; it is the
+  highest-risk untested object and must be exercised explicitly;
+- that same teacher can `INSERT` a `type='class'` `schedule_entries` row for
+  the class (tests `schedule_entries_insert`), and can `SELECT` the class's
+  `storage.objects` avatar row when the class has a photo (tests
+  `class_avatars_select`);
+- a teacher **not** in `teacher_uids` cannot do any of the above;
 - adding a second teacher's id to the array grants that teacher the same
   access, with no SQL change;
 - the second teacher can now `SELECT` the first teacher's `profiles` row, and
