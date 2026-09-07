@@ -14,6 +14,15 @@ class ScheduleEntry {
   final String endTime;
   final String label;
   final String color; // bare 6-digit hex, e.g. '26A69A' — see displayColor
+  // How often this event repeats: 'daily' (weekdays) | 'weekly' | 'monthly' |
+  // 'annually'. Defaults to 'weekly' — the only recurrence that existed before,
+  // and still the one driven by `day`. The occurrence rule lives in
+  // scheduleEntryOccursOn (lib/shared/util/schedule_recurrence.dart).
+  final String recurrence;
+  // The calendar date the monthly/annual rule is measured from (its
+  // day-of-month for monthly; its month + day for annually). null for
+  // daily/weekly and for every pre-recurrence row.
+  final DateTime? anchorDate;
   // Optional approved lesson plan attached to this event (§6.5). Its subject
   // shows on the event; tapping opens the plan. null = no plan attached.
   final String? lessonPlanId;
@@ -32,6 +41,8 @@ class ScheduleEntry {
     required this.endTime,
     required this.label,
     required this.color,
+    required this.recurrence,
+    this.anchorDate,
     this.lessonPlanId,
     required this.createdAt,
     required this.updatedAt,
@@ -49,6 +60,11 @@ class ScheduleEntry {
     endTime: json['end_time'] as String,
     label: json['label'] as String,
     color: json['color'] as String? ?? defaultScheduleColorHex,
+    // Column is NOT NULL DEFAULT 'weekly'; the ?? is defensive for old
+    // fixtures / rows read before the migration.
+    recurrence: json['recurrence'] as String? ?? 'weekly',
+    // tryParse on '' (our fallback for a missing/null key) returns null.
+    anchorDate: DateTime.tryParse((json['anchor_date'] as String?) ?? ''),
     lessonPlanId: json['lesson_plan_id'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -65,6 +81,9 @@ class ScheduleEntry {
     'end_time': endTime,
     'label': label,
     'color': color,
+    'recurrence': recurrence,
+    // DATE column — send a bare yyyy-MM-dd, never a full timestamp.
+    'anchor_date': anchorDate?.toIso8601String().split('T').first,
     'lesson_plan_id': lessonPlanId,
     'created_by': createdBy,
     'updated_by': updatedBy,

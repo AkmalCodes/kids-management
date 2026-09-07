@@ -47,6 +47,7 @@ ScheduleEntry _entry({
       endTime: '09:00',
       label: label,
       color: '26A69A',
+      recurrence: 'weekly',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       createdBy: createdBy,
@@ -161,6 +162,7 @@ void main() {
       endTime: '09:00',
       label: 'Story time',
       color: '26A69A',
+      recurrence: 'weekly',
       lessonPlanId: 'lp-1',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
@@ -210,6 +212,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Music'));
 
@@ -232,6 +236,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: 'Music',
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: 'teacher-1',
         )).called(1);
     // Shown from createEntry's returned row, not from a re-fetch.
@@ -253,6 +259,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Music'));
 
@@ -276,6 +284,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: 'Music',
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: 'teacher-1',
         )).called(1);
     expect(find.text('Music'), findsOneWidget);
@@ -292,6 +302,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer(
       (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Art (updated)'),
@@ -315,6 +327,8 @@ void main() {
           endTime: '09:00',
           label: 'Art (updated)',
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: 'teacher-1',
         )).called(1);
     expect(find.text('Art (updated)'), findsOneWidget);
@@ -365,6 +379,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         ));
   });
@@ -396,6 +412,8 @@ void main() {
           endTime: any(named: 'endTime'),
           label: any(named: 'label'),
           color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         ));
   });

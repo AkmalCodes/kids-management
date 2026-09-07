@@ -37,6 +37,8 @@ class ScheduleController {
     required String endTime,
     required String label,
     required String color,
+    required String recurrence,
+    DateTime? anchorDate,
     String? lessonPlanId,
     required String actorUid,
   }) async {
@@ -49,6 +51,9 @@ class ScheduleController {
       'end_time': endTime,
       'label': label,
       'color': color,
+      'recurrence': recurrence,
+      // DATE column — a bare yyyy-MM-dd, or null for daily/weekly.
+      'anchor_date': anchorDate?.toIso8601String().split('T').first,
       'lesson_plan_id': lessonPlanId,
       'created_by': actorUid,
       'updated_by': actorUid,
@@ -65,6 +70,8 @@ class ScheduleController {
     required String endTime,
     required String label,
     required String color,
+    required String recurrence,
+    DateTime? anchorDate,
     String? lessonPlanId,
     required String actorUid,
   }) async {
@@ -74,6 +81,9 @@ class ScheduleController {
       'end_time': endTime,
       'label': label,
       'color': color,
+      'recurrence': recurrence,
+      // DATE column — a bare yyyy-MM-dd, or null for daily/weekly.
+      'anchor_date': anchorDate?.toIso8601String().split('T').first,
       'lesson_plan_id': lessonPlanId,
       'updated_by': actorUid,
     }).eq('id', id).select().single();

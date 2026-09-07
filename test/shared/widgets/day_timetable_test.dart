@@ -13,6 +13,7 @@ ScheduleEntry _entry() => ScheduleEntry(
   endTime: '09:00',
   label: 'Art',
   color: '26A69A',
+  recurrence: 'weekly',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',

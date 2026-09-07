@@ -153,6 +153,9 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: result.endTime,
           label: result.label,
           color: result.color,
+          // TODO(recurrence Task 5): use the dialog result
+          recurrence: 'weekly',
+          anchorDate: widget.date,
           lessonPlanId: result.lessonPlanId,
           actorUid: user.id,
         );
@@ -224,6 +227,9 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: endTime,
           label: label,
           color: color,
+          // TODO(recurrence Task 5): use the dialog result
+          recurrence: 'weekly',
+          anchorDate: widget.date,
           lessonPlanId: lessonPlanId,
           actorUid: user.id,
         );

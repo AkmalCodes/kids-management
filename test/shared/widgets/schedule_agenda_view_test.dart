@@ -20,6 +20,7 @@ ScheduleEntry _entry(String id, String day, String start, String end, String lab
       endTime: end,
       label: label,
       color: '26A69A',
+      recurrence: 'weekly',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       createdBy: 'teacher-1',

@@ -77,5 +77,49 @@ void main() {
       final entry = ScheduleEntry.fromJson(json);
       expect(entry.canBeEditedBy(uid: 'teacher-2', role: 'teacher'), isFalse);
     });
+
+    group('recurrence + anchorDate', () {
+      test('fromJson reads recurrence and anchor_date when present', () {
+        final withRecurrence = Map<String, dynamic>.from(json)
+          ..['recurrence'] = 'monthly'
+          ..['anchor_date'] = '2026-01-31';
+        final entry = ScheduleEntry.fromJson(withRecurrence);
+        expect(entry.recurrence, 'monthly');
+        expect(entry.anchorDate, DateTime(2026, 1, 31));
+      });
+
+      test('fromJson defaults recurrence to weekly and anchorDate to null when absent', () {
+        // The base fixture has neither key.
+        final entry = ScheduleEntry.fromJson(json);
+        expect(entry.recurrence, 'weekly');
+        expect(entry.anchorDate, isNull);
+      });
+
+      test('fromJson tolerates an explicit null anchor_date', () {
+        final explicitNull = Map<String, dynamic>.from(json)
+          ..['recurrence'] = 'daily'
+          ..['anchor_date'] = null;
+        final entry = ScheduleEntry.fromJson(explicitNull);
+        expect(entry.recurrence, 'daily');
+        expect(entry.anchorDate, isNull);
+      });
+
+      test('toJson round-trips recurrence and anchor_date (date-only string)', () {
+        final source = Map<String, dynamic>.from(json)
+          ..['recurrence'] = 'annually'
+          ..['anchor_date'] = '2024-02-29';
+        final out = ScheduleEntry.fromJson(source).toJson();
+        expect(out['recurrence'], 'annually');
+        expect(out['anchor_date'], '2024-02-29');
+      });
+
+      test('toJson writes a null anchor_date when anchorDate is null', () {
+        final entry = ScheduleEntry.fromJson(json); // no anchor_date
+        final out = entry.toJson();
+        expect(out['recurrence'], 'weekly');
+        expect(out.containsKey('anchor_date'), isTrue);
+        expect(out['anchor_date'], isNull);
+      });
+    });
   });
 }
