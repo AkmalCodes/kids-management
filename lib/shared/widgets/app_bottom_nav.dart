@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+
 // A "floating" bottom navigation bar: inset from the screen edges with
 // rounded corners and a soft shadow, so it reads as a hovering pill.
 //
@@ -49,7 +51,7 @@ class AppBottomNav extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: Material(
-              color: scheme.primaryContainer,
+              color: AppTheme.barTint,
               child: SizedBox(
                 height: _barHeight,
                 child: LayoutBuilder(
@@ -72,7 +74,7 @@ class AppBottomNav extends StatelessWidget {
                           height: _barHeight - _vMargin * 2,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
-                              color: scheme.surface,
+                              color: scheme.primary,
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
@@ -121,7 +123,7 @@ class _NavItem extends StatelessWidget {
     // The icon/label sit ON TOP of the sliding highlight (drawn behind in the
     // Stack), so items themselves have no background. Colour fades as the
     // highlight arrives.
-    final fg = selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+    final fg = selected ? AppTheme.onAccent : scheme.onSurfaceVariant;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
