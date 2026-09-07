@@ -7,30 +7,31 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   AppTheme._();
 
-  static const seedColor = Color(0xFFFDB0C0); // soft pink
+  static const seed = Color(0xFFFDB0C0);      // soft pink — the accent colour
+  static const onAccent = Color(0xFF5A2A33);  // dark rose — text/icons ON soft pink
+  static const barTint = Color(0xFFFFF2F5);   // faint wash on the top/bottom bars
   static const radius = 16.0;
 
   static ThemeData get light {
-    final colorScheme = ColorScheme.fromSeed(seedColor: seedColor);
+    final colorScheme = ColorScheme.fromSeed(seedColor: seed).copyWith(
+      surface: Colors.white,
+      primary: seed,
+      onPrimary: onAccent,
+    );
     // Applies Nunito to every standard text style (buttons, app bar
     // titles, list tiles, etc. all resolve their font from this), so
     // switching the app's font is just this one line.
     final textTheme = GoogleFonts.nunitoTextTheme();
 
-    // A tinted (soft-pink) fill for the top and bottom bars so they read as
-    // distinct surfaces framing the content, rather than blending into the
-    // near-white scaffold. primaryContainer is the seed-derived pink.
-    final barColor = colorScheme.primaryContainer;
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: Colors.white,
       textTheme: textTheme,
 
       appBarTheme: AppBarTheme(
-        backgroundColor: barColor,
-        foregroundColor: colorScheme.onPrimaryContainer,
+        backgroundColor: barTint,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: true,
         // A slimmer top bar (default is 56) to give content more room.
@@ -99,10 +100,10 @@ class AppTheme {
       // as more modern than the older BottomNavigationBar — used in every
       // shell instead.
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: barColor,
-        // A near-white pill so the selected tab stands out clearly against
-        // the pink bar.
-        indicatorColor: colorScheme.surface,
+        backgroundColor: barTint,
+        // The soft pink pill so the selected tab stands out clearly against
+        // the faint bar.
+        indicatorColor: seed,
         elevation: 0,
         // Slimmer than the 80 default; the AppBottomNav floats it off the
         // screen edges (see shared/widgets/app_bottom_nav.dart).
@@ -117,6 +118,12 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
         ),
+      ),
+
+      chipTheme: ChipThemeData(
+        backgroundColor: seed.withValues(alpha: 0.15),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
       ),
 
       // Round the dropdown popup menu so open dropdowns match the app's
