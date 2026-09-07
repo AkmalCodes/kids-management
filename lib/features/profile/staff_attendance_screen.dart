@@ -6,15 +6,17 @@ import '../../core/controllers/staff_attendance_controller.dart';
 import '../../shared/util/date_display.dart';
 import '../../shared/widgets/app_loader.dart';
 
-// A teacher's clock-in / clock-out for today, reached from the Profile tab.
-// Replaces the old Present/Absent chip toggle: the recorded times feed HR and
-// (later) payroll, so each write goes behind a confirm step and, once both
-// times are set, the day is locked -- no re-clocking, no editing here. See
+// A teacher's clock-in / clock-out for today, reached from the Attendance tab's
+// Teachers grid (a teacher tapping their own tile). Replaces the old
+// Present/Absent chip toggle: the recorded times feed HR and (later) payroll, so
+// each write goes behind a confirm step and, once both times are set, the day is
+// locked -- no re-clocking, no editing here. See
 // docs/superpowers/specs/2026-09-02-staff-clock-in-out-design.md.
 //
-// ProfileScreen only shows the entry button to a teacher; the centerId guard
-// lives here because it is this screen's own precondition (clockIn needs a
-// non-null center_id), not a question of who may see the button.
+// The teacher-only gating is that the Teachers grid exists only on the teacher
+// attendance screen; the centerId guard lives here because it is this screen's
+// own precondition (clockIn needs a non-null center_id), not a question of who
+// may see the grid.
 class StaffAttendanceScreen extends ConsumerStatefulWidget {
   const StaffAttendanceScreen({super.key});
 

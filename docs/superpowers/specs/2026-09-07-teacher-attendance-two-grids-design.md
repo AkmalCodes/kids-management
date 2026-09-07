@@ -1,7 +1,7 @@
 # Teacher attendance — two grids (teachers + children)
 
 **Date:** 2026-09-07
-**Status:** approved, not yet implemented
+**Status:** implemented 2026-09-07
 
 ## Problem
 

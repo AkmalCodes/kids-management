@@ -772,7 +772,12 @@ Recurring weekly pattern per person (day-of-week + time, no calendar date) — t
 - **Display**: week/month toggle agenda view (colored event cards, "No events" for empty days) + a per-day hourly timetable when you tap into a day. Each event has a color, chosen from a fixed palette at creation, saved to the database, and shown identically everywhere it appears.
 
 ### 6.3 Attendance
-Teacher marks attendance via a grid of tiles (see `docs/superpowers/specs/2026-09-01-teacher-attendance-grid-design.md` for full design):
+Teacher marks attendance via a grid of tiles (see `docs/superpowers/specs/2026-09-01-teacher-attendance-grid-design.md` for full design). The teacher's **Attendance** tab displays two grids divided by labelled separators (see `docs/superpowers/specs/2026-09-07-teacher-attendance-two-grids-design.md` for the two-grid layout):
+
+**Teachers grid:** The signed-in teacher's own tile appears first with a **three-state clock-in/out badge** (not clocked in / working / done), tapping it opens the clock screen (`StaffAttendanceScreen`). Co-teachers assigned to the teacher's class(es) appear below with no badge; tapping a co-teacher's tile opens their profile in read-only mode (no Edit button, HR fields hidden). The clock-in/out entry point moved from the Profile tab to this grid. The teacher-only gating is that the Teachers grid exists only on the teacher attendance screen.
+
+**Children grid:** Unchanged — tiles, search, mark present/absent, empty states, and photos work as described below.
+
 - Grid displays children as square avatar tiles in rows, each showing a status badge (green check = present, red X = absent, amber question = unmarked)
 - Each tile displays a shortened name label (`shortLabelName`: first word + last initial, e.g. "Ammar H.") on a single line, keeping avatars uniformly sized regardless of name length
 - **Tap** a tile to open the detail screen for that child (photo slots, status buttons, notes, expandable child details)
