@@ -5,22 +5,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kids_management/core/auth/auth_controller.dart';
 import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/attendance.dart';
 import 'package:kids_management/core/controllers/photo_capture_controller.dart';
 import 'package:kids_management/core/controllers/profile_controller.dart';
-import 'package:kids_management/core/controllers/staff_attendance_controller.dart';
 import 'package:kids_management/features/profile/change_password_screen.dart';
 import 'package:kids_management/features/profile/person_detail_screen.dart';
 import 'package:kids_management/features/profile/profile_screen.dart';
-import 'package:kids_management/features/profile/staff_attendance_screen.dart';
 
 class MockAuthController extends Mock implements AuthController {}
 
 class MockProfileController extends Mock implements ProfileController {}
 
 class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
-
-class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
 
 AppUser _user({String? avatarPath, String role = 'teacher'}) => AppUser(
   id: 'uid-1',
@@ -38,21 +33,17 @@ AppUser _user({String? avatarPath, String role = 'teacher'}) => AppUser(
 void main() {
   setUpAll(() {
     registerFallbackValue(XFile(''));
-    registerFallbackValue(AttendanceStatus.present);
   });
 
   late MockAuthController mockAuth;
   late MockProfileController mockProfile;
   late MockPhotoCaptureController mockPhotoCapture;
-  late MockStaffAttendanceController mockStaffAttendance;
 
   setUp(() {
     mockAuth = MockAuthController();
     mockProfile = MockProfileController();
     mockPhotoCapture = MockPhotoCaptureController();
-    mockStaffAttendance = MockStaffAttendanceController();
     when(() => mockAuth.currentEmail).thenReturn('alice@example.com');
-    when(() => mockStaffAttendance.fetchForDate(any())).thenAnswer((_) async => []);
   });
 
   Future<void> pumpScreen(WidgetTester tester, {String? avatarPath, String role = 'teacher'}) async {
@@ -71,7 +62,6 @@ void main() {
           currentUserProvider.overrideWith((ref) => Stream.value(_user(avatarPath: avatarPath, role: role))),
           profileControllerProvider.overrideWithValue(mockProfile),
           photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
-          staffAttendanceControllerProvider.overrideWithValue(mockStaffAttendance),
         ],
         child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
       ),
@@ -148,21 +138,4 @@ void main() {
     verify(() => mockAuth.signOut()).called(1);
   });
 
-  testWidgets('a teacher sees an Attendance button that opens StaffAttendanceScreen',
-      (tester) async {
-    await pumpScreen(tester);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Attendance'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(StaffAttendanceScreen), findsOneWidget);
-  });
-
-  testWidgets('a non-teacher does not see the Attendance button', (tester) async {
-    await pumpScreen(tester, role: 'parent');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Attendance'), findsNothing);
-  });
 }
