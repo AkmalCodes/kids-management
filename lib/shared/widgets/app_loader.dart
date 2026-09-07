@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../core/theme/app_theme.dart';
 
 // Themed drop-in replacement for CircularProgressIndicator, used at every
 // loading state across the app (page loads, section loads, button spinners)
@@ -55,7 +56,7 @@ class _AppLoaderState extends State<AppLoader> {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    final color = AppTheme.onAccent;
 
     return AnimatedOpacity(
       opacity: _visible ? 1.0 : 0.0,

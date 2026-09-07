@@ -47,10 +47,13 @@ void main() {
     await pumpNav(tester);
 
     // Find the inner DecoratedBox (the animated highlight pill)
-    // There are multiple DecoratedBox: outer for shadow, inner for highlight
-    final allDecorated = find.byType(DecoratedBox);
-    // The highlight is the second one (first is for shadow)
-    final decorated = tester.widget<DecoratedBox>(allDecorated.at(1));
+    // within AnimatedPositioned for the highlight
+    final decorated = tester.widget<DecoratedBox>(
+      find.descendant(
+        of: find.byType(AnimatedPositioned),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
     final decoration = decorated.decoration as BoxDecoration;
     expect(decoration.color, AppTheme.seed);
   });
@@ -128,5 +131,27 @@ void main() {
       find.byType(AnimatedPositioned),
     );
     expect(positioned.left, isNot(initialLeft));
+  });
+
+  testWidgets('selected item label is onAccent, unselected is onSurfaceVariant',
+      (tester) async {
+    await pumpNav(tester, selectedIndex: 0);
+
+    // AppBottomNav renders its own _NavItem widgets (not NavigationDestination);
+    // each label's colour lives on the AnimatedDefaultTextStyle wrapping the Text.
+    // .first = the closest ancestor (Material also wraps content in one).
+    TextStyle styleFor(String label) => tester
+        .widget<AnimatedDefaultTextStyle>(
+          find
+              .ancestor(
+                of: find.text(label),
+                matching: find.byType(AnimatedDefaultTextStyle),
+              )
+              .first,
+        )
+        .style;
+
+    expect(styleFor('Home').color, AppTheme.onAccent); // selected
+    expect(styleFor('Settings').color, AppTheme.light.colorScheme.onSurfaceVariant);
   });
 }

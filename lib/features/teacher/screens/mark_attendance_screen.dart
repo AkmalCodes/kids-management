@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_controller.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
@@ -387,7 +388,7 @@ class _SectionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
+          color: AppTheme.onAccent,
           letterSpacing: 1.5,
           fontWeight: FontWeight.w600,
         );
