@@ -36,6 +36,8 @@ ScheduleEntry _entry({
   required String id,
   required String createdBy,
   String label = 'Art',
+  String recurrence = 'weekly',
+  DateTime? anchorDate,
 }) =>
     ScheduleEntry(
       id: id,
@@ -47,7 +49,8 @@ ScheduleEntry _entry({
       endTime: '09:00',
       label: label,
       color: '26A69A',
-      recurrence: 'weekly',
+      recurrence: recurrence,
+      anchorDate: anchorDate,
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       createdBy: createdBy,
@@ -416,5 +419,98 @@ void main() {
           anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         ));
+  });
+
+  testWidgets('creating an event with Monthly recurrence passes monthly + screen date to createEntry',
+      (tester) async {
+    when(() => mockService.createEntry(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+          centerId: any(named: 'centerId'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Monthly Event', recurrence: 'monthly', anchorDate: _monday));
+
+    await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create Event'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), 'Monthly Event');
+    // Change recurrence from Weekly to Monthly
+    await tester.tap(find.text('Weekly'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monthly').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockService.createEntry(
+          type: 'teacher',
+          refId: 'teacher-1',
+          centerId: 'center-1',
+          day: 'Monday',
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: 'Monthly Event',
+          color: any(named: 'color'),
+          recurrence: 'monthly',
+          anchorDate: _monday,
+          actorUid: 'teacher-1',
+        )).called(1);
+  });
+
+  testWidgets('editing a monthly entry preserves its original anchorDate, not the viewed date',
+      (tester) async {
+    final twoMonthsBefore = DateTime(2026, 5, 13); // Two months before _monday
+    final entry = _entry(
+      id: 'entry-1',
+      createdBy: 'teacher-1',
+      recurrence: 'monthly',
+      anchorDate: twoMonthsBefore,
+    );
+    when(() => mockService.updateEntry(
+          id: any(named: 'id'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer(
+      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'monthly', anchorDate: twoMonthsBefore),
+    );
+
+    await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
+
+    final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    await tester.tapAt(gridTopLeft + const Offset(10, 70)); // inside the 08:00-09:00 block
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Event'), findsOneWidget);
+    // Save without changing the dropdown
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockService.updateEntry(
+          id: 'entry-1',
+          day: 'Monday',
+          startTime: '08:00',
+          endTime: '09:00',
+          label: 'Art',
+          color: any(named: 'color'),
+          recurrence: 'monthly',
+          anchorDate: twoMonthsBefore,
+          actorUid: 'teacher-1',
+        )).called(1);
   });
 }

@@ -154,9 +154,8 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: result.endTime,
           label: result.label,
           color: result.color,
-          // TODO(recurrence Task 5): use the dialog result
-          recurrence: 'weekly',
-          anchorDate: widget.date,
+          recurrence: result.recurrence,
+          anchorDate: result.anchorDate,
           lessonPlanId: result.lessonPlanId,
           actorUid: user.id,
         );
@@ -220,6 +219,8 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           :final endTime,
           :final label,
           :final color,
+          :final recurrence,
+          :final anchorDate,
           :final lessonPlanId
         ):
         final updated = await service.updateEntry(
@@ -229,9 +230,8 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
           endTime: endTime,
           label: label,
           color: color,
-          // TODO(recurrence Task 5): use the dialog result
-          recurrence: 'weekly',
-          anchorDate: widget.date,
+          recurrence: recurrence,
+          anchorDate: anchorDate,
           lessonPlanId: lessonPlanId,
           actorUid: user.id,
         );
