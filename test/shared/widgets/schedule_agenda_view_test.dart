@@ -9,7 +9,15 @@ import 'package:kids_management/shared/widgets/schedule_agenda_view.dart';
 // on DateTime.now() would break depending on when it runs).
 final _anchor = DateTime(2026, 7, 17); // a Friday; its week = Jul 13–19
 
-ScheduleEntry _entry(String id, String day, String start, String end, String label) =>
+ScheduleEntry _entry(
+  String id,
+  String day,
+  String start,
+  String end,
+  String label, {
+  String recurrence = 'weekly',
+  DateTime? anchorDate,
+}) =>
     ScheduleEntry(
       id: id,
       type: 'teacher',
@@ -20,7 +28,8 @@ ScheduleEntry _entry(String id, String day, String start, String end, String lab
       endTime: end,
       label: label,
       color: '26A69A',
-      recurrence: 'weekly',
+      recurrence: recurrence,
+      anchorDate: anchorDate,
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       createdBy: 'teacher-1',
@@ -122,5 +131,105 @@ void main() {
     final container = tester.widget<Container>(find.byKey(const Key('event-card-entry-1')));
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.color, const Color(0xFF26A69A));
+  });
+
+  testWidgets('monthly entry shows on exactly one day row in month view',
+      (tester) async {
+    // Anchor day 15; in July, this is the 15th. In February, it would be the
+    // 15th too (28/29 > 15, so no clamping).
+    final entries = [
+      _entry(
+        'entry-monthly',
+        'Friday', // day field is unused for monthly, but required
+        '10:00',
+        '11:00',
+        'Monthly Meeting',
+        recurrence: 'monthly',
+        anchorDate: DateTime(2026, 7, 15),
+      ),
+    ];
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: entries, anchorDate: _anchor)),
+    );
+
+    // Switch to month view (July 2026).
+    await tester.tap(find.byTooltip('Month view'));
+    await tester.pumpAndSettle();
+
+    // Scroll to the 15th to ensure it's rendered (ListView is lazy).
+    await tester.scrollUntilVisible(find.text('15'), 200);
+
+    // The entry should appear exactly once, on the 15th.
+    expect(find.text('Monthly Meeting'), findsOneWidget);
+  });
+
+  testWidgets('annually entry on Feb 29 shows on Feb 28 in common year',
+      (tester) async {
+    // Anchor on Feb 29, 2024 (a leap year).
+    // When we view February 2026 (a common year), it should show on the 28th.
+    final entries = [
+      _entry(
+        'entry-annual',
+        'Thursday', // day field is unused for annual
+        '14:00',
+        '15:00',
+        'Annual Celebration',
+        recurrence: 'annually',
+        anchorDate: DateTime(2024, 2, 29),
+      ),
+    ];
+    // Inject an anchor date in February 2026 (a common year: 28 days).
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: entries, anchorDate: DateTime(2026, 2, 15))),
+    );
+
+    // Switch to month view (February 2026).
+    await tester.tap(find.byTooltip('Month view'));
+    await tester.pumpAndSettle();
+
+    // Scroll to the 28th to ensure it's rendered (ListView is lazy).
+    await tester.scrollUntilVisible(find.text('28'), 200);
+
+    // The entry should appear exactly once, on the 28th.
+    expect(find.text('Annual Celebration'), findsOneWidget);
+  });
+
+  testWidgets('daily entry shows on all five weekday rows in week view',
+      (tester) async {
+    final entries = [
+      _entry(
+        'entry-daily',
+        'Monday', // day field is unused for daily
+        '09:00',
+        '10:00',
+        'Daily Standup',
+        recurrence: 'daily',
+      ),
+    ];
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: entries, anchorDate: _anchor)),
+    );
+
+    // Week view is the default. July 13–19, 2026: Monday–Friday.
+    // The daily entry should appear on all 5 weekday rows.
+    expect(find.text('Daily Standup'), findsNWidgets(5));
+    // Confirm no extra instances on weekends.
+    expect(find.text('No events'), findsNWidgets(2)); // Saturday and Sunday
+  });
+
+  testWidgets('weekly entry shows only on its weekday (regression)',
+      (tester) async {
+    final entries = [
+      _entry('entry-weekly', 'Wednesday', '10:00', '11:00', 'Weekly Sync',
+          recurrence: 'weekly'),
+    ];
+    await tester.pumpWidget(
+      _wrap(ScheduleAgendaView(entries: entries, anchorDate: _anchor)),
+    );
+
+    // Week view: July 13–19. Wednesday is the 17th.
+    expect(find.text('Weekly Sync'), findsOneWidget);
+    // The other 6 days should be empty.
+    expect(find.text('No events'), findsNWidgets(6));
   });
 }

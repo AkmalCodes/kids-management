@@ -3,15 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/schedule.dart';
 import '../../core/controllers/lesson_plan_controller.dart';
 import '../screens/day_schedule_screen.dart';
+import '../util/schedule_recurrence.dart';
 
 // Agenda-style schedule (modeled on typical calendar apps): date numbers
 // down the left, colored event cards beside them, "No events" for empty
 // days. A header button toggles between the current week and the whole
 // month. Tapping a day pushes DayScheduleScreen with that day's timetable.
 //
-// Entries are a recurring weekly pattern (weekday + time, no calendar
-// date), so each calendar date simply shows the entries whose `day`
-// matches its weekday — the same class appears on every matching Monday.
+// Entries support four recurrence frequencies, determined by the `recurrence`
+// field and interpreted by scheduleEntryOccursOn:
+// - daily: shows on all weekdays (Monday–Friday)
+// - weekly: shows on the weekday matching `day` (e.g., 'Monday')
+// - monthly: shows on the day-of-month matching the anchor date, or the last
+//   day of the month if the anchor day doesn't exist (e.g., 31st Jan anchor
+//   shows on the last day of February)
+// - annually: shows on the month+day matching the anchor date, with 29-Feb
+//   anchors falling back to 28 Feb in non-leap years
+// Each calendar date shows the entries whose recurrence rule matches it.
 class ScheduleAgendaView extends ConsumerStatefulWidget {
   const ScheduleAgendaView({
     super.key,
@@ -84,9 +92,6 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   String? _subjectFor(ScheduleEntry entry) =>
       entry.lessonPlanId == null ? null : _subjectByPlanId[entry.lessonPlanId];
 
-  static const _weekdayFull = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-  ];
   static const _weekdayAbbrev = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const _monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -137,8 +142,7 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   }
 
   List<ScheduleEntry> _entriesFor(DateTime date) {
-    final dayName = _weekdayFull[date.weekday - 1];
-    return widget.entries.where((e) => e.day == dayName).toList()
+    return widget.entries.where((e) => scheduleEntryOccursOn(e, date)).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
   }
 
