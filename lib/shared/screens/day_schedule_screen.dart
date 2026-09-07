@@ -138,6 +138,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
     final result = await showScheduleEntryFormDialog(
       context,
+      anchorDate: widget.date,
       initialStartTime: startTime,
       initialEndTime: endTime,
       lessonPlans: _planOptions,
@@ -206,6 +207,7 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
 
     final result = await showScheduleEntryFormDialog(
       context,
+      anchorDate: entry.anchorDate ?? widget.date,
       existing: entry,
       lessonPlans: _planOptions,
     );

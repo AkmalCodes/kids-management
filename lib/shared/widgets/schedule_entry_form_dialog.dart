@@ -10,14 +10,53 @@ class ScheduleEntrySaved extends ScheduleEntryFormResult {
     required this.endTime,
     required this.label,
     required this.color,
+    required this.recurrence,
+    required this.anchorDate,
     this.lessonPlanId,
   });
   final String startTime;
   final String endTime;
   final String label;
   final String color;
+  // One of 'daily' / 'weekly' / 'monthly' / 'annually'.
+  final String recurrence;
+  // The calendar date the monthly/annual rule is measured from. The dialog
+  // has no UI to change it — it echoes back the anchor it was handed.
+  final DateTime anchorDate;
   // The approved lesson plan attached to this event, or null for none.
   final String? lessonPlanId;
+}
+
+// Weekday / month name lists mirroring day_schedule_screen.dart, used only to
+// phrase the "Repeats" helper text.
+const _weekdayNames = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+];
+const _monthNames = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+String _weekdayName(int weekday) => _weekdayNames[weekday - 1]; // Monday == 1
+String _monthName(int month) => _monthNames[month - 1];
+
+// A plain-language sentence describing what the current recurrence + anchor
+// date actually mean, shown under the "Repeats" dropdown.
+String _recurrenceHelp(String recurrence, DateTime anchor) {
+  switch (recurrence) {
+    case 'daily':
+      return 'Repeats every weekday';
+    case 'monthly':
+      return 'Repeats on day ${anchor.day} each month (the last day in shorter months)';
+    case 'annually':
+      if (anchor.month == 2 && anchor.day == 29) {
+        return 'Repeats every 29 Feb (28 Feb in non-leap years)';
+      }
+      return 'Repeats every ${anchor.day} ${_monthName(anchor.month)}';
+    case 'weekly':
+    default:
+      return 'Repeats every ${_weekdayName(anchor.weekday)}';
+  }
 }
 
 class ScheduleEntryDeleted extends ScheduleEntryFormResult {}
@@ -32,6 +71,7 @@ typedef LessonPlanOption = ({String id, String label});
 // attachable to this event (empty hides the picker). Returns null on cancel.
 Future<ScheduleEntryFormResult?> showScheduleEntryFormDialog(
   BuildContext context, {
+  required DateTime anchorDate,
   ScheduleEntry? existing,
   String? initialStartTime,
   String? initialEndTime,
@@ -40,6 +80,7 @@ Future<ScheduleEntryFormResult?> showScheduleEntryFormDialog(
   return showDialog<ScheduleEntryFormResult>(
     context: context,
     builder: (_) => _ScheduleEntryFormDialog(
+      anchorDate: anchorDate,
       existing: existing,
       initialStartTime: initialStartTime,
       initialEndTime: initialEndTime,
@@ -50,12 +91,14 @@ Future<ScheduleEntryFormResult?> showScheduleEntryFormDialog(
 
 class _ScheduleEntryFormDialog extends StatefulWidget {
   const _ScheduleEntryFormDialog({
+    required this.anchorDate,
     this.existing,
     this.initialStartTime,
     this.initialEndTime,
     this.lessonPlans = const [],
   });
 
+  final DateTime anchorDate;
   final ScheduleEntry? existing;
   final String? initialStartTime;
   final String? initialEndTime;
@@ -71,6 +114,9 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late String _selectedColor;
+  // 'daily' / 'weekly' / 'monthly' / 'annually'. Seeded from the edited entry,
+  // else 'weekly' so an untouched dialog keeps today's behaviour.
+  late String _recurrence;
   String? _lessonPlanId;
 
   static TimeOfDay _parseTime(String hhmm) {
@@ -96,6 +142,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         ? _parseTime(existing.endTime)
         : _parseTime(widget.initialEndTime ?? '09:00');
     _selectedColor = existing?.color ?? defaultScheduleColorHex;
+    _recurrence = existing?.recurrence ?? 'weekly';
     // Keep the current attachment only if it's among the offered plans.
     final planIds = widget.lessonPlans.map((p) => p.id).toSet();
     _lessonPlanId = planIds.contains(existing?.lessonPlanId) ? existing!.lessonPlanId : null;
@@ -125,6 +172,8 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
         endTime: _formatTime(_endTime),
         label: _labelController.text.trim(),
         color: _selectedColor,
+        recurrence: _recurrence,
+        anchorDate: widget.anchorDate,
         lessonPlanId: _lessonPlanId,
       ),
     );
@@ -158,6 +207,30 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               onPressed: _pickEndTime,
               icon: const Icon(Icons.schedule),
               label: Text('End: ${_formatTime(_endTime)}'),
+            ),
+            const SizedBox(height: 12),
+            // How often the event repeats. Defaults to 'weekly' (unchanged
+            // behaviour). The anchor date is fixed by the caller — this only
+            // picks the frequency; the helper text spells out the concrete rule.
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              borderRadius: BorderRadius.circular(16),
+              initialValue: _recurrence,
+              decoration: const InputDecoration(labelText: 'Repeats'),
+              items: const [
+                DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                DropdownMenuItem(value: 'annually', child: Text('Annually')),
+              ],
+              onChanged: (v) => setState(() => _recurrence = v!),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _recurrenceHelp(_recurrence, widget.anchorDate),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
             // Attach an approved lesson plan (only shown if any exist for the
             // class); its subject then appears on the event.

@@ -3,7 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kids_management/core/models/schedule.dart';
 import 'package:kids_management/shared/widgets/schedule_entry_form_dialog.dart';
 
-ScheduleEntry _entry({String color = 'D81B60'}) => ScheduleEntry(
+// A fixed anchor date threaded through every dialog: Wed 9 Sep 2026.
+final _anchor = DateTime(2026, 9, 9);
+
+ScheduleEntry _entry({String color = 'D81B60', String recurrence = 'weekly'}) => ScheduleEntry(
   id: 'entry-1',
   type: 'teacher',
   refId: 'teacher-1',
@@ -13,7 +16,7 @@ ScheduleEntry _entry({String color = 'D81B60'}) => ScheduleEntry(
   endTime: '09:00',
   label: 'Art',
   color: color,
-  recurrence: 'weekly',
+  recurrence: recurrence,
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
   createdBy: 'teacher-1',
@@ -23,8 +26,9 @@ ScheduleEntry _entry({String color = 'D81B60'}) => ScheduleEntry(
 // A button that opens the dialog and stashes the result, so tests can pump
 // a real widget tree (showDialog needs a Navigator/MaterialApp context).
 class _Harness extends StatefulWidget {
-  const _Harness({this.existing});
+  _Harness({this.existing, DateTime? anchorDate}) : anchorDate = anchorDate ?? _anchor;
   final ScheduleEntry? existing;
+  final DateTime anchorDate;
 
   @override
   State<_Harness> createState() => _HarnessState();
@@ -41,7 +45,11 @@ class _HarnessState extends State<_Harness> {
         children: [
           ElevatedButton(
             onPressed: () async {
-              final r = await showScheduleEntryFormDialog(context, existing: widget.existing);
+              final r = await showScheduleEntryFormDialog(
+                context,
+                existing: widget.existing,
+                anchorDate: widget.anchorDate,
+              );
               setState(() {
                 result = r;
                 opened = true;
@@ -53,6 +61,8 @@ class _HarnessState extends State<_Harness> {
           if (result is ScheduleEntrySaved) ...[
             Text((result as ScheduleEntrySaved).label),
             Text('color:${(result as ScheduleEntrySaved).color}'),
+            Text('recurrence:${(result as ScheduleEntrySaved).recurrence}'),
+            Text('anchor:${(result as ScheduleEntrySaved).anchorDate.toIso8601String()}'),
           ],
         ],
       ),
@@ -62,7 +72,7 @@ class _HarnessState extends State<_Harness> {
 
 void main() {
   testWidgets('add mode shows no Delete button and default times', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -85,7 +95,7 @@ void main() {
   });
 
   testWidgets('empty label blocks save', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -97,7 +107,7 @@ void main() {
   });
 
   testWidgets('save returns ScheduleEntrySaved with the entered label', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -121,7 +131,7 @@ void main() {
   });
 
   testWidgets('cancel returns null', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -132,7 +142,7 @@ void main() {
   });
 
   testWidgets('add mode defaults to the default palette color', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -155,7 +165,7 @@ void main() {
   });
 
   testWidgets('tapping a different swatch changes the saved color', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: _Harness()));
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
@@ -165,5 +175,79 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('color:D81B60'), findsOneWidget);
+  });
+
+  testWidgets('add mode shows a Repeats field defaulting to Weekly', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repeats'), findsOneWidget);
+    expect(find.text('Weekly'), findsOneWidget);
+    // Helper text for a Wednesday anchor + weekly selection.
+    expect(find.text('Repeats every Wednesday'), findsOneWidget);
+  });
+
+  testWidgets('edit mode seeds Repeats from the entry recurrence', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(home: _Harness(existing: _entry(recurrence: 'monthly'))),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Monthly'), findsOneWidget);
+    expect(
+      find.text('Repeats on day 9 each month (the last day in shorter months)'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('helper text switches from weekly to monthly when the dropdown changes',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repeats every Wednesday'), findsOneWidget);
+
+    await tester.tap(find.text('Weekly'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monthly').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repeats every Wednesday'), findsNothing);
+    expect(
+      find.text('Repeats on day 9 each month (the last day in shorter months)'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('selecting Monthly then Save returns recurrence and anchorDate', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), 'Music');
+    await tester.tap(find.text('Weekly'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Monthly').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('recurrence:monthly'), findsOneWidget);
+    expect(find.text('anchor:${DateTime(2026, 9, 9).toIso8601String()}'), findsOneWidget);
+  });
+
+  testWidgets('untouched dialog returns recurrence weekly', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), 'Music');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('recurrence:weekly'), findsOneWidget);
   });
 }
