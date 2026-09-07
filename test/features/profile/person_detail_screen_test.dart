@@ -55,6 +55,19 @@ AppUser _teacherWithHr() => AppUser(
   updatedBy: 'director-1',
 );
 
+AppUser _peerTeacher() => AppUser(
+  id: 'teacher-2',
+  role: 'teacher',
+  name: 'Ms. Johnson',
+  phone: '555-0101',
+  email: 'johnson@example.com',
+  centerId: 'center-1',
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+  createdBy: 'director-1',
+  updatedBy: 'director-1',
+);
+
 void main() {
   setUpAll(() {
     registerFallbackValue(XFile(''));
@@ -72,6 +85,7 @@ void main() {
     WidgetTester tester, {
     AppUser? currentUser,
     AppUser? person,
+    bool readOnly = false,
   }) async {
     // Tall surface so the whole form (now with HR fields) fits and the Save
     // button is on-screen / tappable.
@@ -84,7 +98,7 @@ void main() {
           profileControllerProvider.overrideWithValue(mockProfile),
           photoCaptureControllerProvider.overrideWithValue(mockPhotoCapture),
         ],
-        child: MaterialApp(home: PersonDetailScreen(person: person ?? _teacher())),
+        child: MaterialApp(home: PersonDetailScreen(person: person ?? _teacher(), readOnly: readOnly)),
       ),
     );
   }
@@ -318,5 +332,16 @@ void main() {
           path: any(named: 'path'),
           actorUid: any(named: 'actorUid'),
         ));
+  });
+
+  testWidgets('readOnly hides the Edit button and the "Not provided" rows',
+      (tester) async {
+    // A co-teacher-style AppUser: identity only, HR fields null.
+    await pumpScreen(tester, person: _peerTeacher(), readOnly: true);
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.edit_outlined), findsNothing);
+    expect(find.text('Not provided'), findsNothing);
+    expect(find.text(_peerTeacher().name), findsWidgets);
   });
 }

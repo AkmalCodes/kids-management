@@ -18,9 +18,10 @@ import '../../shared/widgets/app_loader.dart';
 // Email is shown read-only -- it's the login identity (auth.users), kept in
 // profiles.email by a DB trigger; changing it is an auth flow, not done here.
 class PersonDetailScreen extends ConsumerStatefulWidget {
-  const PersonDetailScreen({super.key, required this.person});
+  const PersonDetailScreen({super.key, required this.person, this.readOnly = false});
 
   final AppUser person;
+  final bool readOnly;
 
   @override
   ConsumerState<PersonDetailScreen> createState() => _PersonDetailScreenState();
@@ -237,11 +238,12 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
       appBar: AppBar(
         title: Text(widget.person.name),
         actions: [
-          IconButton(
-            icon: Icon(_editing ? Icons.close : Icons.edit_outlined),
-            tooltip: _editing ? 'Cancel' : 'Edit',
-            onPressed: _editing ? _cancelEdit : _startEdit,
-          ),
+          if (!widget.readOnly)
+            IconButton(
+              icon: Icon(_editing ? Icons.close : Icons.edit_outlined),
+              tooltip: _editing ? 'Cancel' : 'Edit',
+              onPressed: _editing ? _cancelEdit : _startEdit,
+            ),
         ],
       ),
       body: Form(
@@ -274,49 +276,54 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
               editing: _editing,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a name' : null,
             ),
-            EditableField(
-              label: 'Phone',
-              controller: _phoneController,
-              editing: _editing,
-              keyboardType: TextInputType.phone,
-              copyable: true,
-            ),
-            // DOB: a tappable picker while editing, a plain row when viewing.
-            if (_editing)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _pickDob,
-                  icon: const Icon(Icons.cake_outlined),
-                  label: Text(
-                    _dob == null ? 'Date of birth: not set' : 'Date of birth: ${_formatDate(_dob!)}',
-                  ),
-                ),
-              )
-            else
-              _readOnlyRow(
-                context,
-                label: 'Date of birth',
-                value: _dob == null ? '' : _formatDate(_dob!),
+            if (!widget.readOnly || widget.person.phone.isNotEmpty)
+              EditableField(
+                label: 'Phone',
+                controller: _phoneController,
+                editing: _editing,
+                keyboardType: TextInputType.phone,
+                copyable: true,
               ),
-            EditableField(
-              label: 'Address',
-              controller: _addressController,
-              editing: _editing,
-              maxLines: 2,
-            ),
-            EditableField(
-              label: 'Emergency contact name',
-              controller: _emergencyNameController,
-              editing: _editing,
-            ),
-            EditableField(
-              label: 'Emergency contact phone',
-              controller: _emergencyPhoneController,
-              editing: _editing,
-              keyboardType: TextInputType.phone,
-              copyable: true,
-            ),
+            // DOB: a tappable picker while editing, a plain row when viewing.
+            if (!widget.readOnly || _dob != null)
+              if (_editing)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _pickDob,
+                    icon: const Icon(Icons.cake_outlined),
+                    label: Text(
+                      _dob == null ? 'Date of birth: not set' : 'Date of birth: ${_formatDate(_dob!)}',
+                    ),
+                  ),
+                )
+              else
+                _readOnlyRow(
+                  context,
+                  label: 'Date of birth',
+                  value: _dob == null ? '' : _formatDate(_dob!),
+                ),
+            if (!widget.readOnly || (widget.person.address ?? '').isNotEmpty)
+              EditableField(
+                label: 'Address',
+                controller: _addressController,
+                editing: _editing,
+                maxLines: 2,
+              ),
+            if (!widget.readOnly || (widget.person.emergencyContactName ?? '').isNotEmpty)
+              EditableField(
+                label: 'Emergency contact name',
+                controller: _emergencyNameController,
+                editing: _editing,
+              ),
+            if (!widget.readOnly || (widget.person.emergencyContactPhone ?? '').isNotEmpty)
+              EditableField(
+                label: 'Emergency contact phone',
+                controller: _emergencyPhoneController,
+                editing: _editing,
+                keyboardType: TextInputType.phone,
+                copyable: true,
+              ),
             const SizedBox(height: 24),
             // Save only exists in edit mode.
             if (_editing)
