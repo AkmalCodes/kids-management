@@ -469,12 +469,13 @@ void main() {
 
   testWidgets('editing a monthly entry preserves its original anchorDate, not the viewed date',
       (tester) async {
-    final twoMonthsBefore = DateTime(2026, 5, 13); // Two months before _monday
+    // Real clamp path: anchor is the 31st, viewed date is the 13th (different day-of-month).
+    final anchorDate = DateTime(2026, 1, 31);
     final entry = _entry(
       id: 'entry-1',
       createdBy: 'teacher-1',
       recurrence: 'monthly',
-      anchorDate: twoMonthsBefore,
+      anchorDate: anchorDate,
     );
     when(() => mockService.updateEntry(
           id: any(named: 'id'),
@@ -487,7 +488,7 @@ void main() {
           anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer(
-      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'monthly', anchorDate: twoMonthsBefore),
+      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'monthly', anchorDate: anchorDate),
     );
 
     await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
@@ -509,7 +510,7 @@ void main() {
           label: 'Art',
           color: any(named: 'color'),
           recurrence: 'monthly',
-          anchorDate: twoMonthsBefore,
+          anchorDate: DateTime(2026, 1, 31),
           actorUid: 'teacher-1',
         )).called(1);
   });

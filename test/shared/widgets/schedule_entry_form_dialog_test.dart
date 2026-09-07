@@ -6,12 +6,16 @@ import 'package:kids_management/shared/widgets/schedule_entry_form_dialog.dart';
 // A fixed anchor date threaded through every dialog: Wed 9 Sep 2026.
 final _anchor = DateTime(2026, 9, 9);
 
-ScheduleEntry _entry({String color = 'D81B60', String recurrence = 'weekly'}) => ScheduleEntry(
+ScheduleEntry _entry({
+  String color = 'D81B60',
+  String recurrence = 'weekly',
+  String day = 'Monday',
+}) => ScheduleEntry(
   id: 'entry-1',
   type: 'teacher',
   refId: 'teacher-1',
   centerId: 'center-1',
-  day: 'Monday',
+  day: day,
   startTime: '08:00',
   endTime: '09:00',
   label: 'Art',
@@ -249,5 +253,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('recurrence:weekly'), findsOneWidget);
+  });
+
+  testWidgets('editing weekly entry shows its own day in helper text', (tester) async {
+    // Entry with day 'Monday', but anchor is Wednesday (different).
+    // Helper text should show 'Repeats every Monday' (entry.day), not 'Repeats every Wednesday' (anchor.weekday).
+    final entryWithMonday = _entry(day: 'Monday', recurrence: 'weekly');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: _Harness(existing: entryWithMonday, anchorDate: DateTime(2026, 9, 9)), // Wed anchor
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Repeats every Monday'), findsOneWidget);
   });
 }

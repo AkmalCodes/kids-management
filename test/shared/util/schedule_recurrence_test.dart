@@ -36,6 +36,14 @@ void main() {
       expect(scheduleEntryOccursOn(e, DateTime(2026, 9, 12)), isFalse); // Sat
       expect(scheduleEntryOccursOn(e, DateTime(2026, 9, 13)), isFalse); // Sun
     });
+
+    test('daily does not break at month boundary', () {
+      // Wed 30 Sep 2026 and Thu 1 Oct 2026 (different months, both weekdays)
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 9, 30)), isTrue);  // Wed
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 10, 1)), isTrue);  // Thu
+      // Sat 3 Oct 2026 should be false
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 10, 3)), isFalse); // Sat
+    });
   });
 
   group('weekly', () {
@@ -51,6 +59,10 @@ void main() {
       final e = _entry(recurrence: 'monthly', anchorDate: DateTime(2026, 1, 15));
       expect(scheduleEntryOccursOn(e, DateTime(2026, 2, 15)), isTrue);
       expect(scheduleEntryOccursOn(e, DateTime(2026, 2, 14)), isFalse);
+      // No-clamp path: 15th in a 30-day month (April) and 31-day month (March)
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 4, 15)), isTrue);  // 30-day month
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 3, 15)), isTrue);  // 31-day month
+      expect(scheduleEntryOccursOn(e, DateTime(2026, 3, 16)), isFalse);
     });
 
     test('the 31st clamps to the last day of shorter months', () {

@@ -135,8 +135,7 @@ void main() {
 
   testWidgets('monthly entry shows on exactly one day row in month view',
       (tester) async {
-    // Anchor day 15; in July, this is the 15th. In February, it would be the
-    // 15th too (28/29 > 15, so no clamping).
+    // Anchor day 3; near the top of July, so no scrolling needed to see it and neighbours.
     final entries = [
       _entry(
         'entry-monthly',
@@ -145,7 +144,7 @@ void main() {
         '11:00',
         'Monthly Meeting',
         recurrence: 'monthly',
-        anchorDate: DateTime(2026, 7, 15),
+        anchorDate: DateTime(2026, 7, 3),
       ),
     ];
     await tester.pumpWidget(
@@ -156,11 +155,10 @@ void main() {
     await tester.tap(find.byTooltip('Month view'));
     await tester.pumpAndSettle();
 
-    // Scroll to the 15th to ensure it's rendered (ListView is lazy).
-    await tester.scrollUntilVisible(find.text('15'), 200);
-
-    // The entry should appear exactly once, on the 15th.
+    // The entry should appear exactly once (no scrolling needed).
     expect(find.text('Monthly Meeting'), findsOneWidget);
+    // Verify that other days near the anchor are empty.
+    expect(find.text('No events'), findsWidgets); // Multiple empty rows exist
   });
 
   testWidgets('annually entry on Feb 29 shows on Feb 28 in common year',

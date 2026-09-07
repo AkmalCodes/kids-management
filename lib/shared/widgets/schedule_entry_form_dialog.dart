@@ -42,7 +42,8 @@ String _monthName(int month) => _monthNames[month - 1];
 
 // A plain-language sentence describing what the current recurrence + anchor
 // date actually mean, shown under the "Repeats" dropdown.
-String _recurrenceHelp(String recurrence, DateTime anchor) {
+// For weekly, prefers the entry's own day (when editing) over the anchor's weekday.
+String _recurrenceHelp(String recurrence, DateTime anchor, {String? day}) {
   switch (recurrence) {
     case 'daily':
       return 'Repeats every weekday';
@@ -55,7 +56,9 @@ String _recurrenceHelp(String recurrence, DateTime anchor) {
       return 'Repeats every ${anchor.day} ${_monthName(anchor.month)}';
     case 'weekly':
     default:
-      return 'Repeats every ${_weekdayName(anchor.weekday)}';
+      // Use the entry's own day if provided (when editing); else fall back to anchor's weekday.
+      final weekday = day ?? _weekdayName(anchor.weekday);
+      return 'Repeats every $weekday';
   }
 }
 
@@ -227,7 +230,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
             ),
             const SizedBox(height: 4),
             Text(
-              _recurrenceHelp(_recurrence, widget.anchorDate),
+              _recurrenceHelp(_recurrence, widget.anchorDate, day: widget.existing?.day),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
