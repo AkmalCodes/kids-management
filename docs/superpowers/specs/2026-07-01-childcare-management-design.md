@@ -682,7 +682,7 @@ lib/
       lesson_plan_controller.dart      -- lesson plan CRUD + submit/review (approval) (§6.5)
       subject_controller.dart          -- center subjects CRUD (§6.5)
     theme/
-      app_theme.dart                -- single seed color + font (Nunito via google_fonts) + tinted top/bottom bars, cascades app-wide
+      app_theme.dart                -- white base surface, soft pink (`#FDB0C0`) as the accent (`colorScheme.primary`, `onPrimary` = dark rose `#5A2A33`); bars carry a faint pink wash (`AppTheme.barTint`); bottom-nav selection pill and attendance headers are the pink accent; role chips get a soft-pink tint via `chipTheme`; font (Nunito via google_fonts) cascades app-wide (see §2026-09-07-theme-pink-on-white-design.md)
   features/
     auth/
       login_screen.dart             -- includes "Forgot password?" -> ForgotPasswordScreen
