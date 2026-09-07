@@ -49,6 +49,8 @@ class AttendanceGridTile extends ConsumerWidget {
           ),
         ),
         child: ClipRRect(
+          // 14 not 16: sits inside the 2px border so the photo does not bleed
+          // over the rounded corner.
           borderRadius: BorderRadius.circular(14),
           child: _photo(colors, ref),
         ),

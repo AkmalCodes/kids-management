@@ -48,8 +48,8 @@ void main() {
 
   Future<void> pumpScreen(WidgetTester tester, {String? avatarPath, String role = 'teacher'}) async {
     // The default 800x600 test viewport is an artificial constraint, not a
-    // real device limit -- the stack of profile actions (Attendance, Profile
-    // details, Change password, Sign out) runs past 600px and pushes the
+    // real device limit -- the stack of profile actions (Profile details,
+    // Change password, Sign out) runs past 600px and pushes the
     // lower buttons offscreen. A real phone screen is taller; give this
     // ListView room to actually fit rather than fight the test harness's
     // default with scroll gymnastics.
@@ -137,5 +137,4 @@ void main() {
 
     verify(() => mockAuth.signOut()).called(1);
   });
-
 }

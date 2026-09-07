@@ -372,5 +372,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PersonDetailScreen), findsOneWidget);
     expect(find.byIcon(Icons.edit_outlined), findsNothing);
+    // A co-teacher has no email/phone/HR fields in fetchCoTeachers' projection,
+    // and readOnly mode must drop those rows rather than show "Not provided".
+    expect(find.text('Not provided'), findsNothing);
   });
 }

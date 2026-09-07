@@ -34,6 +34,10 @@ class GridPersonTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [
+          // The name below is a fixed single line, so the avatar absorbs
+          // whatever height is left and stays the same size on every tile. A
+          // fixed square here overflowed by ~1px at normal text size, and far
+          // worse under accessibility text scaling.
           Expanded(
             child: Center(
               child: AspectRatio(

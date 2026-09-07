@@ -80,10 +80,15 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         myClockState: StaffClockState.notClockedIn,
       );
     }
-    final children = await ref.read(childControllerProvider).fetchForTeacher(user.id);
-    final records = await ref.read(attendanceControllerProvider).fetchForDate(_today);
-    final coTeachers = await ref.read(teacherControllerProvider).fetchCoTeachers(user.id);
-    final staffRows = await ref.read(staffAttendanceControllerProvider).fetchForDate(_today);
+    // All four fetches only need user.id, so run them concurrently rather than
+    // awaiting one after another (the design doc's Data-flow section: "in
+    // parallel"). Record-of-futures `.wait` keeps each result's own type.
+    final (children, records, coTeachers, staffRows) = await (
+      ref.read(childControllerProvider).fetchForTeacher(user.id),
+      ref.read(attendanceControllerProvider).fetchForDate(_today),
+      ref.read(teacherControllerProvider).fetchCoTeachers(user.id),
+      ref.read(staffAttendanceControllerProvider).fetchForDate(_today),
+    ).wait;
 
     StaffAttendance? mine;
     for (final r in staffRows) {
@@ -291,7 +296,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                 return const Center(child: AppLoader());
               }
               final data = snapshot.data!;
-              final me = data.teachers.isEmpty ? null : data.teachers.first;
               final filteredChildren = data.children
                   .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
                   .toList();
@@ -314,13 +318,15 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                       gridDelegate: gridDelegate,
                       delegate: SliverChildBuilderDelegate(
                         (context, i) {
+                          // This grid only builds when data.teachers is
+                          // non-empty, and its first entry is always the
+                          // signed-in user (see _load), so `me` is safe here.
+                          final me = data.teachers.first;
                           final t = data.teachers[i];
                           return StaffGridTile(
                             teacher: t,
-                            clockState: (me != null && t.id == me.id)
-                                ? data.myClockState
-                                : null,
-                            onTap: () => _openTeacher(me!, t),
+                            clockState: t.id == me.id ? data.myClockState : null,
+                            onTap: () => _openTeacher(me, t),
                           );
                         },
                         childCount: data.teachers.length,

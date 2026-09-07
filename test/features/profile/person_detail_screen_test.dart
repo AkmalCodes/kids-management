@@ -55,12 +55,13 @@ AppUser _teacherWithHr() => AppUser(
   updatedBy: 'director-1',
 );
 
+// Mirrors what TeacherController.fetchCoTeachers actually returns: identity
+// only, no email in the projection and an empty phone.
 AppUser _peerTeacher() => AppUser(
   id: 'teacher-2',
   role: 'teacher',
   name: 'Ms. Johnson',
-  phone: '555-0101',
-  email: 'johnson@example.com',
+  phone: '',
   centerId: 'center-1',
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),

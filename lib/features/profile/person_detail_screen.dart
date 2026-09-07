@@ -268,8 +268,12 @@ class _PersonDetailScreenState extends ConsumerState<PersonDetailScreen> {
               ),
             Center(child: Chip(label: Text(roleLabel), side: BorderSide.none)),
             const SizedBox(height: 16),
-            // Email is always read-only (login identity), tap to copy.
-            _readOnlyRow(context, label: 'Login email', value: email, copyable: true),
+            // Email is always read-only (login identity), tap to copy. Gated
+            // like the other rows: in readOnly mode a co-teacher's email is
+            // absent from fetchCoTeachers' projection, so drop the row rather
+            // than render "Not provided" noise.
+            if (!widget.readOnly || email.isNotEmpty)
+              _readOnlyRow(context, label: 'Login email', value: email, copyable: true),
             EditableField(
               label: 'Name',
               controller: _nameController,
