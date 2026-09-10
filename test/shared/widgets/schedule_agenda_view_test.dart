@@ -137,11 +137,20 @@ void main() {
     // _anchor is a fixed injected "today"; put the once entry on a visible day.
     final onceEntry = _entry('once-1', 'Monday', '10:00', '11:00', 'One-off',
         recurrence: 'once', anchorDate: _anchor);
+    // A second once entry whose anchor is well outside the visible week. Its
+    // day field ('Monday') matches visible Monday the 13th, so a once->weekly
+    // fallback bug would render it there; a correct 'once' rule must not.
+    final farOnceEntry = _entry(
+        'once-2', 'Monday', '12:00', '13:00', 'Far-off',
+        recurrence: 'once', anchorDate: _anchor.add(const Duration(days: 30)));
     await tester.pumpWidget(
-      _wrap(ScheduleAgendaView(entries: [onceEntry], anchorDate: _anchor)),
+      _wrap(ScheduleAgendaView(
+          entries: [onceEntry, farOnceEntry], anchorDate: _anchor)),
     );
     // Week view (default): shows exactly once, on the _anchor day.
     expect(find.text('One-off'), findsOneWidget);
+    // The out-of-week once entry must not appear at all.
+    expect(find.text('Far-off'), findsNothing);
   });
 
   testWidgets('daily entry shows on all five weekday rows in week view',

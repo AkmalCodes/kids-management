@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/models/app_user.dart';
+import 'app_dropdown_field.dart';
 
 // A form control for assigning teachers to a class: the current selection as
 // deletable chips, plus an "Add teacher" dropdown of the teachers not yet
@@ -56,70 +57,32 @@ class TeacherMultiSelect extends StatelessWidget {
             ],
           ),
         const SizedBox(height: 8),
-        // Measure the field's width via GlobalKey and post-frame callback to
-        // pass it to DropdownButton.menuWidth. This makes the popup menu match
-        // the field width instead of overhanging it. GlobalKey avoids the
-        // "does not support returning intrinsic dimensions" error from
+        // Measure the field's width and pass it to DropdownButton.menuWidth so
+        // the popup menu matches the field width instead of overhanging it.
+        // FieldWidthDropdown (shared with AppDropdownField) uses a GlobalKey +
+        // post-frame callback, which avoids the "does not support returning
+        // intrinsic dimensions" error a LayoutBuilder throws inside
         // AlertDialog's IntrinsicWidth measurement.
-        _TeacherDropdownMeasurer(
-          onChanged: onChanged,
-          selectedIds: selectedIds,
-          unselected: unselected,
+        FieldWidthDropdown<String>(
+          build: (context, menuWidth) => DropdownButton<String>(
+            isExpanded: true,
+            menuWidth: menuWidth,
+            hint: const Text('Add teacher'),
+            value: null,
+            items: [
+              for (final t in unselected)
+                DropdownMenuItem(value: t.id, child: Text(t.name)),
+            ],
+            onChanged: unselected.isEmpty
+                ? null
+                : (id) {
+                    if (id != null) {
+                      onChanged([...selectedIds, id]);
+                    }
+                  },
+          ),
         ),
       ],
     );
   }
-}
-
-// Measures the dropdown's width and passes it to DropdownButton.menuWidth.
-class _TeacherDropdownMeasurer extends StatefulWidget {
-  const _TeacherDropdownMeasurer({
-    required this.onChanged,
-    required this.selectedIds,
-    required this.unselected,
-  });
-
-  final ValueChanged<List<String>> onChanged;
-  final List<String> selectedIds;
-  final List<AppUser> unselected;
-
-  @override
-  State<_TeacherDropdownMeasurer> createState() =>
-      _TeacherDropdownMeasurerState();
-}
-
-class _TeacherDropdownMeasurerState extends State<_TeacherDropdownMeasurer> {
-  final _key = GlobalKey();
-  double? _width;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final w = _key.currentContext?.size?.width;
-      if (w != null && w != _width && mounted) setState(() => _width = w);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => KeyedSubtree(
-        key: _key,
-        child: DropdownButton<String>(
-          isExpanded: true,
-          menuWidth: _width,
-          hint: const Text('Add teacher'),
-          value: null,
-          items: [
-            for (final t in widget.unselected)
-              DropdownMenuItem(value: t.id, child: Text(t.name)),
-          ],
-          onChanged: widget.unselected.isEmpty
-              ? null
-              : (id) {
-                  if (id != null) {
-                    widget.onChanged([...widget.selectedIds, id]);
-                  }
-                },
-        ),
-      );
 }
