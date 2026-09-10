@@ -6,6 +6,7 @@ import '../../../core/models/child.dart';
 import '../../../core/controllers/child_controller.dart';
 import '../../../core/controllers/teacher_controller.dart';
 import '../../../core/controllers/user_management_controller.dart';
+import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
 
 // One form covers both halves of "enroll a child": the child record itself,
@@ -147,10 +148,8 @@ class _EnrollChildScreenState extends ConsumerState<EnrollChildScreen> {
               future: _teachersFuture,
               builder: (context, snapshot) {
                 final teachers = snapshot.data ?? [];
-                return DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
-                  initialValue: _selectedTeacherId,
+                return AppDropdownField<String>(
+                  value: _selectedTeacherId,
                   decoration: const InputDecoration(labelText: 'Teacher (optional)'),
                   items: [
                     for (final teacher in teachers)

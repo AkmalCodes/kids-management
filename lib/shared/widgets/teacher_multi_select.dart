@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/models/app_user.dart';
+import 'app_dropdown_field.dart';
 
 // A form control for assigning teachers to a class: the current selection as
 // deletable chips, plus an "Add teacher" dropdown of the teachers not yet
@@ -56,19 +57,28 @@ class TeacherMultiSelect extends StatelessWidget {
             ],
           ),
         const SizedBox(height: 8),
-        DropdownButton<String>(
-          isExpanded: true,
-          hint: const Text('Add teacher'),
-          value: null,
-          items: [
-            for (final t in unselected)
-              DropdownMenuItem(value: t.id, child: Text(t.name)),
-          ],
-          onChanged: unselected.isEmpty
-              ? null
-              : (id) {
-                  if (id != null) onChanged([...selectedIds, id]);
-                },
+        // MenuWidthBuilder feeds the field's own width to the popup menu so it
+        // matches the control instead of overhanging it (same trick as
+        // AppDropdownField; this one is a bare DropdownButton, not a FormField).
+        // MenuWidthBuilder rather than a bare LayoutBuilder because this control
+        // renders inside class_form_dialog's AlertDialog, which measures its
+        // content's intrinsic width -- a plain LayoutBuilder throws on that.
+        MenuWidthBuilder(
+          builder: (context, constraints) => DropdownButton<String>(
+            isExpanded: true,
+            menuWidth: constraints.maxWidth,
+            hint: const Text('Add teacher'),
+            value: null,
+            items: [
+              for (final t in unselected)
+                DropdownMenuItem(value: t.id, child: Text(t.name)),
+            ],
+            onChanged: unselected.isEmpty
+                ? null
+                : (id) {
+                    if (id != null) onChanged([...selectedIds, id]);
+                  },
+          ),
         ),
       ],
     );

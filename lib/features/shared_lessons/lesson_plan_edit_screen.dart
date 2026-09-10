@@ -9,6 +9,7 @@ import '../../core/controllers/lesson_plan_controller.dart';
 import '../../core/controllers/subject_controller.dart';
 import '../../shared/widgets/editable_field.dart';
 import '../../shared/widgets/lesson_plan_status_chip.dart';
+import '../../shared/widgets/app_dropdown_field.dart';
 import '../../shared/widgets/app_loader.dart';
 
 // Create/edit/review one lesson plan. Shared by teachers and directors:
@@ -264,10 +265,8 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
                 final ids = subjects.map((s) => s.id).toSet();
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: DropdownButtonFormField<String?>(
-                    isExpanded: true,
-                    borderRadius: BorderRadius.circular(16),
-                    initialValue:
+                  child: AppDropdownField<String?>(
+                    value:
                         (_subjectId != null && ids.contains(_subjectId)) ? _subjectId : null,
                     decoration: const InputDecoration(labelText: 'Subject'),
                     items: [
@@ -298,10 +297,8 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
                 final ids = classes.map((c) => c.id).toSet();
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: DropdownButtonFormField<String?>(
-                    isExpanded: true,
-                    borderRadius: BorderRadius.circular(16),
-                    initialValue: (_classId != null && ids.contains(_classId)) ? _classId : null,
+                  child: AppDropdownField<String?>(
+                    value: (_classId != null && ids.contains(_classId)) ? _classId : null,
                     decoration: const InputDecoration(labelText: 'Class'),
                     items: [
                       const DropdownMenuItem(value: null, child: Text('None')),

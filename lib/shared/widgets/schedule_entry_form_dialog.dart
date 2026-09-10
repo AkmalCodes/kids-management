@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/schedule_colors.dart';
 import '../../core/models/schedule.dart';
+import 'app_dropdown_field.dart';
 
 sealed class ScheduleEntryFormResult {}
 
@@ -211,10 +212,8 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
             // How often the event repeats. Defaults to 'weekly' (unchanged
             // behaviour). The anchor date is fixed by the caller — this only
             // picks the frequency; the helper text spells out the concrete rule.
-            DropdownButtonFormField<String>(
-              isExpanded: true,
-              borderRadius: BorderRadius.circular(16),
-              initialValue: _recurrence,
+            AppDropdownField<String>(
+              value: _recurrence,
               decoration: const InputDecoration(labelText: 'Repeats'),
               items: const [
                 DropdownMenuItem(value: 'once', child: Text('Once')),
@@ -234,10 +233,8 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
             // class); its subject then appears on the event.
             if (widget.lessonPlans.isNotEmpty) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                isExpanded: true,
-                borderRadius: BorderRadius.circular(16),
-                initialValue: _lessonPlanId,
+              AppDropdownField<String?>(
+                value: _lessonPlanId,
                 decoration: const InputDecoration(labelText: 'Lesson plan'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('None')),

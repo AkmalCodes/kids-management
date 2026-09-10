@@ -128,16 +128,6 @@ class AppTheme {
         side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
       ),
-
-      // Round the dropdown popup menu so open dropdowns match the app's
-      // rounded, filled inputs.
-      dropdownMenuTheme: DropdownMenuThemeData(
-        menuStyle: MenuStyle(
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
-          ),
-        ),
-      ),
     );
   }
 }

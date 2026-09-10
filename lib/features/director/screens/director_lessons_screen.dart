@@ -8,6 +8,7 @@ import '../../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
 import 'manage_subjects_screen.dart';
+import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
 
 // Director's Lessons tab: browse every teacher's lesson plans, filter by
@@ -192,10 +193,8 @@ class _FilterBar extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String?>(
-                  initialValue: teacherFilter,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
+                child: AppDropdownField<String?>(
+                  value: teacherFilter,
                   decoration: const InputDecoration(labelText: 'Teacher', isDense: true),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All teachers')),
@@ -207,10 +206,8 @@ class _FilterBar extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: DropdownButtonFormField<LessonPlanStatus?>(
-                  initialValue: statusFilter,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
+                child: AppDropdownField<LessonPlanStatus?>(
+                  value: statusFilter,
                   decoration: const InputDecoration(labelText: 'Status', isDense: true),
                   items: const [
                     DropdownMenuItem(value: null, child: Text('All statuses')),

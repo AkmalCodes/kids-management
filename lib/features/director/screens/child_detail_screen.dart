@@ -14,6 +14,7 @@ import '../../../shared/widgets/avatar_preview.dart';
 import '../../../shared/widgets/avatar_source_sheet.dart';
 import '../../../shared/widgets/editable_field.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
 
 // Director-only view/edit of a single child's details. Reached by tapping a
@@ -266,10 +267,8 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                   return _readOnlyRow(context, label: 'Class', value: name);
                 }
                 final ids = classes.map((c) => c.id).toSet();
-                return DropdownButtonFormField<String?>(
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
-                  initialValue: (_classId != null && ids.contains(_classId)) ? _classId : null,
+                return AppDropdownField<String?>(
+                  value: (_classId != null && ids.contains(_classId)) ? _classId : null,
                   decoration: const InputDecoration(
                     labelText: 'Class',
                     helperText: 'Drives the schedule the parent sees',
@@ -301,10 +300,8 @@ class _ChildDetailScreenState extends ConsumerState<ChildDetailScreen> {
                 // Keep the current teacher selectable even before the list
                 // loads / if they aren't in the fetched set.
                 final ids = teachers.map((t) => t.id).toSet();
-                return DropdownButtonFormField<String?>(
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
-                  initialValue: (_teacherId != null && ids.contains(_teacherId)) ? _teacherId : null,
+                return AppDropdownField<String?>(
+                  value: (_teacherId != null && ids.contains(_teacherId)) ? _teacherId : null,
                   decoration: const InputDecoration(labelText: 'Class teacher'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Unassigned')),

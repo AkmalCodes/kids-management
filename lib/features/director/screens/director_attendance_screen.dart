@@ -10,6 +10,7 @@ import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
+import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
 
 class DirectorAttendanceScreen extends ConsumerStatefulWidget {
@@ -199,10 +200,8 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
               // Class filter (all classes by default).
               final classFilterBar = Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: DropdownButtonFormField<String?>(
-                  initialValue: _classFilter,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
+                child: AppDropdownField<String?>(
+                  value: _classFilter,
                   decoration: const InputDecoration(labelText: 'Class', isDense: true),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All classes')),
