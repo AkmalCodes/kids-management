@@ -3,6 +3,8 @@
 **Date:** 2026-09-07
 **Status:** implemented 2026-09-07
 
+> **Revised 2026-09-10:** monthly and annually were removed and a single-occurrence "once" was added. The monthly/annual + leap-year sections below are retained only as history of removed code — they no longer describe the shipped behaviour.
+
 ## Problem
 
 Every `schedule_entries` row is a **weekly** recurring pattern: a weekday name

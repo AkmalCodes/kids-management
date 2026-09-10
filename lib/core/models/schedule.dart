@@ -14,14 +14,11 @@ class ScheduleEntry {
   final String endTime;
   final String label;
   final String color; // bare 6-digit hex, e.g. '26A69A' — see displayColor
-  // How often this event repeats: 'daily' (weekdays) | 'weekly' | 'monthly' |
-  // 'annually'. Defaults to 'weekly' — the only recurrence that existed before,
-  // and still the one driven by `day`. The occurrence rule lives in
-  // scheduleEntryOccursOn (lib/shared/util/schedule_recurrence.dart).
+  // How often this event repeats: 'once' | 'daily' | 'weekly'. Defaults to 'weekly'.
+  // The occurrence rule lives in scheduleEntryOccursOn (lib/shared/util/schedule_recurrence.dart).
   final String recurrence;
-  // The calendar date the monthly/annual rule is measured from (its
-  // day-of-month for monthly; its month + day for annually). null for
-  // daily/weekly and for every pre-recurrence row.
+  // The calendar date the 'once' rule occurs on. null for daily/weekly entries
+  // (it's ignored for those recurrences).
   final DateTime? anchorDate;
   // Optional approved lesson plan attached to this event (§6.5). Its subject
   // shows on the event; tapping opens the plan. null = no plan attached.

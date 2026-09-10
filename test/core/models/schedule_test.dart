@@ -81,10 +81,10 @@ void main() {
     group('recurrence + anchorDate', () {
       test('fromJson reads recurrence and anchor_date when present', () {
         final withRecurrence = Map<String, dynamic>.from(json)
-          ..['recurrence'] = 'monthly'
+          ..['recurrence'] = 'once'
           ..['anchor_date'] = '2026-01-31';
         final entry = ScheduleEntry.fromJson(withRecurrence);
-        expect(entry.recurrence, 'monthly');
+        expect(entry.recurrence, 'once');
         expect(entry.anchorDate, DateTime(2026, 1, 31));
       });
 
@@ -106,10 +106,10 @@ void main() {
 
       test('toJson round-trips recurrence and anchor_date (date-only string)', () {
         final source = Map<String, dynamic>.from(json)
-          ..['recurrence'] = 'annually'
+          ..['recurrence'] = 'daily'
           ..['anchor_date'] = '2024-02-29';
         final out = ScheduleEntry.fromJson(source).toJson();
-        expect(out['recurrence'], 'annually');
+        expect(out['recurrence'], 'daily');
         expect(out['anchor_date'], '2024-02-29');
       });
 

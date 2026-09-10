@@ -1,7 +1,7 @@
 # Schedule / UI fixes — design
 
 **Date:** 2026-09-10
-**Status:** approved, not yet implemented
+**Status:** implemented 2026-09-10
 
 ## Problem
 
