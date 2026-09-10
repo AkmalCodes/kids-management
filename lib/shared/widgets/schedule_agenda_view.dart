@@ -10,15 +10,11 @@ import '../util/schedule_recurrence.dart';
 // days. A header button toggles between the current week and the whole
 // month. Tapping a day pushes DayScheduleScreen with that day's timetable.
 //
-// Entries support four recurrence frequencies, determined by the `recurrence`
+// Entries support three recurrence frequencies, determined by the `recurrence`
 // field and interpreted by scheduleEntryOccursOn:
+// - once: shows only on its anchor date
 // - daily: shows on all weekdays (Monday–Friday)
 // - weekly: shows on the weekday matching `day` (e.g., 'Monday')
-// - monthly: shows on the day-of-month matching the anchor date, or the last
-//   day of the month if the anchor day doesn't exist (e.g., 31st Jan anchor
-//   shows on the last day of February)
-// - annually: shows on the month+day matching the anchor date, with 29-Feb
-//   anchors falling back to 28 Feb in non-leap years
 // Each calendar date shows the entries whose recurrence rule matches it.
 class ScheduleAgendaView extends ConsumerStatefulWidget {
   const ScheduleAgendaView({

@@ -421,7 +421,7 @@ void main() {
         ));
   });
 
-  testWidgets('creating an event with Monthly recurrence passes monthly + screen date to createEntry',
+  testWidgets('creating an event with Once recurrence passes once + screen date to createEntry',
       (tester) async {
     when(() => mockService.createEntry(
           type: any(named: 'type'),
@@ -435,7 +435,7 @@ void main() {
           recurrence: any(named: 'recurrence'),
           anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
-        )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'Monthly Event', recurrence: 'monthly', anchorDate: _monday));
+        )).thenAnswer((_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'One-off Event', recurrence: 'once', anchorDate: _monday));
 
     await pumpScreen(tester, entries: const [], viewerId: 'teacher-1', editable: true);
 
@@ -443,11 +443,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Create Event'), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField), 'Monthly Event');
-    // Change recurrence from Weekly to Monthly
+    await tester.enterText(find.byType(TextFormField), 'One-off Event');
+    // Change recurrence from Weekly to Once
     await tester.tap(find.text('Weekly'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Monthly').last);
+    await tester.tap(find.text('Once'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
@@ -459,22 +459,22 @@ void main() {
           day: 'Monday',
           startTime: any(named: 'startTime'),
           endTime: any(named: 'endTime'),
-          label: 'Monthly Event',
+          label: 'One-off Event',
           color: any(named: 'color'),
-          recurrence: 'monthly',
+          recurrence: 'once',
           anchorDate: _monday,
           actorUid: 'teacher-1',
         )).called(1);
   });
 
-  testWidgets('editing a monthly entry preserves its original anchorDate, not the viewed date',
+  testWidgets('editing a once entry preserves its original anchorDate, not the viewed date',
       (tester) async {
-    // Real clamp path: anchor is the 31st, viewed date is the 13th (different day-of-month).
+    // Real path: anchor is the 31st Jan, viewed date is the 13th Jul (different day-of-month).
     final anchorDate = DateTime(2026, 1, 31);
     final entry = _entry(
       id: 'entry-1',
       createdBy: 'teacher-1',
-      recurrence: 'monthly',
+      recurrence: 'once',
       anchorDate: anchorDate,
     );
     when(() => mockService.updateEntry(
@@ -488,7 +488,7 @@ void main() {
           anchorDate: any(named: 'anchorDate'),
           actorUid: any(named: 'actorUid'),
         )).thenAnswer(
-      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'monthly', anchorDate: anchorDate),
+      (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'once', anchorDate: anchorDate),
     );
 
     await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
@@ -509,7 +509,7 @@ void main() {
           endTime: '09:00',
           label: 'Art',
           color: any(named: 'color'),
-          recurrence: 'monthly',
+          recurrence: 'once',
           anchorDate: DateTime(2026, 1, 31),
           actorUid: 'teacher-1',
         )).called(1);

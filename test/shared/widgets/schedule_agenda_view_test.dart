@@ -133,63 +133,15 @@ void main() {
     expect(decoration.color, const Color(0xFF26A69A));
   });
 
-  testWidgets('monthly entry shows on exactly one day row in month view',
-      (tester) async {
-    // Anchor day 3; near the top of July, so no scrolling needed to see it and neighbours.
-    final entries = [
-      _entry(
-        'entry-monthly',
-        'Friday', // day field is unused for monthly, but required
-        '10:00',
-        '11:00',
-        'Monthly Meeting',
-        recurrence: 'monthly',
-        anchorDate: DateTime(2026, 7, 3),
-      ),
-    ];
+  testWidgets('a once entry shows only on its anchor date', (tester) async {
+    // _anchor is a fixed injected "today"; put the once entry on a visible day.
+    final onceEntry = _entry('once-1', 'Monday', '10:00', '11:00', 'One-off',
+        recurrence: 'once', anchorDate: _anchor);
     await tester.pumpWidget(
-      _wrap(ScheduleAgendaView(entries: entries, anchorDate: _anchor)),
+      _wrap(ScheduleAgendaView(entries: [onceEntry], anchorDate: _anchor)),
     );
-
-    // Switch to month view (July 2026).
-    await tester.tap(find.byTooltip('Month view'));
-    await tester.pumpAndSettle();
-
-    // The entry should appear exactly once (no scrolling needed).
-    expect(find.text('Monthly Meeting'), findsOneWidget);
-    // Verify that other days near the anchor are empty.
-    expect(find.text('No events'), findsWidgets); // Multiple empty rows exist
-  });
-
-  testWidgets('annually entry on Feb 29 shows on Feb 28 in common year',
-      (tester) async {
-    // Anchor on Feb 29, 2024 (a leap year).
-    // When we view February 2026 (a common year), it should show on the 28th.
-    final entries = [
-      _entry(
-        'entry-annual',
-        'Thursday', // day field is unused for annual
-        '14:00',
-        '15:00',
-        'Annual Celebration',
-        recurrence: 'annually',
-        anchorDate: DateTime(2024, 2, 29),
-      ),
-    ];
-    // Inject an anchor date in February 2026 (a common year: 28 days).
-    await tester.pumpWidget(
-      _wrap(ScheduleAgendaView(entries: entries, anchorDate: DateTime(2026, 2, 15))),
-    );
-
-    // Switch to month view (February 2026).
-    await tester.tap(find.byTooltip('Month view'));
-    await tester.pumpAndSettle();
-
-    // Scroll to the 28th to ensure it's rendered (ListView is lazy).
-    await tester.scrollUntilVisible(find.text('28'), 200);
-
-    // The entry should appear exactly once, on the 28th.
-    expect(find.text('Annual Celebration'), findsOneWidget);
+    // Week view (default): shows exactly once, on the _anchor day.
+    expect(find.text('One-off'), findsOneWidget);
   });
 
   testWidgets('daily entry shows on all five weekday rows in week view',
