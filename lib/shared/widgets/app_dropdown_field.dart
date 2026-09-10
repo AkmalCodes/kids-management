@@ -1,11 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+
+// A StatefulWidget that measures its width via GlobalKey after the first frame
+// and passes it to a builder. Used by AppDropdownField and TeacherMultiSelect
+// to measure the field's width for DropdownButton.menuWidth.
+//
+// menuWidth is null on the first frame, then set to the measured width after
+// layout. This is safe: DropdownButton accepts null menuWidth, and by the time
+// the user taps to open the menu, the post-frame callback has set the real width.
+//
+// Why this widget exists: a vanilla LayoutBuilder throws "does not support
+// returning intrinsic dimensions" whenever an ancestor measures its intrinsic
+// size. AlertDialog does exactly that -- it wraps its content in an
+// IntrinsicWidth -- so an AppDropdownField or DropdownButton placed inside a
+// dialog would crash. GlobalKey avoids that entirely.
+class _FieldWidthDropdown<T> extends StatefulWidget {
+  const _FieldWidthDropdown({required this.build});
+
+  // build(context, menuWidth) returns the DropdownButton; menuWidth is null
+  // on the first frame, then the measured field width.
+  final Widget Function(BuildContext, double?) build;
+
+  @override
+  State<_FieldWidthDropdown<T>> createState() => _FieldWidthDropdownState<T>();
+}
+
+class _FieldWidthDropdownState<T> extends State<_FieldWidthDropdown<T>> {
+  final _key = GlobalKey();
+  double? _width;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final w = _key.currentContext?.size?.width;
+      if (w != null && w != _width && mounted) setState(() => _width = w);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      KeyedSubtree(key: _key, child: widget.build(context, _width));
+}
 
 // A DropdownButtonFormField replacement whose popup menu is exactly the
 // width of the input field. DropdownButtonFormField gives its menu no
 // explicit width, so Flutter sizes it to the button box (plus a start/end
 // margin) and it overhangs the field. A plain DropdownButton accepts
-// `menuWidth`; we feed it the field's own width from a MenuWidthBuilder.
+// `menuWidth`; we feed it the field's own width from _FieldWidthDropdown.
 class AppDropdownField<T> extends StatelessWidget {
   const AppDropdownField({
     super.key,
@@ -36,10 +77,10 @@ class AppDropdownField<T> extends StatelessWidget {
         return InputDecorator(
           decoration: effective,
           isEmpty: field.value == null,
-          child: MenuWidthBuilder(
-            builder: (context, constraints) => DropdownButton<T>(
+          child: _FieldWidthDropdown<T>(
+            build: (context, menuWidth) => DropdownButton<T>(
               isExpanded: true,
-              menuWidth: constraints.maxWidth,
+              menuWidth: menuWidth,
               borderRadius: BorderRadius.circular(borderRadius),
               value: field.value,
               items: items,
@@ -54,95 +95,5 @@ class AppDropdownField<T> extends StatelessWidget {
         );
       },
     );
-  }
-}
-
-// A LayoutBuilder that also answers intrinsic-dimension queries instead of
-// throwing on them.
-//
-// Why this exists: the vanilla LayoutBuilder throws
-// "LayoutBuilder does not support returning intrinsic dimensions" whenever an
-// ancestor measures its intrinsic size. AlertDialog does exactly that -- it
-// wraps its content in an IntrinsicWidth -- so an AppDropdownField (or the
-// teacher-picker DropdownButton, which uses this too) placed inside a dialog
-// would crash the whole subtree.
-//
-// It is safe to answer those queries here: the builder is only used to pass
-// the field's width to DropdownButton.menuWidth, which sizes the *popup
-// overlay*, never the button box. So the child's intrinsic size does not
-// depend on the constraints the builder is called with, and delegating the
-// query straight to the child gives the right answer.
-class MenuWidthBuilder extends ConstrainedLayoutBuilder<BoxConstraints> {
-  const MenuWidthBuilder({super.key, required super.builder});
-
-  @override
-  RenderAbstractLayoutBuilderMixin<BoxConstraints, RenderBox> createRenderObject(
-    BuildContext context,
-  ) => _RenderMenuWidthBuilder();
-}
-
-class _RenderMenuWidthBuilder extends RenderBox
-    with
-        RenderObjectWithChildMixin<RenderBox>,
-        RenderObjectWithLayoutCallbackMixin,
-        RenderAbstractLayoutBuilderMixin<BoxConstraints, RenderBox> {
-  // The only deviation from Flutter's private _RenderLayoutBuilder: these four
-  // delegate to the child rather than throwing. See MenuWidthBuilder's note.
-  @override
-  double computeMinIntrinsicWidth(double height) =>
-      child?.getMinIntrinsicWidth(height) ?? 0.0;
-
-  @override
-  double computeMaxIntrinsicWidth(double height) =>
-      child?.getMaxIntrinsicWidth(height) ?? 0.0;
-
-  @override
-  double computeMinIntrinsicHeight(double width) =>
-      child?.getMinIntrinsicHeight(width) ?? 0.0;
-
-  @override
-  double computeMaxIntrinsicHeight(double width) =>
-      child?.getMaxIntrinsicHeight(width) ?? 0.0;
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) {
-    assert(
-      debugCannotComputeDryLayout(
-        reason: 'Calculating the dry layout would require running the layout '
-            'callback speculatively, which might mutate the live render object tree.',
-      ),
-    );
-    return Size.zero;
-  }
-
-  @override
-  void performLayout() {
-    final BoxConstraints constraints = this.constraints;
-    runLayoutCallback();
-    if (child != null) {
-      child!.layout(constraints, parentUsesSize: true);
-      size = constraints.constrain(child!.size);
-    } else {
-      size = constraints.biggest;
-    }
-  }
-
-  @override
-  double? computeDistanceToActualBaseline(TextBaseline baseline) {
-    return child?.getDistanceToActualBaseline(baseline) ??
-        super.computeDistanceToActualBaseline(baseline);
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    return child?.hitTest(result, position: position) ?? false;
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    final RenderBox? child = this.child;
-    if (child != null) {
-      context.paintChild(child, offset);
-    }
   }
 }

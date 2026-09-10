@@ -51,9 +51,11 @@ void main() {
   testWidgets('the built DropdownButton menuWidth equals the field width',
       (tester) async {
     await _pump(tester, value: 'a', width: 280);
+    // Pump once more so the post-frame callback runs and the width is measured.
+    await tester.pump();
     final btn = tester.widget<DropdownButton<String>>(find.byType(DropdownButton<String>));
     // The field is 280 wide minus the InputDecorator content padding; assert
-    // the menu tracks the LayoutBuilder width, i.e. it is set and < 280.
+    // the menu tracks the measured width, i.e. it is set and < 280.
     expect(btn.menuWidth, isNotNull);
     expect(btn.menuWidth! <= 280 && btn.menuWidth! > 0, isTrue);
   });
