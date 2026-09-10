@@ -68,9 +68,10 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
       title: Text(widget.title),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Class name'),
@@ -83,6 +84,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
               onChanged: (ids) => setState(() => _teacherIds = ids),
             ),
           ],
+        ),
         ),
       ),
       actions: [

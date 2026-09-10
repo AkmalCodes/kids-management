@@ -276,4 +276,21 @@ void main() {
 
     expect(find.text('Repeats every Monday'), findsOneWidget);
   });
+
+  testWidgets('does not overflow when the viewport is short (keyboard up)',
+      (tester) async {
+    tester.view.physicalSize = const Size(1000, 900); // short: ~keyboard open
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.descendant(of: find.byType(AlertDialog), matching: find.byType(SingleChildScrollView)),
+      findsOneWidget,
+    );
+  });
 }

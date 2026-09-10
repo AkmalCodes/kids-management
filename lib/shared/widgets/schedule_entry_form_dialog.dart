@@ -185,10 +185,11 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
       title: Text(isEditing ? 'Edit Event' : 'Create Event'),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             TextFormField(
               controller: _labelController,
               decoration: const InputDecoration(labelText: 'Event name'),
@@ -262,6 +263,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               ],
             ),
           ],
+        ),
         ),
       ),
       actions: [

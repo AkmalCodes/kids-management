@@ -60,9 +60,10 @@ class _PersonInviteDialogState extends State<_PersonInviteDialog> {
       title: Text(widget.title),
       content: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
@@ -87,6 +88,7 @@ class _PersonInviteDialogState extends State<_PersonInviteDialog> {
               decoration: const InputDecoration(labelText: 'Phone (optional)'),
             ),
           ],
+        ),
         ),
       ),
       actions: [
