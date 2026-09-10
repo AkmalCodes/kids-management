@@ -18,9 +18,9 @@ class ScheduleEntrySaved extends ScheduleEntryFormResult {
   final String endTime;
   final String label;
   final String color;
-  // One of 'daily' / 'weekly' / 'monthly' / 'annually'.
+  // One of 'once' / 'daily' / 'weekly'.
   final String recurrence;
-  // The calendar date the monthly/annual rule is measured from. The dialog
+  // The calendar date the recurrence rule is measured from. The dialog
   // has no UI to change it — it echoes back the anchor it was handed.
   final DateTime anchorDate;
   // The approved lesson plan attached to this event, or null for none.
@@ -45,15 +45,10 @@ String _monthName(int month) => _monthNames[month - 1];
 // For weekly, prefers the entry's own day (when editing) over the anchor's weekday.
 String _recurrenceHelp(String recurrence, DateTime anchor, {String? day}) {
   switch (recurrence) {
+    case 'once':
+      return 'Occurs once on ${anchor.day} ${_monthName(anchor.month)} ${anchor.year}';
     case 'daily':
       return 'Repeats every weekday';
-    case 'monthly':
-      return 'Repeats on day ${anchor.day} each month (the last day in shorter months)';
-    case 'annually':
-      if (anchor.month == 2 && anchor.day == 29) {
-        return 'Repeats every 29 Feb (28 Feb in non-leap years)';
-      }
-      return 'Repeats every ${anchor.day} ${_monthName(anchor.month)}';
     case 'weekly':
     default:
       // Use the entry's own day if provided (when editing); else fall back to anchor's weekday.
@@ -117,7 +112,7 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   late String _selectedColor;
-  // 'daily' / 'weekly' / 'monthly' / 'annually'. Seeded from the edited entry,
+  // 'once' / 'daily' / 'weekly'. Seeded from the edited entry,
   // else 'weekly' so an untouched dialog keeps today's behaviour.
   late String _recurrence;
   String? _lessonPlanId;
@@ -221,10 +216,9 @@ class _ScheduleEntryFormDialogState extends State<_ScheduleEntryFormDialog> {
               initialValue: _recurrence,
               decoration: const InputDecoration(labelText: 'Repeats'),
               items: const [
+                DropdownMenuItem(value: 'once', child: Text('Once')),
                 DropdownMenuItem(value: 'daily', child: Text('Daily')),
                 DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
-                DropdownMenuItem(value: 'annually', child: Text('Annually')),
               ],
               onChanged: (v) => setState(() => _recurrence = v!),
             ),

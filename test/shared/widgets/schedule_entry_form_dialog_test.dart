@@ -194,19 +194,16 @@ void main() {
 
   testWidgets('edit mode seeds Repeats from the entry recurrence', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(home: _Harness(existing: _entry(recurrence: 'monthly'))),
+      MaterialApp(home: _Harness(existing: _entry(recurrence: 'once'))),
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Monthly'), findsOneWidget);
-    expect(
-      find.text('Repeats on day 9 each month (the last day in shorter months)'),
-      findsOneWidget,
-    );
+    expect(find.text('Once'), findsOneWidget);
+    expect(find.text('Occurs once on 9 Sep 2026'), findsOneWidget);
   });
 
-  testWidgets('helper text switches from weekly to monthly when the dropdown changes',
+  testWidgets('helper text switches from weekly to daily when the dropdown changes',
       (tester) async {
     await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
@@ -216,17 +213,14 @@ void main() {
 
     await tester.tap(find.text('Weekly'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Monthly').last);
+    await tester.tap(find.text('Daily'));
     await tester.pumpAndSettle();
 
     expect(find.text('Repeats every Wednesday'), findsNothing);
-    expect(
-      find.text('Repeats on day 9 each month (the last day in shorter months)'),
-      findsOneWidget,
-    );
+    expect(find.text('Repeats every weekday'), findsOneWidget);
   });
 
-  testWidgets('selecting Monthly then Save returns recurrence and anchorDate', (tester) async {
+  testWidgets('selecting Once then Save returns recurrence and anchorDate', (tester) async {
     await tester.pumpWidget(MaterialApp(home: _Harness()));
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
@@ -234,12 +228,12 @@ void main() {
     await tester.enterText(find.byType(TextFormField), 'Music');
     await tester.tap(find.text('Weekly'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Monthly').last);
+    await tester.tap(find.text('Once'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('recurrence:monthly'), findsOneWidget);
+    expect(find.text('recurrence:once'), findsOneWidget);
     expect(find.text('anchor:${DateTime(2026, 9, 9).toIso8601String()}'), findsOneWidget);
   });
 
@@ -253,6 +247,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('recurrence:weekly'), findsOneWidget);
+  });
+
+  testWidgets('selecting Once shows correct helper text', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: _Harness()));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Weekly'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Once'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Occurs once on 9 Sep 2026'), findsOneWidget);
   });
 
   testWidgets('editing weekly entry shows its own day in helper text', (tester) async {
