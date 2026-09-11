@@ -48,16 +48,23 @@ void main() {
     expect(find.text('Banana'), findsOneWidget);
   });
 
-  testWidgets('the built DropdownButton menuWidth equals the field width',
+  testWidgets(
+      'the open popup menu matches the field width and left edge exactly '
+      '(the actual bug: popup used to land short of the chevron)',
       (tester) async {
     await _pump(tester, value: 'a', width: 280);
-    // Pump once more so the post-frame callback runs and the width is measured.
-    await tester.pump();
-    final btn = tester.widget<DropdownButton<String>>(find.byType(DropdownButton<String>));
-    // The field is 280 wide minus the InputDecorator content padding; assert
-    // the menu tracks the measured width, i.e. it is set and < 280.
-    expect(btn.menuWidth, isNotNull);
-    expect(btn.menuWidth! <= 280 && btn.menuWidth! > 0, isTrue);
+    final fieldBox = tester.getRect(find.byType(InputDecorator));
+    await tester.tap(find.text('Apple'));
+    await tester.pumpAndSettle();
+    // The menu's ListView is laid out by Flutter's own dropdown route to
+    // exactly `menuWidth ?? buttonRect.width` at `buttonRect.left` -- with
+    // ButtonTheme.alignedDropdown: true and DropdownButtonFormField's button
+    // box being the whole field (chevron included), both should match the
+    // field exactly, not land short on the right the way the unaligned
+    // 16px/24px default margin used to.
+    final menuBox = tester.getRect(find.byType(ListView));
+    expect(menuBox.width, closeTo(fieldBox.width, 0.5));
+    expect(menuBox.left, closeTo(fieldBox.left, 0.5));
   });
 
   testWidgets(

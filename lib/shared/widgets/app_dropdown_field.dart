@@ -58,12 +58,28 @@ class _FieldWidthDropdownState<T> extends State<FieldWidthDropdown<T>> {
       );
 }
 
-// A DropdownButtonFormField replacement whose popup menu is exactly the
-// width of the input field. DropdownButtonFormField gives its menu no
-// explicit width, so Flutter sizes it to the button box (plus a start/end
-// margin) and it overhangs the field. A plain DropdownButton accepts
-// `menuWidth`; we feed it the field's own width from FieldWidthDropdown.
-class AppDropdownField<T> extends StatefulWidget {
+// A thin DropdownButtonFormField wrapper that fixes the field-width bug at
+// its actual source instead of re-measuring around it.
+//
+// Why not measure our own width (the FieldWidthDropdown approach above)?
+// DropdownButtonFormField builds its DropdownButton *inside the same State*
+// as its InputDecorator (Focus > GestureDetector > InputDecorator, all in one
+// build() call) -- so when it measures its own render box to position and
+// size the popup, that box IS the whole visible field, chevron included.
+// Our own earlier attempt put InputDecorator *outside*, wrapping a plain
+// DropdownButton as its child -- so the button's own box was only the
+// content area *inside* InputDecorator's padding, permanently ~16px short on
+// each side no matter what menuWidth we fed it. That was a nesting-order bug,
+// not a margin bug -- no amount of manual measuring could have fixed it.
+//
+// The real, framework-native fix is ButtonTheme(alignedDropdown: true): it
+// zeroes the popup's default 16px-start/24px-end margin (which exists so a
+// plain, undecorated DropdownButton's menu doesn't touch the screen edges),
+// so the popup anchors to *exactly* the button's own box. Since that box is
+// already the full field for DropdownButtonFormField, the popup now matches
+// the field exactly -- no GlobalKey, no post-frame callback, no menuWidth
+// plumbing needed.
+class AppDropdownField<T> extends StatelessWidget {
   const AppDropdownField({
     super.key,
     required this.value,
@@ -82,62 +98,18 @@ class AppDropdownField<T> extends StatefulWidget {
   final double borderRadius;
 
   @override
-  State<AppDropdownField<T>> createState() => _AppDropdownFieldState<T>();
-}
-
-class _AppDropdownFieldState<T> extends State<AppDropdownField<T>> {
-  // Holds the inner FormField's state so didUpdateWidget can re-sync it.
-  final _fieldKey = GlobalKey<FormFieldState<T>>();
-
-  @override
-  void didUpdateWidget(AppDropdownField<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // FormFieldState reads `initialValue` once and never again, so a parent
-    // that rebuilds us with a different `value` (common when `value` is derived
-    // from an async list that resolves after the first build) would be ignored.
-    // DropdownButtonFormField's own state class re-syncs this the same way.
-    // The `!= currentValue` guard stops this from fighting the user's own pick,
-    // which already flowed back through field.didChange.
-    if (widget.value != oldWidget.value &&
-        _fieldKey.currentState?.value != widget.value) {
-      _fieldKey.currentState?.didChange(widget.value);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FormField<T>(
-      key: _fieldKey,
-      initialValue: widget.value,
-      validator: widget.validator,
-      builder: (field) {
-        final effective = (widget.decoration ?? const InputDecoration())
-            .applyDefaults(Theme.of(context).inputDecorationTheme)
-            .copyWith(errorText: field.errorText);
-        return InputDecorator(
-          decoration: effective,
-          // "Is there a selected item to show?" -- matches how
-          // DropdownButtonFormField computes isEmpty. Several call sites use a
-          // real DropdownMenuItem(value: null, child: Text('Unassigned')) and
-          // default to null; that IS a selected item, so the label must float.
-          isEmpty: !widget.items.any((item) => item.value == field.value),
-          child: FieldWidthDropdown<T>(
-            build: (context, menuWidth) => DropdownButton<T>(
-              isExpanded: true,
-              menuWidth: menuWidth,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              value: field.value,
-              items: widget.items,
-              onChanged: (v) {
-                field.didChange(v);
-                widget.onChanged(v);
-              },
-              // The InputDecorator draws the box; hide the button's own line.
-              underline: const SizedBox.shrink(),
-            ),
-          ),
-        );
-      },
+    return ButtonTheme(
+      alignedDropdown: true,
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
+        isExpanded: true,
+        borderRadius: BorderRadius.circular(borderRadius),
+        decoration: decoration ?? const InputDecoration(),
+        items: items,
+        onChanged: onChanged,
+        validator: validator,
+      ),
     );
   }
 }

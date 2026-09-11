@@ -168,54 +168,84 @@ class AppDropdownField<T> extends StatelessWidget {
 }
 ```
 
-Implementation (as shipped): a `StatefulWidget` wrapping a `FormField<T>`
-(`initialValue: value`, `validator:`, held by a `GlobalKey<FormFieldState<T>>`),
-whose builder returns an `InputDecorator` (decoration = the passed one merged
-with the app's rounded/filled defaults, plus `errorText` from the field state)
-wrapping a `FieldWidthDropdown<T>` → `DropdownButton<T>`:
+**Revised 2026-09-11 — the shipped version above (`FieldWidthDropdown` +
+manual `menuWidth`) turned out not to fix the bug.** It narrowed the gap but
+never closed it, and after wrapping in `ButtonTheme(alignedDropdown: true)`
+(an intermediate attempt, see history below) the popup started centering
+oddly instead. Root cause, traced through Flutter's own
+`dropdown.dart`: `DropdownButtonFormField` builds its `DropdownButton`
+*inside the same `State` as its `InputDecorator`* — one `build()` returns
+`Focus > GestureDetector > InputDecorator`, all as one widget. When it
+measures its own render box (`context.findRenderObject()` in `_handleTap`,
+using the *State's own* context) to position and size the popup, that box
+*is* the whole visible field, chevron included, because the `InputDecorator`
+is inside it, not outside it.
+
+The shipped `AppDropdownField` did the opposite: `InputDecorator(child:
+FieldWidthDropdown(...DropdownButton...))` — `InputDecorator` *outside*,
+wrapping the button as its child. So the plain `DropdownButton`'s own render
+box — the box `FieldWidthDropdown`'s `GlobalKey` measured, and the box
+`_handleTap` used for popup position — was only the *content area inside*
+`InputDecorator`'s padding, permanently ~16px short on each side no matter
+what `menuWidth` was fed in. That's a nesting-order bug, not a margin bug —
+no amount of manual measuring could have fixed it, which is why the popup
+kept landing short of the chevron through multiple attempted fixes.
+
+The actual fix: stop reinventing `DropdownButtonFormField`'s plumbing.
+`AppDropdownField` is now a thin wrapper around the real thing:
 
 ```dart
-FieldWidthDropdown<T>(
-  build: (context, menuWidth) => DropdownButton<T>(
-    isExpanded: true,
-    menuWidth: menuWidth,              // <-- the fix: the field's own width
-    borderRadius: BorderRadius.circular(borderRadius),
-    value: field.value,
-    items: items,
-    underline: const SizedBox.shrink(),
-    onChanged: (v) { field.didChange(v); onChanged(v); },
-  ),
-)
+class AppDropdownField<T> extends StatelessWidget {
+  // ...same public constructor as before...
+
+  @override
+  Widget build(BuildContext context) {
+    return ButtonTheme(
+      alignedDropdown: true,
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
+        isExpanded: true,
+        borderRadius: BorderRadius.circular(borderRadius),
+        decoration: decoration ?? const InputDecoration(),
+        items: items,
+        onChanged: onChanged,
+        validator: validator,
+      ),
+    );
+  }
+}
 ```
 
-`DropdownButton` (unlike `DropdownButtonFormField`) accepts `menuWidth`;
-feeding it the field's own width makes the popup exactly match.
+`ButtonTheme(alignedDropdown: true)` zeroes the popup's default
+16px-start/24px-end margin (`_kUnalignedMenuMargin`, meant for a plain
+undecorated `DropdownButton` so its menu doesn't touch the screen edges), so
+the popup anchors to *exactly* the button's own box. Since that box is
+already the whole field for `DropdownButtonFormField` (per the nesting above),
+the popup now matches the field exactly — chevron included — with no
+`GlobalKey`, no post-frame callback, and no `menuWidth` plumbing.
 
-**Why `FieldWidthDropdown`, not `LayoutBuilder`.** The obvious version wraps the
-button in a `LayoutBuilder` and passes `constraints.maxWidth`. That throws
-"LayoutBuilder does not support returning intrinsic dimensions" whenever an
-ancestor measures its intrinsic size — and `AlertDialog` does exactly that, it
-wraps its content in an `IntrinsicWidth`. So every dropdown placed in a form
-dialog would crash. `FieldWidthDropdown` (in `app_dropdown_field.dart`, also
-used by `TeacherMultiSelect`) is a small `StatefulWidget` that measures its own
-box via a `GlobalKey` in a post-frame callback and hands the width to a
-`build(context, menuWidth)` callback. `menuWidth` is `null` for the first
-frame — harmless, `DropdownButton` accepts null — then the measured width. The
-width is measured once and not re-measured on later layout changes; acceptable
-because every user sits in a fixed-width dialog or filter bar.
+This also deletes, for free, two bugs a previous review round had to patch by
+hand in the custom version: `DropdownButtonFormField`'s own state class
+already re-syncs an externally changed `initialValue` in `didUpdateWidget`
+(`lib/…material/dropdown.dart`'s `_DropdownButtonFormFieldState`), and already
+computes `isEmpty` as "is there a selected item to show" — so a real
+`DropdownMenuItem(value: null, …)` option correctly keeps the label floating.
+Both were re-implemented from scratch in the custom version; now they're
+just the framework's own, already-tested code.
 
-**Why `StatefulWidget`.** `FormFieldState` captures `initialValue` once and
-never re-reads it, so a parent that rebuilds `AppDropdownField` with a
-different `value` (e.g. `value` derived from an async list that resolves after
-the first build) would be ignored. `didUpdateWidget` pushes an externally
-changed `value` into the field state via `key.currentState?.didChange`, guarded
-by `!= currentValue` so it doesn't fight the user's own pick.
+`FieldWidthDropdown` (the `GlobalKey`-measuring `StatefulWidget`) stays in
+`app_dropdown_field.dart` — `TeacherMultiSelect` still uses it directly for
+its bare `DropdownButton` (no `InputDecorator` wrapping it, so there's no
+outer box to fall short of; the measured box *is* the visible control, and
+the technique is valid there). It just isn't used by `AppDropdownField`
+itself any more.
 
-`isEmpty` for the `InputDecorator` is `!items.any((i) => i.value == field.value)`
-— "is there a selected item to show" — matching `DropdownButtonFormField`. A
-plain `field.value == null` would wrongly pin the floating label down for the
-~8 call sites that use a real `DropdownMenuItem(value: null, …)` option
-("Unassigned" / "All classes" / …) and default to `null`.
+**Why `LayoutBuilder` was never an option** (kept from the original design,
+still true): wrapping the button in a `LayoutBuilder` and passing
+`constraints.maxWidth` throws "LayoutBuilder does not support returning
+intrinsic dimensions" whenever an ancestor measures its intrinsic size — and
+`AlertDialog` does exactly that, wrapping its content in an `IntrinsicWidth`.
+So every dropdown placed in a form dialog would have crashed.
 
 ### Call sites (migrate all)
 
