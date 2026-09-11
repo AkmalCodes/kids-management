@@ -44,8 +44,18 @@ class _FieldWidthDropdownState<T> extends State<FieldWidthDropdown<T>> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      KeyedSubtree(key: _key, child: widget.build(context, _width));
+  Widget build(BuildContext context) => KeyedSubtree(
+        key: _key,
+        // alignedDropdown: true turns off DropdownButton's old built-in
+        // popup margin (16px left / 24px right by default), which is what
+        // made the popup's right edge land short of the box's own right
+        // edge -- right where the dropdown's arrow icon sits. With this on,
+        // the popup lines up exactly with the box we measured.
+        child: ButtonTheme(
+          alignedDropdown: true,
+          child: widget.build(context, _width),
+        ),
+      );
 }
 
 // A DropdownButtonFormField replacement whose popup menu is exactly the
