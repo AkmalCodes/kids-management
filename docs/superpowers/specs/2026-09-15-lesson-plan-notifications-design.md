@@ -157,7 +157,15 @@ it and confirm exactly one `APPROVED` row appears for the author.
 
 ## Model + controller + provider
 
-### `Notification` (`lib/core/models/notification.dart`)
+### `AppNotification` (`lib/core/models/app_notification.dart`)
+
+Named `AppNotification`, not `Notification` — Flutter's own framework already
+defines `Notification` (`widgets/notifications.dart`,
+`NotificationListener<T extends Notification>`); reusing the name would
+collide the moment both it and `package:flutter/material.dart` are imported
+unqualified in the same file. Same reason `AppUser` isn't just `User`,
+`AppLoader` isn't just `Loader` — established prefix convention for exactly
+this situation, so `app_notification.dart` alongside `app_user.dart`.
 
 Mirrors the shape of `LessonPlan`: `id`, `userId`, `type`, `status`, `title`,
 `body`, `entityId`, `readAt` (nullable), `createdAt`, `createdBy` (nullable).
@@ -165,12 +173,12 @@ Mirrors the shape of `LessonPlan`: `id`, `userId`, `type`, `status`, `title`,
 
 ### `NotificationController` (`lib/core/controllers/notification_controller.dart`)
 
-- `Stream<List<Notification>> watchNotifications()` — Supabase Realtime
+- `Stream<List<AppNotification>> watchNotifications()` — Supabase Realtime
   stream on `notifications`, filtered `user_id = auth.uid()`, ordered
   `created_at desc`. Same shape as `currentUserProvider`'s underlying stream.
 - `Future<void> markRead(String id)` — `UPDATE ... SET read_at = now()`.
 
-### `notificationsProvider` (`StreamProvider<List<Notification>>`)
+### `notificationsProvider` (`StreamProvider<List<AppNotification>>`)
 
 Wraps `watchNotifications()`. `unreadNotificationsCountProvider` derives the
 badge count (`.where((n) => n.readAt == null).length`) from it. This is a
@@ -195,7 +203,10 @@ still recomputes it, same as any `Provider` built on a `StreamProvider`.
   1. calls `markRead(notification.id)`,
   2. fetches the plan via `LessonPlanController.getPlan(notification.entityId)`
      (already exists) and navigates to **`LessonPlanEditScreen(plan: plan,
-     isDirector: <from currentUserProvider's role>)`** — not the read-only
+     isDirector: <hardcoded per caller>)`** — `NotificationsScreen` itself
+     takes an `isDirector` constructor param, same as `LessonPlanEditScreen`;
+     `TeacherShell` opens it with `false`, `DirectorShell` with `true`. No
+     runtime role lookup needed inside the screen. Not the read-only
      `LessonPlanViewScreen` (that one has no status chip, no review note, and
      no Approve/Reject controls — it's built for tapping a schedule event,
      not for acting on a notification). `LessonPlanEditScreen` already
@@ -211,7 +222,7 @@ still recomputes it, same as any `Provider` built on a `StreamProvider`.
 
 ## Testing
 
-- `Notification.fromJson` — parses all fields, `read_at` null and non-null.
+- `AppNotification.fromJson` — parses all fields, `read_at` null and non-null.
 - `NotificationController` — **no dedicated test file.** `LessonPlanController`
   (the closest precedent — same shape, wraps a Supabase table) has none
   either; the repo's actual convention for these thin Supabase CRUD wrappers
