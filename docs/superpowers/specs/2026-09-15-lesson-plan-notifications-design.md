@@ -60,6 +60,13 @@ CREATE TABLE notifications (
 CREATE INDEX notifications_user_unread_idx
   ON notifications (user_id, created_at DESC)
   WHERE read_at IS NULL;
+
+-- Required for the app's realtime stream (see Model + controller below) to
+-- receive changes on this table at all — Supabase does not enable Realtime
+-- on a table just because RLS allows reading it. Nothing else in this repo
+-- has needed this before now (no prior `.stream()` usage), so it's easy to
+-- forget.
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 ```
 
 - `type` is the entity kind ("what kind of thing"), `status` is the event
@@ -175,18 +182,28 @@ still recomputes it, same as any `Provider` built on a `StreamProvider`.
 
 - **Bell icon**: `IconButton(icon: Icon(Icons.notifications_outlined))` added
   to `actions:` on the `AppBar` in `TeacherShell` and `DirectorShell` (neither
-  has any `actions` today). A small badge (reuse whatever badge widget exists
-  for the bottom-nav pip if one does, otherwise a plain
-  `Positioned`+`Container` dot with the count) shows when the derived unread
-  count is `> 0`.
+  has any `actions` today), wrapped in Flutter's built-in Material 3 `Badge`
+  (`Badge(label: Text('$count'), isLabelVisible: count > 0, child: ...)`) —
+  no hand-rolled positioned dot needed, and no existing count-badge widget in
+  the codebase to reuse (the bottom-nav "pip" is a *selection* indicator, a
+  different thing).
 - **`NotificationsScreen`** (`lib/shared/screens/notifications_screen.dart`,
   reachable from both shells since a teacher and a director both need it):
   full-screen list, newest first, unread rows visually distinct (bold title
   or a leading dot — match whatever the codebase's existing "unread"/"unseen"
   convention is; if there isn't one yet, bold + a colored dot). Tapping a row:
   1. calls `markRead(notification.id)`,
-  2. navigates to `LessonPlanViewScreen` for `notification.entityId` (works
-     for both roles — the screen is already shared, per §6.5 Increment 2).
+  2. fetches the plan via `LessonPlanController.getPlan(notification.entityId)`
+     (already exists) and navigates to **`LessonPlanEditScreen(plan: plan,
+     isDirector: <from currentUserProvider's role>)`** — not the read-only
+     `LessonPlanViewScreen` (that one has no status chip, no review note, and
+     no Approve/Reject controls — it's built for tapping a schedule event,
+     not for acting on a notification). `LessonPlanEditScreen` already
+     branches on `isDirector` to show Approve/Reject vs edit/resubmit, so a
+     director's "submitted" notification and a teacher's "rejected"
+     notification both land somewhere they can actually act, with the
+     reviewer's note visible. If `getPlan` returns null (plan deleted since
+     the notification fired), show a snackbar instead of navigating.
 
   `type` isn't branched on yet (only `'lesson_plan'` exists), but the
   navigation call is written as a `switch (notification.type)` with one case
@@ -195,12 +212,16 @@ still recomputes it, same as any `Provider` built on a `StreamProvider`.
 ## Testing
 
 - `Notification.fromJson` — parses all fields, `read_at` null and non-null.
-- `NotificationController` — `mocktail` against `SupabaseClient`/stream,
-  matching the existing controller-test convention (no real network calls).
-- `notificationsProvider` / unread-count derivation — Riverpod provider test
-  with a fake stream emitting a couple of read/unread rows.
-- `NotificationsScreen` — widget test: renders a list, tapping a row calls
-  `markRead` and navigates.
+- `NotificationController` — **no dedicated test file.** `LessonPlanController`
+  (the closest precedent — same shape, wraps a Supabase table) has none
+  either; the repo's actual convention for these thin Supabase CRUD wrappers
+  is "proven through the widgets that call it," not mocked in isolation
+  (mocking `.stream()`'s concrete `SupabaseStreamBuilder` return type isn't
+  practical anyway — `AuthController.userStream`, the one other stream
+  getter in the codebase, isn't unit-tested either, for the same reason).
+- `NotificationsScreen` — widget test: renders a list from a fake unread/read
+  mix, tapping a row calls `markRead` and navigates to `LessonPlanEditScreen`
+  with the right `isDirector`.
 - No Dart test for the trigger itself (repo convention: SQL logic is
   verified by the manual walkthrough above, not a Dart test — same as every
   prior migration).
