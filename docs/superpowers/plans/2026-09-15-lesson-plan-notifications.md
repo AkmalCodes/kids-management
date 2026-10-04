@@ -17,6 +17,7 @@
 - Comment non-obvious code (RLS/trigger reasoning, Riverpod wiring) — this codebase doubles as a learning reference for the user.
 - Migration SQL is applied by hand by the user in the Supabase SQL editor (project ref `rpefksoutqsbreiyppee`) — never assume it's already applied; the plan calls out exactly what to run and what to check.
 - Full spec: `docs/superpowers/specs/2026-09-15-lesson-plan-notifications-design.md`. Read it once before starting; every task below implements one piece of it.
+- Rejection reason needs no new column (asked and settled 2026-10-04): `lesson_plans.review_note` already exists and the director already fills it on reject, so the trigger folds it into the notification `body` via `COALESCE(': ' || NEW.review_note, '')` and `NotificationsScreen` shows it as the row subtitle.
 
 ---
 
@@ -28,7 +29,7 @@
 **Interfaces:**
 - Produces: table `notifications(id, user_id, type, status, title, body, entity_id, read_at, created_at, created_by)`; trigger `lesson_plan_status_notify` on `lesson_plans`.
 
-- [ ] **Step 1: Write the migration file**
+- [x] **Step 1: Write the migration file**
 
 ```sql
 -- =====================================================================
@@ -121,14 +122,16 @@ CREATE TRIGGER lesson_plan_status_notify
   EXECUTE FUNCTION notify_lesson_plan_status_change();
 ```
 
-- [ ] **Step 2: Commit the migration file**
+- [x] **Step 2: Commit the migration file**
 
 ```bash
 git add docs/superpowers/specs/2026-09-15-lesson-plan-notifications.sql
 git commit -m "docs: lesson plan notifications migration SQL"
 ```
 
-- [ ] **Step 3: Hand off to the user to apply and verify**
+Landed as `bcc8ce9` (together with this plan file).
+
+- [ ] **Step 3: Hand off to the user to apply and verify** — WAITING ON THE USER as of 2026-10-04
 
 Tell the user: run the whole file in the Supabase dashboard (project `rpefksoutqsbreiyppee`) → **SQL Editor** → **New query** → paste → **Run**. Expect `Success. No rows returned.`
 
