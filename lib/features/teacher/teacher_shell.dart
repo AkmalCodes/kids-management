@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/notification_bell_action.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/teacher_lesson_plans_screen.dart';
@@ -29,6 +30,7 @@ class _TeacherShellState extends State<TeacherShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Childcare Manager'),
+        actions: const [NotificationBellAction(isDirector: false)],
       ),
       body: _pages[_index],
       bottomNavigationBar: AppBottomNav(

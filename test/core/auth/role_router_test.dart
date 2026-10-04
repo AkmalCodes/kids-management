@@ -7,6 +7,7 @@ import 'package:kids_management/core/auth/role_router.dart';
 import 'package:kids_management/core/models/app_user.dart';
 import 'package:kids_management/core/controllers/child_controller.dart';
 import 'package:kids_management/core/controllers/class_controller.dart';
+import 'package:kids_management/core/controllers/notification_controller.dart';
 import 'package:kids_management/core/controllers/teacher_controller.dart';
 import 'package:kids_management/features/director/screens/manage_teachers_screen.dart';
 import 'package:kids_management/features/parent/screens/child_schedule_screen.dart';
@@ -62,6 +63,9 @@ void main() {
       overrides: [
         currentUserProvider.overrideWith((ref) => Stream.value(_user('teacher'))),
         classControllerProvider.overrideWithValue(mockClasses),
+        // The AppBar's NotificationBellAction watches this; without an
+        // override it would reach for the real (uninitialised) Supabase client.
+        notificationsProvider.overrideWith((ref) => Stream.value([])),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));
@@ -83,6 +87,9 @@ void main() {
         currentUserProvider.overrideWith((ref) => Stream.value(_user('director'))),
         childControllerProvider.overrideWithValue(mockChildren),
         teacherControllerProvider.overrideWithValue(mockTeachers),
+        // The AppBar's NotificationBellAction watches this; without an
+        // override it would reach for the real (uninitialised) Supabase client.
+        notificationsProvider.overrideWith((ref) => Stream.value([])),
       ],
       child: const MaterialApp(home: RoleRouter()),
     ));

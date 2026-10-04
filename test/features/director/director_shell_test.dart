@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kids_management/core/controllers/child_controller.dart';
+import 'package:kids_management/core/controllers/notification_controller.dart';
 import 'package:kids_management/core/controllers/teacher_controller.dart';
 import 'package:kids_management/features/director/director_shell.dart';
 
@@ -22,6 +23,9 @@ void main() {
         overrides: [
           childControllerProvider.overrideWithValue(mockChildren),
           teacherControllerProvider.overrideWithValue(mockTeachers),
+          // The AppBar's NotificationBellAction watches this; without an
+          // override it would reach for the real (uninitialised) Supabase client.
+          notificationsProvider.overrideWith((ref) => Stream.value([])),
         ],
         child: const MaterialApp(home: DirectorShell()),
       ),

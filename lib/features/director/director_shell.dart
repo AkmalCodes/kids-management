@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/notification_bell_action.dart';
 import '../profile/profile_screen.dart';
 import 'screens/director_attendance_screen.dart';
 import 'screens/director_lessons_screen.dart';
@@ -29,6 +30,7 @@ class _DirectorShellState extends State<DirectorShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Childcare Manager'),
+        actions: const [NotificationBellAction(isDirector: true)],
       ),
       body: _pages[_index],
       bottomNavigationBar: AppBottomNav(

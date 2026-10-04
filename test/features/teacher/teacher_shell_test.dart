@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kids_management/core/controllers/notification_controller.dart';
 import 'package:kids_management/features/teacher/teacher_shell.dart';
 
 void main() {
   testWidgets('TeacherShell renders its tabs', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: TeacherShell())),
+      ProviderScope(
+        overrides: [
+          // The AppBar's NotificationBellAction watches this; without an
+          // override it would reach for the real (uninitialised) Supabase client.
+          notificationsProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: const MaterialApp(home: TeacherShell()),
+      ),
     );
     expect(find.text('Schedule'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);

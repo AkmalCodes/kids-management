@@ -568,7 +568,7 @@ git commit -m "feat: NotificationsScreen lists notifications, opens the lesson p
 - Consumes: `unreadNotificationsCountProvider`, `notificationsProvider` (Task 3), `NotificationsScreen` (Task 4).
 - Produces: `class NotificationBellAction extends ConsumerWidget { const NotificationBellAction({super.key, required this.isDirector}); final bool isDirector; }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -622,12 +622,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/shared/widgets/notification_bell_action_test.dart`
 Expected: FAIL — `notification_bell_action.dart` doesn't exist yet.
 
-- [ ] **Step 3: Write the widget**
+- [x] **Step 3: Write the widget**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -661,12 +661,12 @@ class NotificationBellAction extends ConsumerWidget {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/shared/widgets/notification_bell_action_test.dart`
 Expected: PASS (3/3).
 
-- [ ] **Step 5: Wire into `TeacherShell`**
+- [x] **Step 5: Wire into `TeacherShell`**
 
 Modify `lib/features/teacher/teacher_shell.dart`:
 
@@ -690,7 +690,7 @@ and:
       ),
 ```
 
-- [ ] **Step 6: Wire into `DirectorShell`**
+- [x] **Step 6: Wire into `DirectorShell`**
 
 Modify `lib/features/director/director_shell.dart`:
 
@@ -714,12 +714,12 @@ and:
       ),
 ```
 
-- [ ] **Step 7: Run the full suite + analyze**
+- [x] **Step 7: Run the full suite + analyze**
 
 Run: `flutter analyze && flutter test`
 Expected: `No issues found!`, all tests pass (report the real count).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add lib/shared/widgets/notification_bell_action.dart test/shared/widgets/notification_bell_action_test.dart lib/features/teacher/teacher_shell.dart lib/features/director/director_shell.dart
