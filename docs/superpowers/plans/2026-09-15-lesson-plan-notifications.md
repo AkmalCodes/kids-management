@@ -363,7 +363,7 @@ git commit -m "feat: NotificationController + notificationsProvider (realtime)"
 - Consumes: `notificationsProvider` (Task 3), `notificationControllerProvider.markRead` (Task 3), `lessonPlanControllerProvider.getPlan` (`lib/core/controllers/lesson_plan_controller.dart`, exists), `LessonPlanEditScreen(plan:, isDirector:)` (`lib/features/shared_lessons/lesson_plan_edit_screen.dart`, exists).
 - Produces: `class NotificationsScreen extends ConsumerWidget { const NotificationsScreen({super.key, required this.isDirector}); final bool isDirector; }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -454,12 +454,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/shared/screens/notifications_screen_test.dart`
 Expected: FAIL — `notifications_screen.dart` doesn't exist yet.
 
-- [ ] **Step 3: Write the screen**
+- [x] **Step 3: Write the screen**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -537,17 +537,17 @@ class NotificationsScreen extends ConsumerWidget {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/shared/screens/notifications_screen_test.dart`
 Expected: PASS (3/3).
 
-- [ ] **Step 5: Run the full suite + analyze**
+- [x] **Step 5: Run the full suite + analyze**
 
 Run: `flutter analyze && flutter test`
 Expected: `No issues found!`, all tests pass (report the real count).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/shared/screens/notifications_screen.dart test/shared/screens/notifications_screen_test.dart
