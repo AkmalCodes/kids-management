@@ -1,7 +1,7 @@
 # Lesson plan notifications — design
 
 **Date:** 2026-09-15
-**Status:** Draft — Pending User Approval
+**Status:** Implemented 2026-10-04 (migration applied by hand; app side `778310e`..`7284e80`)
 
 ## Problem
 

@@ -733,7 +733,7 @@ git commit -m "feat: notification bell + badge in both shells"
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-01-childcare-management-design.md`
 
-- [ ] **Step 1: Mark Increment 3 done in §6.5**
+- [x] **Step 1: Mark Increment 3 done in §6.5**
 
 Find this line (currently the last bullet of §6.5):
 
@@ -759,7 +759,7 @@ Replace with:
   `docs/superpowers/specs/2026-09-15-lesson-plan-notifications-design.md`.
 ```
 
-- [ ] **Step 2: Update the roadmap table row in §10**
+- [x] **Step 2: Update the roadmap table row in §10**
 
 Find:
 
@@ -773,7 +773,7 @@ Replace with:
 | 7 | Lesson Plans — Increment 1 (subjects + CRUD + approval) + Increment 2 (reusable plans attached to schedule events; subject shown on the event, tap opens the plan) + Increment 3 (notifications for approval events) | ✅ Done. A dashboard view was scoped out of Increment 3 — not yet built |
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-07-01-childcare-management-design.md
@@ -785,3 +785,9 @@ git commit -m "docs: record lesson plan notifications (Increment 3) as implement
 ## Done
 
 Report to the user: commits landed, final `flutter analyze`/`flutter test` counts, and the manual verification steps from Task 1 if they haven't run them yet.
+
+## Deviations from this plan (recorded 2026-10-04, at execution)
+
+- **Task 3:** `markRead` sends `DateTime.now().toUtc()`, not local time — a zone-less local ISO string would be stored as if it were UTC (8 h off in MYT).
+- **Task 4:** the test also mocks `subjectControllerProvider` / `classControllerProvider` — `LessonPlanEditScreen.initState` calls their `fetchAll()`, so the tap-through test crashed on the real Supabase client without them. Added a 4th test (deleted plan shows the snackbar). `_open` skips `markRead` for an already-read row.
+- **Task 5:** the test's `const MaterialApp(...)` didn't compile (`AppBar` has no const constructor); `const` moved onto the actions list. Four existing tests (`role_router_test` teacher + director, `teacher_shell_test`, `director_shell_test`) needed `notificationsProvider` overridden with an empty stream, since both shells now watch it.

@@ -807,7 +807,19 @@ Teacher-authored plans with a **subject** categorization and a **director approv
   - **Visibility:** `lesson_plans_select` was widened so a **connected role** (the class's teacher, or a parent of a child in the class) can read **approved** plans — so tapping a scheduled subject opens the full plan for parents too, while drafts/unapproved stay teacher/director-only. See §4 RLS.
   - **Subject on events (every role):** the subject **label** shown on schedule event cards — on both the weekly/monthly **agenda** and the **day view** — is resolved via the **`class_plan_subjects(class_id)` SECURITY DEFINER function** (§4), which returns just each approved plan's id+title+subject to a connected viewer. This is what makes the subject appear for **parents** (who can't read `lesson_plans` rows), independent of the widened SELECT above (that one only governs opening the full plan's content).
   - 🔭 Content is plain text fields for now; a richer format (e.g. PDF attachments) is a possible later upgrade.
-- 🔭 **Increment 3 (still to design):** a dashboard + notifications for approval events.
+- ✅ **Increment 3 — notifications for approval events:** a generic
+  `notifications` table (`type`/`status`/`title`/`body`/`entity_id`, RLS
+  scoped to `user_id = auth.uid()`) is populated by a `SECURITY DEFINER`
+  trigger (`lesson_plan_status_notify`) on `lesson_plans` status changes: a
+  `submitted` plan notifies every director in the plan's own `center_id`; an
+  `approved`/`rejected` plan notifies its author, including the review note
+  on rejection. Surfaced in-app via Supabase Realtime (`AppNotification`,
+  `NotificationController.watchNotifications`, `notificationsProvider`) as a
+  bell icon + unread badge (`NotificationBellAction`) in both `TeacherShell`
+  and `DirectorShell`, leading to `NotificationsScreen` — tapping a row opens
+  `LessonPlanEditScreen` for that plan. No dashboard (a separate, larger
+  piece of work) and no push/email — see
+  `docs/superpowers/specs/2026-09-15-lesson-plan-notifications-design.md`.
 
 ### 6.6 Director / Admin Panel — partially built
 - ✅ View all attendance records, any date (Attendance tab)
@@ -933,7 +945,7 @@ This replaces the original 4-phase plan — actual delivery order ended up more 
 | 5 | Profile/settings tab (avatar, change password, sign out) + Forgot Password on login, with password-recovery deep-link handling (§6.7) | ✅ Done |
 | 5.5 | Profile pictures shown as avatars everywhere (attendance cards, People lists, parent contacts) | ✅ Done |
 | 6 | Daily Reports (text + images) — teacher write, parent read (§6.4) | ✅ Done |
-| 7 | Lesson Plans — Increment 1 (subjects + CRUD + approval) + Increment 2 (reusable plans attached to schedule events; subject shown on the event, tap opens the plan) | ✅ Done. Increment 3 (dashboard/notifications) still to design |
+| 7 | Lesson Plans — Increment 1 (subjects + CRUD + approval) + Increment 2 (reusable plans attached to schedule events; subject shown on the event, tap opens the plan) + Increment 3 (notifications for approval events) | ✅ Done. A dashboard view was scoped out of Increment 3 — not yet built |
 | 8 | Play Store release prep (see §11) | ⬜ Not started |
 | 9 | Web build + polish | ⬜ Not started |
 
