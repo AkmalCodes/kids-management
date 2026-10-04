@@ -178,4 +178,25 @@ void main() {
 
     verify(() => mockPlans.deletePlan('lp-1')).called(1);
   });
+
+  testWidgets('Delete sits on the same row as the status chip', (tester) async {
+    await pump(tester,
+        screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.submitted), isDirector: true),
+        user: _user('director'));
+
+    // Same Row ancestor = same line, not a stray button under the actions.
+    final chipRow = find.ancestor(of: find.text('Awaiting approval'), matching: find.byType(Row));
+    expect(find.descendant(of: chipRow.first, matching: find.text('Delete')), findsOneWidget);
+  });
+
+  testWidgets('Approve uses the theme primary colour, not a hard-coded green',
+      (tester) async {
+    await pump(tester,
+        screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.submitted), isDirector: true),
+        user: _user('director'));
+
+    final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Approve'));
+    // null style = FilledButton falls back to the app theme (primary colour).
+    expect(button.style, isNull);
+  });
 }

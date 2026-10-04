@@ -230,9 +230,26 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: LessonPlanStatusChip(status: _status),
+            // Status chip on the left, Delete on the right of the same line --
+            // keeps the destructive action out of the main Save/Approve stack.
+            Row(
+              children: [
+                LessonPlanStatusChip(status: _status),
+                const Spacer(),
+                // Delete: teacher on own, director on any (an existing plan).
+                // Disabled while a save/review is in flight.
+                if (!_isNew)
+                  TextButton.icon(
+                    onPressed: _saving ? null : _delete,
+                    // Theme's error colour instead of hard-coded Colors.red,
+                    // so it follows the app palette.
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
+                  ),
+              ],
             ),
             // A director's note on a rejected plan, so the teacher sees why.
             if (widget.plan?.reviewNote != null && widget.plan!.reviewNote!.isNotEmpty) ...[
@@ -345,8 +362,8 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
       buttons.add(Row(
         children: [
           Expanded(
+            // No style override: takes the theme's primary colour like Save.
             child: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.green),
               onPressed: () => _review(true),
               child: const Text('Approve'),
             ),
@@ -361,15 +378,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
         ],
       ));
     }
-    // Delete: teacher on own, director on any (an existing plan).
-    if (!_isNew) {
-      buttons.add(const SizedBox(height: 8));
-      buttons.add(TextButton.icon(
-        onPressed: _delete,
-        icon: const Icon(Icons.delete_outline, color: Colors.red),
-        label: const Text('Delete', style: TextStyle(color: Colors.red)),
-      ));
-    }
+    // Delete lives next to the status chip at the top (see build).
     return buttons;
   }
 }
