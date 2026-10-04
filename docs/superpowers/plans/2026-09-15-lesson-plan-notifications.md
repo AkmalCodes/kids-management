@@ -281,7 +281,7 @@ git commit -m "feat: AppNotification model"
 
 No dedicated test file for the controller — `LessonPlanController` (closest precedent: same shape, wraps a Supabase table) has none either. The repo's real convention for these thin Supabase CRUD wrappers is "proven through the widgets that call it," and `.stream()`'s return type (`SupabaseStreamBuilder`) isn't practically mockable — `AuthController.userStream`, the only other stream getter in the codebase, isn't unit-tested for the same reason. This task's "test" is `flutter analyze` staying clean; Task 4/5's widget tests exercise it for real via provider overrides.
 
-- [ ] **Step 1: Write the controller + providers**
+- [x] **Step 1: Write the controller + providers**
 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -339,12 +339,12 @@ final unreadNotificationsCountProvider = Provider<int>((ref) {
 });
 ```
 
-- [ ] **Step 2: Verify it compiles clean**
+- [x] **Step 2: Verify it compiles clean**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add lib/core/controllers/notification_controller.dart
