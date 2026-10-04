@@ -131,7 +131,7 @@ git commit -m "docs: lesson plan notifications migration SQL"
 
 Landed as `bcc8ce9` (together with this plan file).
 
-- [ ] **Step 3: Hand off to the user to apply and verify** — WAITING ON THE USER as of 2026-10-04
+- [x] **Step 3: Hand off to the user to apply and verify** — applied and verified by the user 2026-10-04
 
 Tell the user: run the whole file in the Supabase dashboard (project `rpefksoutqsbreiyppee`) → **SQL Editor** → **New query** → paste → **Run**. Expect `Success. No rows returned.`
 
@@ -153,7 +153,7 @@ Do not proceed to Task 2 until the user confirms this works.
 **Interfaces:**
 - Produces: `class AppNotification { id, userId, type, status, title, body, entityId, readAt (DateTime?), createdAt, createdBy (String?) }`, `factory AppNotification.fromJson(Map<String, dynamic>)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -196,12 +196,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `flutter test test/core/models/app_notification_test.dart`
 Expected: FAIL — `Error: Couldn't resolve the package 'kids_management'... app_notification.dart` (file doesn't exist yet).
 
-- [ ] **Step 3: Write the model**
+- [x] **Step 3: Write the model**
 
 ```dart
 // One row of the generic `notifications` table (see design doc
@@ -256,12 +256,12 @@ class AppNotification {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `flutter test test/core/models/app_notification_test.dart`
 Expected: PASS (2/2).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/core/models/app_notification.dart test/core/models/app_notification_test.dart
