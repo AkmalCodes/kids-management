@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
 import 'forgot_password_screen.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/app_logo.dart';
 
 // ConsumerStatefulWidget instead of plain StatefulWidget: this screen needs
 // both local UI state (text controllers, loading/error flags via setState)
@@ -84,11 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.child_care,
-                  size: 72,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                const AppLogo(size: 96),
                 const SizedBox(height: 16),
                 const Text(
                   'Childcare Manager',

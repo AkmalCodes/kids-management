@@ -35,6 +35,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   image_picker: ^1.1.2
   google_fonts: ^8.2.0
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -53,6 +54,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Files bundled into the app. Listing a folder (trailing slash) includes
+  # every file directly inside it. assets/icon/ is NOT listed: those PNGs are
+  # only inputs for the flutter_launcher_icons generator, not used at runtime.
+  assets:
+    - assets/logo/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

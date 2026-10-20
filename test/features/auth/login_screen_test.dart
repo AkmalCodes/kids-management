@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kids_management/features/auth/forgot_password_screen.dart';
 import 'package:kids_management/features/auth/login_screen.dart';
+import 'package:kids_management/shared/widgets/app_logo.dart';
 
 void main() {
   testWidgets('LoginScreen shows two fields and a Sign In button', (tester) async {
@@ -11,6 +12,14 @@ void main() {
     );
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.text('Sign In'), findsOneWidget);
+  });
+
+  testWidgets('LoginScreen shows the app logo instead of the generic icon', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+    expect(find.byType(AppLogo), findsOneWidget);
+    expect(find.byIcon(Icons.child_care), findsNothing);
   });
 
   testWidgets('tapping Forgot password? opens the ForgotPasswordScreen', (tester) async {
