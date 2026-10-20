@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/controllers/notification_controller.dart';
-import 'package:kids_management/features/teacher/teacher_shell.dart';
+import 'package:kawankecil/core/controllers/notification_controller.dart';
+import 'package:kawankecil/features/teacher/teacher_shell.dart';
 
 void main() {
   testWidgets('TeacherShell renders its tabs', (tester) async {

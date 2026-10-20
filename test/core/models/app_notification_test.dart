@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/app_notification.dart';
+import 'package:kawankecil/core/models/app_notification.dart';
 
 void main() {
   Map<String, dynamic> baseJson() => {

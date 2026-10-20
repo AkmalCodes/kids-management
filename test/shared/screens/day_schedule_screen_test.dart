@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/lesson_plan.dart';
-import 'package:kids_management/core/models/schedule.dart';
-import 'package:kids_management/core/models/subject.dart';
-import 'package:kids_management/core/controllers/lesson_plan_controller.dart';
-import 'package:kids_management/core/controllers/schedule_controller.dart';
-import 'package:kids_management/core/controllers/subject_controller.dart';
-import 'package:kids_management/features/shared_lessons/lesson_plan_view_screen.dart';
-import 'package:kids_management/shared/screens/day_schedule_screen.dart';
-import 'package:kids_management/shared/widgets/day_timetable.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/lesson_plan.dart';
+import 'package:kawankecil/core/models/schedule.dart';
+import 'package:kawankecil/core/models/subject.dart';
+import 'package:kawankecil/core/controllers/lesson_plan_controller.dart';
+import 'package:kawankecil/core/controllers/schedule_controller.dart';
+import 'package:kawankecil/core/controllers/subject_controller.dart';
+import 'package:kawankecil/features/shared_lessons/lesson_plan_view_screen.dart';
+import 'package:kawankecil/shared/screens/day_schedule_screen.dart';
+import 'package:kawankecil/shared/widgets/day_timetable.dart';
 
 class MockScheduleController extends Mock implements ScheduleController {}
 

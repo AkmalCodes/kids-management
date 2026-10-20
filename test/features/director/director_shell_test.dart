@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/controllers/child_controller.dart';
-import 'package:kids_management/core/controllers/notification_controller.dart';
-import 'package:kids_management/core/controllers/teacher_controller.dart';
-import 'package:kids_management/features/director/director_shell.dart';
+import 'package:kawankecil/core/controllers/child_controller.dart';
+import 'package:kawankecil/core/controllers/notification_controller.dart';
+import 'package:kawankecil/core/controllers/teacher_controller.dart';
+import 'package:kawankecil/features/director/director_shell.dart';
 
 class MockChildController extends Mock implements ChildController {}
 

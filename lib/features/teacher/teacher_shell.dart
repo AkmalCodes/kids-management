@@ -29,7 +29,7 @@ class _TeacherShellState extends State<TeacherShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Childcare Manager'),
+        title: const Text('KawanKecil'),
         actions: const [NotificationBellAction(isDirector: false)],
       ),
       body: _pages[_index],

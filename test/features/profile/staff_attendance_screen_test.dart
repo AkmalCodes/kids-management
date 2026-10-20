@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/attendance.dart';
-import 'package:kids_management/core/models/staff_attendance.dart';
-import 'package:kids_management/core/controllers/staff_attendance_controller.dart';
-import 'package:kids_management/features/profile/staff_attendance_screen.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/attendance.dart';
+import 'package:kawankecil/core/models/staff_attendance.dart';
+import 'package:kawankecil/core/controllers/staff_attendance_controller.dart';
+import 'package:kawankecil/features/profile/staff_attendance_screen.dart';
 
 class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
 

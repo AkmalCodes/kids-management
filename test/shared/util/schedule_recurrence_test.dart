@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/schedule.dart';
-import 'package:kids_management/shared/util/schedule_recurrence.dart';
+import 'package:kawankecil/core/models/schedule.dart';
+import 'package:kawankecil/shared/util/schedule_recurrence.dart';
 
 ScheduleEntry _entry({
   required String recurrence,

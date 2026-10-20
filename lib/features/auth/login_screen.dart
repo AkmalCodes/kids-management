@@ -88,7 +88,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const AppLogo(size: 96),
                 const SizedBox(height: 16),
                 const Text(
-                  'Childcare Manager',
+                  'KawanKecil',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 32),

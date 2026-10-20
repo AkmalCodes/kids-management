@@ -31,7 +31,7 @@ class _ParentShellState extends State<ParentShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Childcare Manager'),
+        title: const Text('KawanKecil'),
       ),
       body: _pages[_index],
       bottomNavigationBar: AppBottomNav(

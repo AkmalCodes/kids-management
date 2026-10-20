@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/child.dart';
-import 'package:kids_management/core/models/daily_report.dart';
-import 'package:kids_management/core/controllers/child_controller.dart';
-import 'package:kids_management/core/controllers/daily_report_controller.dart';
-import 'package:kids_management/shared/util/date_display.dart';
-import 'package:kids_management/shared/widgets/app_loader.dart';
-import 'package:kids_management/features/parent/screens/child_reports_screen.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/child.dart';
+import 'package:kawankecil/core/models/daily_report.dart';
+import 'package:kawankecil/core/controllers/child_controller.dart';
+import 'package:kawankecil/core/controllers/daily_report_controller.dart';
+import 'package:kawankecil/shared/util/date_display.dart';
+import 'package:kawankecil/shared/widgets/app_loader.dart';
+import 'package:kawankecil/features/parent/screens/child_reports_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
 

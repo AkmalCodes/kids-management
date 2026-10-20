@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/shared/util/name_display.dart';
+import 'package:kawankecil/shared/util/name_display.dart';
 
 void main() {
   group('shortLabelName', () {

@@ -1,4 +1,4 @@
-# Screen Map — Childcare Manager
+# Screen Map — KawanKecil
 
 A quick reference to every screen in the app so we can name the same thing when discussing UI/logic changes. Grouped by area. File paths are relative to `lib/`.
 

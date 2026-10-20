@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/shared/widgets/teacher_multi_select.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/shared/widgets/teacher_multi_select.dart';
 
 AppUser _t(String id, String name) => AppUser(
   id: id,

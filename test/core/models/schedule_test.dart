@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/schedule.dart';
+import 'package:kawankecil/core/models/schedule.dart';
 
 void main() {
   group('ScheduleEntry', () {

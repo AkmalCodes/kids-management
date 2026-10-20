@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/attendance.dart';
+import 'package:kawankecil/core/models/attendance.dart';
 
 void main() {
   group('Attendance', () {

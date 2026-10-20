@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/shared/widgets/logout_button.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/shared/widgets/logout_button.dart';
 
 class MockAuthController extends Mock implements AuthController {}
 

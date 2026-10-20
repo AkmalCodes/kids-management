@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/child.dart';
-import 'package:kids_management/core/models/daily_report.dart';
-import 'package:kids_management/core/controllers/daily_report_controller.dart';
-import 'package:kids_management/core/controllers/photo_capture_controller.dart';
-import 'package:kids_management/features/teacher/screens/daily_report_edit_screen.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/child.dart';
+import 'package:kawankecil/core/models/daily_report.dart';
+import 'package:kawankecil/core/controllers/daily_report_controller.dart';
+import 'package:kawankecil/core/controllers/photo_capture_controller.dart';
+import 'package:kawankecil/features/teacher/screens/daily_report_edit_screen.dart';
 
 class MockDailyReportController extends Mock implements DailyReportController {}
 

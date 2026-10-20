@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/features/teacher/widgets/grid_person_tile.dart';
+import 'package:kawankecil/features/teacher/widgets/grid_person_tile.dart';
 
 Future<void> _pump(
   WidgetTester tester, {

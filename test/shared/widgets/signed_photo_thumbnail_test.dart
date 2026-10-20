@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/controllers/attendance_controller.dart';
-import 'package:kids_management/shared/widgets/app_loader.dart';
-import 'package:kids_management/shared/widgets/signed_photo_thumbnail.dart';
+import 'package:kawankecil/core/controllers/attendance_controller.dart';
+import 'package:kawankecil/shared/widgets/app_loader.dart';
+import 'package:kawankecil/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockAttendanceController extends Mock implements AttendanceController {}
 

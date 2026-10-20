@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/attendance.dart';
-import 'package:kids_management/core/models/staff_attendance.dart';
+import 'package:kawankecil/core/models/attendance.dart';
+import 'package:kawankecil/core/models/staff_attendance.dart';
 
 void main() {
   group('StaffAttendance', () {

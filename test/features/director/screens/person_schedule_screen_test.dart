@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/controllers/schedule_controller.dart';
-import 'package:kids_management/features/director/screens/person_schedule_screen.dart';
+import 'package:kawankecil/core/controllers/schedule_controller.dart';
+import 'package:kawankecil/features/director/screens/person_schedule_screen.dart';
 
 void main() {
   testWidgets('shows the title and the agenda view once entries load', (tester) async {

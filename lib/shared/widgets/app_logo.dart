@@ -6,7 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 //
 // It's an SVG, not a PNG, so it stays sharp at any size. One file serves
 // every screen density, unlike the launcher icon, which needs a PNG per
-// density. Source of truth is the Figma file "Kids Management — Brand &
+// density. Source of truth is the Figma file "KawanKecil — Brand &
 // Icons" (frame "Logo D1 — Family in the blocks / mark"). If the logo
 // changes there, re-export it as SVG over assets/logo/app_logo.svg.
 //
@@ -25,7 +25,7 @@ class AppLogo extends StatelessWidget {
       width: size,
       height: size,
       // Read aloud by TalkBack/VoiceOver, since the logo has no visible text.
-      semanticsLabel: 'Kids Management logo',
+      semanticsLabel: 'KawanKecil logo',
     );
   }
 }

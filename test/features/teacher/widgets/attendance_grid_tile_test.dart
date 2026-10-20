@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/attendance.dart';
-import 'package:kids_management/core/models/child.dart';
-import 'package:kids_management/features/teacher/widgets/attendance_grid_tile.dart';
-import 'package:kids_management/features/teacher/widgets/grid_person_tile.dart';
+import 'package:kawankecil/core/models/attendance.dart';
+import 'package:kawankecil/core/models/child.dart';
+import 'package:kawankecil/features/teacher/widgets/attendance_grid_tile.dart';
+import 'package:kawankecil/features/teacher/widgets/grid_person_tile.dart';
 
 Child _child({String name = 'Alice', String? avatarPath}) => Child(
   id: 'child-1',

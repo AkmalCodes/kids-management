@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/class_group.dart';
-import 'package:kids_management/core/models/schedule.dart';
-import 'package:kids_management/core/controllers/class_controller.dart';
-import 'package:kids_management/core/controllers/schedule_controller.dart';
-import 'package:kids_management/features/teacher/screens/teacher_schedule_screen.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/class_group.dart';
+import 'package:kawankecil/core/models/schedule.dart';
+import 'package:kawankecil/core/controllers/class_controller.dart';
+import 'package:kawankecil/core/controllers/schedule_controller.dart';
+import 'package:kawankecil/features/teacher/screens/teacher_schedule_screen.dart';
 
 class MockClassController extends Mock implements ClassController {}
 

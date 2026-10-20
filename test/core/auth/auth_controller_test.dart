@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
 
 class MockGoTrueClient extends Mock implements GoTrueClient {}
 class MockSupabaseClient extends Mock implements SupabaseClient {}

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/class_group.dart';
+import 'package:kawankecil/core/models/class_group.dart';
 
 void main() {
   group('ClassGroup.fromJson', () {

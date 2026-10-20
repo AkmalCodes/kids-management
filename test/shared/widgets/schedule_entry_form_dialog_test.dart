@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/schedule.dart';
-import 'package:kids_management/shared/widgets/schedule_entry_form_dialog.dart';
+import 'package:kawankecil/core/models/schedule.dart';
+import 'package:kawankecil/shared/widgets/schedule_entry_form_dialog.dart';
 
 // A fixed anchor date threaded through every dialog: Wed 9 Sep 2026.
 final _anchor = DateTime(2026, 9, 9);

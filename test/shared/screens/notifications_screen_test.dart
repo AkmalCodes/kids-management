@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/models/app_notification.dart';
-import 'package:kids_management/core/models/lesson_plan.dart';
-import 'package:kids_management/core/controllers/class_controller.dart';
-import 'package:kids_management/core/controllers/lesson_plan_controller.dart';
-import 'package:kids_management/core/controllers/notification_controller.dart';
-import 'package:kids_management/core/controllers/subject_controller.dart';
-import 'package:kids_management/features/shared_lessons/lesson_plan_edit_screen.dart';
-import 'package:kids_management/shared/screens/notifications_screen.dart';
+import 'package:kawankecil/core/models/app_notification.dart';
+import 'package:kawankecil/core/models/lesson_plan.dart';
+import 'package:kawankecil/core/controllers/class_controller.dart';
+import 'package:kawankecil/core/controllers/lesson_plan_controller.dart';
+import 'package:kawankecil/core/controllers/notification_controller.dart';
+import 'package:kawankecil/core/controllers/subject_controller.dart';
+import 'package:kawankecil/features/shared_lessons/lesson_plan_edit_screen.dart';
+import 'package:kawankecil/shared/screens/notifications_screen.dart';
 
 class MockNotificationController extends Mock implements NotificationController {}
 

@@ -1,4 +1,4 @@
-# Childcare Manager
+# KawanKecil
 
 Flutter app for managing children's schedules, teacher schedules, and attendance. See [docs/superpowers/specs/2026-07-01-childcare-management-design.md](docs/superpowers/specs/2026-07-01-childcare-management-design.md) for the full design spec.
 

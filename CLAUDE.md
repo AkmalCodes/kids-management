@@ -1,8 +1,10 @@
 # CLAUDE.md
 
-Instructions for Claude Code when working in this repo (Kids Management —
-formerly `test_flutter`, a Flutter childcare-management app backed by
-Supabase).
+Instructions for Claude Code when working in this repo (**KawanKecil** —
+Malay for "little friend"; formerly Kids Management / Childcare Manager /
+`test_flutter`, a Flutter childcare-management app backed by Supabase). The
+folder on disk is still `kids_management`. That's only the folder name, so
+there's no need to rename it.
 
 ## Docs to read before making changes
 
@@ -49,16 +51,20 @@ a separate artifact: after editing `create-user`, redeploy it
 
 ## Project identity
 
-- Package name: `kids_management`. Android applicationId / iOS bundle id:
-  `com.example.kids_management`. Keep these three in sync if either ever
-  changes again — see git history around the `test_flutter` →
-  `kids-management` rename for the full list of files that reference the
-  package/bundle id (Android manifest + Gradle, iOS Info.plist + pbxproj,
-  Kotlin `MainActivity` package path, Supabase edge function redirect URLs,
-  `.iml` files).
+- Display name: `KawanKecil` (one word, two capital K's). Dart package name:
+  `kawankecil`. Android applicationId / namespace and iOS bundle id:
+  `com.akmalcodes.kawankecil`. Keep them in sync if any changes again. The
+  rename commit "rename app to KawanKecil" lists every file that references
+  them: pubspec + test imports, Android Gradle + manifest label + Kotlin
+  `MainActivity` package path, iOS pbxproj + Info.plist, in-app titles, the
+  web page, email templates, and `supabase/config.toml` project_id.
+  Deliberately not renamed: the Cloudflare Pages project `kids-management` and
+  the `kids.akmalcodes.quest` address. They're invisible to users, and renaming
+  them means DNS + Supabase redirect allow-list + email link changes.
 - **All auth email leaves by one door:** Supabase's mailer, configured with
-  Mailgun SMTP (Auth → Emails → SMTP Settings; sender
-  `Childcare Manager <no-reply@mg.akmalcodes.quest>`). Bodies are the dashboard
+  Mailgun SMTP (Auth → Emails → SMTP Settings; sender name `KawanKecil`, address
+  `no-reply@mg.akmalcodes.quest`. Before the rename the name was
+  `Childcare Manager`; the dashboard value is changed by hand). Bodies are the dashboard
   templates, mirrored in `docs/email-templates/` since dashboard config is
   invisible to git. `create-user` used to send invites itself via Mailgun's
   HTTP API — that was a workaround for the built-in shared relay mangling HTML,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/features/teacher/widgets/staff_grid_tile.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/features/teacher/widgets/staff_grid_tile.dart';
 
 AppUser _teacher({String? avatarPath}) => AppUser(
   id: 't-1',

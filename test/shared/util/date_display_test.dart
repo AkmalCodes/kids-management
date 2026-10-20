@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/shared/util/date_display.dart';
+import 'package:kawankecil/shared/util/date_display.dart';
 
 void main() {
   group('hourMinute', () {

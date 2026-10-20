@@ -4,14 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/attendance.dart';
-import 'package:kids_management/core/models/child.dart';
-import 'package:kids_management/core/controllers/attendance_controller.dart';
-import 'package:kids_management/core/controllers/photo_capture_controller.dart';
-import 'package:kids_management/features/teacher/screens/child_attendance_detail_screen.dart';
-import 'package:kids_management/shared/widgets/signed_photo_thumbnail.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/attendance.dart';
+import 'package:kawankecil/core/models/child.dart';
+import 'package:kawankecil/core/controllers/attendance_controller.dart';
+import 'package:kawankecil/core/controllers/photo_capture_controller.dart';
+import 'package:kawankecil/features/teacher/screens/child_attendance_detail_screen.dart';
+import 'package:kawankecil/shared/widgets/signed_photo_thumbnail.dart';
 
 class MockAttendanceController extends Mock implements AttendanceController {}
 

@@ -29,7 +29,7 @@ class _DirectorShellState extends State<DirectorShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Childcare Manager'),
+        title: const Text('KawanKecil'),
         actions: const [NotificationBellAction(isDirector: true)],
       ),
       body: _pages[_index],

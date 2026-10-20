@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/models/app_notification.dart';
-import 'package:kids_management/core/controllers/notification_controller.dart';
-import 'package:kids_management/shared/screens/notifications_screen.dart';
-import 'package:kids_management/shared/widgets/notification_bell_action.dart';
+import 'package:kawankecil/core/models/app_notification.dart';
+import 'package:kawankecil/core/controllers/notification_controller.dart';
+import 'package:kawankecil/shared/screens/notifications_screen.dart';
+import 'package:kawankecil/shared/widgets/notification_bell_action.dart';
 
 AppNotification _notification(String id, {bool read = false}) => AppNotification(
       id: id,

@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:kids_management/core/auth/auth_controller.dart';
-import 'package:kids_management/core/models/app_user.dart';
-import 'package:kids_management/core/models/attendance.dart';
-import 'package:kids_management/core/models/child.dart';
-import 'package:kids_management/core/models/staff_attendance.dart';
-import 'package:kids_management/core/controllers/attendance_controller.dart';
-import 'package:kids_management/core/controllers/child_controller.dart';
-import 'package:kids_management/core/controllers/teacher_controller.dart';
-import 'package:kids_management/core/controllers/staff_attendance_controller.dart';
-import 'package:kids_management/features/teacher/screens/mark_attendance_screen.dart';
-import 'package:kids_management/features/teacher/widgets/attendance_grid_tile.dart';
-import 'package:kids_management/features/teacher/widgets/staff_grid_tile.dart';
-import 'package:kids_management/features/teacher/screens/child_attendance_detail_screen.dart';
-import 'package:kids_management/features/profile/staff_attendance_screen.dart';
-import 'package:kids_management/features/profile/person_detail_screen.dart';
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/attendance.dart';
+import 'package:kawankecil/core/models/child.dart';
+import 'package:kawankecil/core/models/staff_attendance.dart';
+import 'package:kawankecil/core/controllers/attendance_controller.dart';
+import 'package:kawankecil/core/controllers/child_controller.dart';
+import 'package:kawankecil/core/controllers/teacher_controller.dart';
+import 'package:kawankecil/core/controllers/staff_attendance_controller.dart';
+import 'package:kawankecil/features/teacher/screens/mark_attendance_screen.dart';
+import 'package:kawankecil/features/teacher/widgets/attendance_grid_tile.dart';
+import 'package:kawankecil/features/teacher/widgets/staff_grid_tile.dart';
+import 'package:kawankecil/features/teacher/screens/child_attendance_detail_screen.dart';
+import 'package:kawankecil/features/profile/staff_attendance_screen.dart';
+import 'package:kawankecil/features/profile/person_detail_screen.dart';
 
 class MockChildController extends Mock implements ChildController {}
 

@@ -1,6 +1,6 @@
 # App launcher icon config, read by `dart run flutter_launcher_icons`.
 #
-# Source art lives in Figma ("Kids Management — Brand & Icons", logo D1,
+# Source art lives in Figma ("KawanKecil — Brand & Icons", logo D1,
 # frames `export/app-icon` and `export/adaptive-foreground`). If the logo
 # changes: re-export both 1024px PNGs into assets/icon/, then re-run the
 # command above. It overwrites the generated icons in android/, ios/ and web/.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kids_management/core/theme/app_theme.dart';
-import 'package:kids_management/shared/widgets/app_bottom_nav.dart';
+import 'package:kawankecil/core/theme/app_theme.dart';
+import 'package:kawankecil/shared/widgets/app_bottom_nav.dart';
 
 void main() {
   Future<void> pumpNav(WidgetTester tester, {int selectedIndex = 0}) =>
