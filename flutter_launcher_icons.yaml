@@ -1,0 +1,38 @@
+# App launcher icon config, read by `dart run flutter_launcher_icons`.
+#
+# Source art lives in Figma ("Kids Management — Brand & Icons", logo D1,
+# frames `export/app-icon` and `export/adaptive-foreground`). If the logo
+# changes: re-export both 1024px PNGs into assets/icon/, then re-run the
+# command above. It overwrites the generated icons in android/, ios/ and web/.
+# Never edit those generated files by hand.
+flutter_launcher_icons:
+  # Full square icon: wash background, no rounded corners. iOS and older
+  # Android launchers apply their own corner mask, so the PNG must be
+  # full-bleed or you'd get a rounded square inside a rounded square.
+  image_path: "assets/icon/app_icon.png"
+
+  android: true
+  ios: true
+  # The App Store rejects icons with an alpha channel, even a fully opaque one.
+  remove_alpha_ios: true
+
+  # Android 8+ "adaptive" icon = two layers. Each phone maker masks it to its
+  # own shape (circle, squircle, teardrop) and animates the layers apart.
+  # The foreground keeps the blocks inside the centre ~61% "safe zone" so no
+  # mask shape clips them; the background is a flat fill.
+  adaptive_icon_background: "#FFF2F5" # Brand/Wash (AppTheme.barTint)
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # The generator wraps the foreground in a 16% inset by default. The PNG is
+  # already padded into the safe zone in Figma, so a second inset would shrink
+  # the logo twice.
+  adaptive_icon_foreground_inset: 0
+
+  # No `web:` section on purpose. web/ is NOT a Flutter web build. It's the
+  # hand-written set-password page deployed to Cloudflare Pages (see
+  # docs/cloudflare-pages-setup.md), and the generator would drop a
+  # manifest.json and icons/ folder into it.
+  #
+  # Known generator bug (0.14.x): each run rewrites
+  # ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS from YES to
+  # AppIcon in ios/Runner.xcodeproj/project.pbxproj. Revert that file after
+  # regenerating: `git checkout -- ios/Runner.xcodeproj/project.pbxproj`
