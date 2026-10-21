@@ -732,7 +732,7 @@ lib/
       day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete
     widgets/
       logout_button.dart
-      app_bottom_nav.dart           -- floating (inset + rounded) NavigationBar used by every shell
+      app_bottom_nav.dart           -- floating (inset + rounded) bottom bar used by every shell. Unselected tabs are icon-only; the selected tab grows to [icon][label], its label sliding out from behind the icon as the pink pill slides + stretches over (2026-10-21)
       row_actions_sheet.dart        -- long-press Edit/Delete bottom sheet + confirmDelete (§6.6)
       attendance_status_chip.dart
       lesson_plan_status_chip.dart  -- draft/submitted/approved/rejected chip (§6.5)
