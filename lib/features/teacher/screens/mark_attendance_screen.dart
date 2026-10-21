@@ -55,6 +55,18 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     _future = _load();
   }
 
+  // Pull-to-refresh. Tab pages are kept alive (LazyIndexedStack), so this is
+  // how the teacher picks up changes made elsewhere (a child enrolled, a
+  // colleague clocking in). RefreshIndicator needs a Future to know when to
+  // hide its spinner.
+  Future<void> _pullRefresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -290,88 +302,93 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<_RosterData>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: AppLoader());
-              }
-              final data = snapshot.data!;
-              final filteredChildren = data.children
-                  .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
-                  .toList();
+          child: RefreshIndicator(
+            onRefresh: _pullRefresh,
+            child: FutureBuilder<_RosterData>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: AppLoader());
+                }
+                final data = snapshot.data!;
+                final filteredChildren = data.children
+                    .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
+                    .toList();
 
-              const gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 16,
-                // Taller than wide: the tile is a square avatar plus a name
-                // line beneath it.
-                childAspectRatio: 0.72,
-              );
+                const gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 16,
+                  // Taller than wide: the tile is a square avatar plus a name
+                  // line beneath it.
+                  childAspectRatio: 0.72,
+                );
 
-              return CustomScrollView(
-                slivers: [
-                  const SliverToBoxAdapter(child: _SectionDivider('Teachers')),
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverGrid(
-                      gridDelegate: gridDelegate,
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                          // This grid only builds when data.teachers is
-                          // non-empty, and its first entry is always the
-                          // signed-in user (see _load), so `me` is safe here.
-                          final me = data.teachers.first;
-                          final t = data.teachers[i];
-                          return StaffGridTile(
-                            teacher: t,
-                            clockState: t.id == me.id ? data.myClockState : null,
-                            onTap: () => _openTeacher(me, t),
-                          );
-                        },
-                        childCount: data.teachers.length,
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: _SectionDivider('Children')),
-                  if (data.children.isEmpty)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: Text('No children assigned to you yet.')),
-                      ),
-                    )
-                  else if (filteredChildren.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(child: Text('No students match "$_query".')),
-                      ),
-                    )
-                  else
+                return CustomScrollView(
+                  // Scrollable even when short, so it can be pulled to refresh.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    const SliverToBoxAdapter(child: _SectionDivider('Teachers')),
                     SliverPadding(
                       padding: const EdgeInsets.all(16),
                       sliver: SliverGrid(
                         gridDelegate: gridDelegate,
                         delegate: SliverChildBuilderDelegate(
                           (context, i) {
-                            final child = filteredChildren[i];
-                            final existing = data.attendanceByChild[child.id];
-                            return AttendanceGridTile(
-                              child: child,
-                              attendance: existing,
-                              onTap: () => _openDetail(child, existing),
-                              onLongPress: () => _showActions(child, existing),
+                            // This grid only builds when data.teachers is
+                            // non-empty, and its first entry is always the
+                            // signed-in user (see _load), so `me` is safe here.
+                            final me = data.teachers.first;
+                            final t = data.teachers[i];
+                            return StaffGridTile(
+                              teacher: t,
+                              clockState: t.id == me.id ? data.myClockState : null,
+                              onTap: () => _openTeacher(me, t),
                             );
                           },
-                          childCount: filteredChildren.length,
+                          childCount: data.teachers.length,
                         ),
                       ),
                     ),
-                ],
-              );
-            },
+                    const SliverToBoxAdapter(child: _SectionDivider('Children')),
+                    if (data.children.isEmpty)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: Text('No children assigned to you yet.')),
+                        ),
+                      )
+                    else if (filteredChildren.isEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Center(child: Text('No students match "$_query".')),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverGrid(
+                          gridDelegate: gridDelegate,
+                          delegate: SliverChildBuilderDelegate(
+                            (context, i) {
+                              final child = filteredChildren[i];
+                              final existing = data.attendanceByChild[child.id];
+                              return AttendanceGridTile(
+                                child: child,
+                                attendance: existing,
+                                onTap: () => _openDetail(child, existing),
+                                onLongPress: () => _showActions(child, existing),
+                              );
+                            },
+                            childCount: filteredChildren.length,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ],

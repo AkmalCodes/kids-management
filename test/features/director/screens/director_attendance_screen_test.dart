@@ -135,4 +135,17 @@ void main() {
     expect(find.text('Check-in photo'), findsOneWidget);
     expect(find.text('Belongings photo'), findsOneWidget);
   });
+
+  testWidgets('pulling down refetches the roster (page is kept alive between tabs)',
+      (tester) async {
+    when(() => mockChildren.fetchAll()).thenAnswer((_) async => []);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.fling(find.text('No children enrolled yet.'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    verify(() => mockChildren.fetchAll()).called(2);
+  });
 }

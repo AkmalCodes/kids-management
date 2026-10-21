@@ -100,4 +100,15 @@ void main() {
     expect(find.byType(LessonPlanEditScreen), findsOneWidget);
     expect(find.text('New lesson plan'), findsOneWidget);
   });
+
+  testWidgets('pulling down refetches the plans (page is kept alive between tabs)',
+      (tester) async {
+    when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.fling(find.text('No lesson plans yet.'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    verify(() => mockPlans.fetchForTeacher('teacher-1')).called(2);
+  });
 }

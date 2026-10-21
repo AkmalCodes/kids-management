@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/lazy_indexed_stack.dart';
 import '../profile/profile_screen.dart';
 import 'screens/child_attendance_screen.dart';
 import 'screens/child_reports_screen.dart';
@@ -33,7 +34,8 @@ class _ParentShellState extends State<ParentShell> {
       appBar: AppBar(
         title: const Text('KawanKecil'),
       ),
-      body: _pages[_index],
+      // Built on first visit, then kept alive: see LazyIndexedStack for why.
+      body: LazyIndexedStack(index: _index, children: _pages),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

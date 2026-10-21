@@ -87,4 +87,18 @@ void main() {
     final screen = tester.widget<DailyReportEditScreen>(find.byType(DailyReportEditScreen));
     expect(screen.child.id, 'child-1');
   });
+
+  testWidgets('pulling down refetches the children (page is kept alive between tabs)',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    // Pull on the empty-state message: it must still be refreshable.
+    await tester.fling(
+        find.text('No children assigned to you yet.'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    verify(() => mockChildren.fetchForTeacher('teacher-1')).called(2);
+  });
 }

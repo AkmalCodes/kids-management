@@ -733,6 +733,8 @@ lib/
     widgets/
       logout_button.dart
       app_bottom_nav.dart           -- floating (inset + rounded) bottom bar used by every shell. Unselected tabs are icon-only; the selected tab grows to [icon][label], its label sliding out from behind the icon as the pink pill slides + stretches over (2026-10-21)
+      lazy_indexed_stack.dart       -- shell tab bodies: a page is built on its first visit, then kept alive (hidden). Replaced `body: _pages[_index]`, which rebuilt the page + re-ran its initState fetch on every tap and stalled the nav animation (2026-10-21)
+      refreshable_message.dart      -- centred empty-state text that can still be pulled to refresh. Kept-alive tab pages that load once in initState (DirectorAttendance, DirectorLessons, MarkAttendance, TeacherLessonPlans, TeacherReports) all have pull-to-refresh, since revisiting a tab no longer refetches
       row_actions_sheet.dart        -- long-press Edit/Delete bottom sheet + confirmDelete (§6.6)
       attendance_status_chip.dart
       lesson_plan_status_chip.dart  -- draft/submitted/approved/rejected chip (§6.5)

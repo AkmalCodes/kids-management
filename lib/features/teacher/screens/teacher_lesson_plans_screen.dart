@@ -8,6 +8,7 @@ import '../../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../../shared/widgets/row_actions_sheet.dart';
 import '../../shared_lessons/lesson_plan_edit_screen.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../../../shared/widgets/refreshable_message.dart';
 
 // Teacher's Lessons tab: their own lesson plans (newest first) with the
 // approval status, plus a + to write a new one. Tapping a plan opens the
@@ -53,6 +54,17 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
     });
   }
 
+  // Pull-to-refresh. Tab pages are kept alive (LazyIndexedStack), so this is
+  // how the user picks up changes made elsewhere (e.g. the director approving
+  // a plan). RefreshIndicator needs a Future to know when to hide its spinner.
+  Future<void> _pullRefresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
+  }
+
   Future<void> _open({LessonPlan? plan}) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -78,55 +90,60 @@ class _TeacherLessonPlansScreenState extends ConsumerState<TeacherLessonPlansScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder<_PlansData>(
-        future: _future,
-        builder: (context, snapshot) {
-          // Surface load errors instead of spinning forever (e.g. the
-          // subjects/lesson_plans migration hasn't been run yet).
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Could not load lesson plans:\n${snapshot.error}',
-                    textAlign: TextAlign.center),
-              ),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: AppLoader());
-          }
-          final data = snapshot.data!;
-          if (data.plans.isEmpty) {
-            return const Center(child: Text('No lesson plans yet.'));
-          }
-          return ListView.builder(
-            // Top gap matches the card side/bottom margins so the first card
-            // isn't flush against the app bar.
-            padding: const EdgeInsets.only(top: 8, bottom: 80),
-            itemCount: data.plans.length,
-            itemBuilder: (context, i) {
-              final plan = data.plans[i];
-              final subject = plan.subjectId == null
-                  ? null
-                  : data.subjectsById[plan.subjectId];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: ListTile(
-                  title: Text(plan.title),
-                  subtitle: subject == null ? null : Text(subject),
-                  trailing: LessonPlanStatusChip(status: plan.status),
-                  onTap: () => _open(plan: plan),
-                  onLongPress: () => showRowActionsSheet(
-                    context,
-                    title: plan.title,
-                    onEdit: () => _open(plan: plan),
-                    onDelete: () => _delete(plan),
-                  ),
+      body: RefreshIndicator(
+        onRefresh: _pullRefresh,
+        child: FutureBuilder<_PlansData>(
+          future: _future,
+          builder: (context, snapshot) {
+            // Surface load errors instead of spinning forever (e.g. the
+            // subjects/lesson_plans migration hasn't been run yet).
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('Could not load lesson plans:\n${snapshot.error}',
+                      textAlign: TextAlign.center),
                 ),
               );
-            },
-          );
-        },
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: AppLoader());
+            }
+            final data = snapshot.data!;
+            if (data.plans.isEmpty) {
+              return const RefreshableMessage('No lesson plans yet.');
+            }
+            return ListView.builder(
+              // Scrollable even when short, so it can be pulled to refresh.
+              physics: const AlwaysScrollableScrollPhysics(),
+              // Top gap matches the card side/bottom margins so the first card
+              // isn't flush against the app bar.
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
+              itemCount: data.plans.length,
+              itemBuilder: (context, i) {
+                final plan = data.plans[i];
+                final subject = plan.subjectId == null
+                    ? null
+                    : data.subjectsById[plan.subjectId];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: ListTile(
+                    title: Text(plan.title),
+                    subtitle: subject == null ? null : Text(subject),
+                    trailing: LessonPlanStatusChip(status: plan.status),
+                    onTap: () => _open(plan: plan),
+                    onLongPress: () => showRowActionsSheet(
+                      context,
+                      title: plan.title,
+                      onEdit: () => _open(plan: plan),
+                      onDelete: () => _delete(plan),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _open(),

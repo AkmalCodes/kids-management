@@ -137,4 +137,15 @@ void main() {
 
     expect(find.byType(ManageSubjectsScreen), findsOneWidget);
   });
+
+  testWidgets('pulling down refetches the plans (page is kept alive between tabs)',
+      (tester) async {
+    when(() => mockPlans.fetchAll()).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.fling(find.text('No lesson plans match.'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    verify(() => mockPlans.fetchAll()).called(2);
+  });
 }

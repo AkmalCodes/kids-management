@@ -12,6 +12,7 @@ import '../../../shared/widgets/signed_avatar.dart';
 import '../../../shared/widgets/signed_photo_thumbnail.dart';
 import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../../../shared/widgets/refreshable_message.dart';
 
 class DirectorAttendanceScreen extends ConsumerStatefulWidget {
   const DirectorAttendanceScreen({super.key});
@@ -57,6 +58,17 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
       attendanceByChild: {for (final r in records) r.childId: r},
       classes: classes,
     );
+  }
+
+  // Pull-to-refresh. Tab pages are kept alive (LazyIndexedStack), so this is
+  // how the director sees attendance teachers marked since the tab opened.
+  // RefreshIndicator needs a Future to know when to hide its spinner.
+  Future<void> _pullRefresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
   }
 
   Future<void> _pickDate() async {
@@ -187,54 +199,57 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
           ),
         ),
         Expanded(
-          child: FutureBuilder<_RosterData>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: AppLoader());
-              }
-              final data = snapshot.data!;
-              if (data.children.isEmpty) {
-                return const Center(child: Text('No children enrolled yet.'));
-              }
-              // Class filter (all classes by default).
-              final classFilterBar = Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: AppDropdownField<String?>(
-                  value: _classFilter,
-                  decoration: const InputDecoration(labelText: 'Class', isDense: true),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All classes')),
-                    for (final c in data.classes)
-                      DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  ],
-                  onChanged: (v) => setState(() {
-                    _classFilter = v;
-                    _expandedChildId = null;
-                  }),
-                ),
-              );
-              final filtered = _classFilter == null
-                  ? data.children
-                  : data.children.where((c) => c.classId == _classFilter).toList();
-              final sorted = [...filtered]..sort((a, b) => a.name.compareTo(b.name));
-              if (sorted.isEmpty) {
+          child: RefreshIndicator(
+            onRefresh: _pullRefresh,
+            child: FutureBuilder<_RosterData>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: AppLoader());
+                }
+                final data = snapshot.data!;
+                if (data.children.isEmpty) {
+                  return const RefreshableMessage('No children enrolled yet.');
+                }
+                // Class filter (all classes by default).
+                final classFilterBar = Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: AppDropdownField<String?>(
+                    value: _classFilter,
+                    decoration: const InputDecoration(labelText: 'Class', isDense: true),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('All classes')),
+                      for (final c in data.classes)
+                        DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ],
+                    onChanged: (v) => setState(() {
+                      _classFilter = v;
+                      _expandedChildId = null;
+                    }),
+                  ),
+                );
+                final filtered = _classFilter == null
+                    ? data.children
+                    : data.children.where((c) => c.classId == _classFilter).toList();
+                final sorted = [...filtered]..sort((a, b) => a.name.compareTo(b.name));
+                if (sorted.isEmpty) {
+                  return Column(
+                    children: [
+                      classFilterBar,
+                      const Expanded(child: RefreshableMessage('No children in this class.')),
+                    ],
+                  );
+                }
                 return Column(
                   children: [
                     classFilterBar,
-                    const Expanded(child: Center(child: Text('No children in this class.'))),
+                    Expanded(
+                      child: _buildList(context, sorted, data.attendanceByChild),
+                    ),
                   ],
                 );
-              }
-              return Column(
-                children: [
-                  classFilterBar,
-                  Expanded(
-                    child: _buildList(context, sorted, data.attendanceByChild),
-                  ),
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ],
@@ -247,6 +262,8 @@ class _DirectorAttendanceScreenState extends ConsumerState<DirectorAttendanceScr
     Map<String, Attendance> attendanceByChild,
   ) {
     return ListView.builder(
+      // Scrollable even when short, so it can be pulled to refresh.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       itemCount: sorted.length,
       itemBuilder: (context, i) {

@@ -10,6 +10,7 @@ import '../../shared_lessons/lesson_plan_edit_screen.dart';
 import 'manage_subjects_screen.dart';
 import '../../../shared/widgets/app_dropdown_field.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../../../shared/widgets/refreshable_message.dart';
 
 // Director's Lessons tab: browse every teacher's lesson plans, filter by
 // teacher and approval status, and open one to approve/reject/edit. A Subjects
@@ -64,6 +65,17 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
     });
   }
 
+  // Pull-to-refresh. Tab pages are kept alive (LazyIndexedStack), so this is
+  // how the director picks up plans teachers submitted since the tab opened.
+  // RefreshIndicator needs a Future to know when to hide its spinner.
+  Future<void> _pullRefresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
+  }
+
   Future<void> _open(LessonPlan plan) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -102,67 +114,72 @@ class _DirectorLessonsScreenState extends ConsumerState<DirectorLessonsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_LessonsData>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text('Could not load lesson plans:\n${snapshot.error}',
-                  textAlign: TextAlign.center),
-            ),
+    return RefreshIndicator(
+      onRefresh: _pullRefresh,
+      child: FutureBuilder<_LessonsData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('Could not load lesson plans:\n${snapshot.error}',
+                    textAlign: TextAlign.center),
+              ),
+            );
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: AppLoader());
+          }
+          final data = snapshot.data!;
+          final filtered = _applyFilters(data.plans);
+          return Column(
+            children: [
+              _FilterBar(
+                teachersById: data.teachersById,
+                teacherFilter: _teacherFilter,
+                statusFilter: _statusFilter,
+                onTeacher: (v) => setState(() => _teacherFilter = v),
+                onStatus: (v) => setState(() => _statusFilter = v),
+                onSubjects: _openSubjects,
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? const RefreshableMessage('No lesson plans match.')
+                    : ListView.builder(
+                        // Scrollable even when short, so it can be pulled.
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, i) {
+                          final plan = filtered[i];
+                          final teacher = data.teachersById[plan.teacherId] ?? 'Unknown teacher';
+                          final subject = plan.subjectId == null
+                              ? null
+                              : data.subjectsById[plan.subjectId];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            child: ListTile(
+                              title: Text(plan.title),
+                              subtitle: Text(
+                                '$teacher${subject == null ? '' : ' · $subject'}',
+                              ),
+                              trailing: LessonPlanStatusChip(status: plan.status),
+                              onTap: () => _open(plan),
+                              onLongPress: () => showRowActionsSheet(
+                                context,
+                                title: plan.title,
+                                onEdit: () => _open(plan),
+                                onDelete: () => _delete(plan),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
-        }
-        if (!snapshot.hasData) {
-          return const Center(child: AppLoader());
-        }
-        final data = snapshot.data!;
-        final filtered = _applyFilters(data.plans);
-        return Column(
-          children: [
-            _FilterBar(
-              teachersById: data.teachersById,
-              teacherFilter: _teacherFilter,
-              statusFilter: _statusFilter,
-              onTeacher: (v) => setState(() => _teacherFilter = v),
-              onStatus: (v) => setState(() => _statusFilter = v),
-              onSubjects: _openSubjects,
-            ),
-            Expanded(
-              child: filtered.isEmpty
-                  ? const Center(child: Text('No lesson plans match.'))
-                  : ListView.builder(
-                      itemCount: filtered.length,
-                      itemBuilder: (context, i) {
-                        final plan = filtered[i];
-                        final teacher = data.teachersById[plan.teacherId] ?? 'Unknown teacher';
-                        final subject = plan.subjectId == null
-                            ? null
-                            : data.subjectsById[plan.subjectId];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          child: ListTile(
-                            title: Text(plan.title),
-                            subtitle: Text(
-                              '$teacher${subject == null ? '' : ' · $subject'}',
-                            ),
-                            trailing: LessonPlanStatusChip(status: plan.status),
-                            onTap: () => _open(plan),
-                            onLongPress: () => showRowActionsSheet(
-                              context,
-                              title: plan.title,
-                              onEdit: () => _open(plan),
-                              onDelete: () => _delete(plan),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        );
-      },
+        },
+      ),
     );
   }
 }

@@ -376,4 +376,18 @@ void main() {
     // and readOnly mode must drop those rows rather than show "Not provided".
     expect(find.text('Not provided'), findsNothing);
   });
+
+  testWidgets('pulling down refetches the roster (page is kept alive between tabs)',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.fling(
+        find.text('No children assigned to you yet.'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+
+    verify(() => mockChildren.fetchForTeacher('teacher-1')).called(2);
+  });
 }

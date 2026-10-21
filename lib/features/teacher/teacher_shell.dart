@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/lazy_indexed_stack.dart';
 import '../../shared/widgets/notification_bell_action.dart';
 import '../profile/profile_screen.dart';
 import 'screens/mark_attendance_screen.dart';
@@ -32,7 +33,8 @@ class _TeacherShellState extends State<TeacherShell> {
         title: const Text('KawanKecil'),
         actions: const [NotificationBellAction(isDirector: false)],
       ),
-      body: _pages[_index],
+      // Built on first visit, then kept alive: see LazyIndexedStack for why.
+      body: LazyIndexedStack(index: _index, children: _pages),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

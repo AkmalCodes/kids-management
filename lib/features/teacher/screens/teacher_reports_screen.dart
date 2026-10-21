@@ -7,6 +7,7 @@ import '../../../shared/util/date_display.dart';
 import '../../../shared/widgets/signed_avatar.dart';
 import 'daily_report_edit_screen.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../../../shared/widgets/refreshable_message.dart';
 
 // Teacher's Reports tab: their class as a list. Pick a day (‹ › or the date
 // picker) and search a student by name (collapsible), then tap a child to
@@ -34,6 +35,17 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
     final user = await ref.read(currentUserProvider.future);
     if (user == null) return [];
     return ref.read(childControllerProvider).fetchForTeacher(user.id);
+  }
+
+  // Pull-to-refresh. Tab pages are kept alive (LazyIndexedStack), so this is
+  // how the user picks up changes made elsewhere. FutureBuilder keeps showing
+  // the old list while the new future runs, so there's no loader flash.
+  Future<void> _refresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
   }
 
   String get _iso => _date.toIso8601String().substring(0, 10);
@@ -113,43 +125,46 @@ class _TeacherReportsScreenState extends ConsumerState<TeacherReportsScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<List<Child>>(
-            future: _future,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: AppLoader());
-              }
-              final children = snapshot.data!
-                  .where((c) => _query.isEmpty || c.name.toLowerCase().contains(_query))
-                  .toList();
-              if (children.isEmpty) {
-                return Center(
-                  child: Text(_query.isEmpty
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: FutureBuilder<List<Child>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: AppLoader());
+                }
+                final children = snapshot.data!
+                    .where((c) => _query.isEmpty || c.name.toLowerCase().contains(_query))
+                    .toList();
+                if (children.isEmpty) {
+                  return RefreshableMessage(_query.isEmpty
                       ? 'No children assigned to you yet.'
-                      : 'No students match "$_query".'),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
-                itemCount: children.length,
-                itemBuilder: (context, i) {
-                  final child = children[i];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: ListTile(
-                      leading: SignedAvatar(
-                        urlProvider: child.avatarPath == null
-                            ? null
-                            : signedChildAvatarUrlProvider(child.avatarPath!),
-                        radius: 20,
+                      : 'No students match "$_query".');
+                }
+                return ListView.builder(
+                  // Scrollable even when short, so it can be pulled to refresh.
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(top: 4, bottom: 8),
+                  itemCount: children.length,
+                  itemBuilder: (context, i) {
+                    final child = children[i];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: ListTile(
+                        leading: SignedAvatar(
+                          urlProvider: child.avatarPath == null
+                              ? null
+                              : signedChildAvatarUrlProvider(child.avatarPath!),
+                          radius: 20,
+                        ),
+                        title: Text(child.name),
+                        onTap: () => _openEditor(child),
                       ),
-                      title: Text(child.name),
-                      onTap: () => _openEditor(child),
-                    ),
-                  );
-                },
-              );
-            },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
