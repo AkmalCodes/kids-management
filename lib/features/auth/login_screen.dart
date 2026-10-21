@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../core/auth/sign_in_error_message.dart';
 import '../../core/theme/app_theme.dart';
 import 'forgot_password_screen.dart';
 import '../../shared/widgets/app_loader.dart';
@@ -69,8 +70,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // No manual navigation on success: AuthGate (Task 6) watches
       // currentUserProvider and swaps to RoleRouter automatically once
       // Supabase's onAuthStateChange fires.
-    } catch (_) {
-      setState(() => _error = 'Invalid email or password. Please try again.');
+    } catch (e) {
+      // Pick the message from the actual cause: wrong password vs. no
+      // connection vs. anything else (see signInErrorMessage).
+      setState(() => _error = signInErrorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

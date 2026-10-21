@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthRetryableFetchException;
+import 'package:kawankecil/core/auth/auth_controller.dart';
+import 'package:kawankecil/core/auth/sign_in_error_message.dart';
 import 'package:kawankecil/features/auth/forgot_password_screen.dart';
 import 'package:kawankecil/features/auth/login_screen.dart';
 import 'package:kawankecil/shared/widgets/app_logo.dart';
 import 'package:kawankecil/shared/widgets/app_wordmark.dart';
+
+class MockAuthController extends Mock implements AuthController {}
 
 void main() {
   testWidgets('LoginScreen shows two fields and a Sign In button', (tester) async {
@@ -78,5 +84,26 @@ void main() {
     await tester.pump();
 
     expect(tester.widget<AnimatedOpacity>(emailOpacity).opacity, 0.0);
+  });
+
+  testWidgets('a network failure says the server is unreachable, not "invalid"',
+      (tester) async {
+    final mockAuth = MockAuthController();
+    when(() => mockAuth.signIn(any(), any()))
+        .thenThrow(AuthRetryableFetchException(message: 'Failed host lookup'));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [authControllerProvider.overrideWithValue(mockAuth)],
+        child: const MaterialApp(home: LoginScreen()),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'a@b.com');
+    await tester.enterText(find.byType(TextFormField).at(1), 'secret');
+    await tester.tap(find.text('Sign In'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(kServerUnreachableMessage), findsOneWidget);
+    expect(find.textContaining('Invalid'), findsNothing);
   });
 }

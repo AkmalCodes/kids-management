@@ -652,11 +652,13 @@ Actual structure as of this writing — `(not yet built)` marks planned files th
 
 ```
 lib/
-  main.dart
+  main.dart                         -- checks the SUPABASE_URL / SUPABASE_ANON_KEY --dart-defines first; if either is empty it shows MissingConfigApp instead of a login that can never work
   core/
+    app_config.dart                 -- missingSupabaseDefines() + MissingConfigApp (2026-10-21)
     auth/
       auth_gate.dart
       auth_controller.dart
+      sign_in_error_message.dart    -- maps sign-in errors to login text: only rejected credentials say "Invalid email or password"; network failures say "Can't reach the server..." (kServerUnreachableMessage, reused by the error view) (2026-10-21)
       role_router.dart
     constants/
       schedule_colors.dart          -- shared color palette (picker + display)

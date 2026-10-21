@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/app_config.dart';
 import 'core/auth/auth_gate.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL'),
-    publishableKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
-  );
+  // Baked in at build time from --dart-define (see core/app_config.dart).
+  const url = String.fromEnvironment('SUPABASE_URL');
+  const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  final missing = missingSupabaseDefines(url: url, anonKey: anonKey);
+  if (missing.isNotEmpty) {
+    // Say what's wrong up front instead of starting an app whose every
+    // sign-in would fail.
+    runApp(MissingConfigApp(missing: missing));
+    return;
+  }
+  await Supabase.initialize(url: url, publishableKey: anonKey);
   runApp(const ProviderScope(child: ChildcareApp()));
 }
 
