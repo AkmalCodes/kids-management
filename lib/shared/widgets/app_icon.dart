@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-// The app's own icon set, drawn in Figma to match the brand (rounded 2px
-// strokes on a 24px grid). Source: Figma "KawanKecil — Brand & Icons", page
-// "KawanKecil Brand v2", frame "Icons v2 · nav set", components
-// `icon/<name>/outline` and `icon/<name>/filled`.
+// The app's own icon set, drawn in Figma: thin, rounded strokes (2px on a
+// 48px canvas, so about 1px at nav size). Source: Figma "KawanKecil — Brand &
+// Icons", page "Brand & Icons", the v1 icon set:
+//   outline = components `icon/<name>/outline` (frame "Icons — outline")
+//   filled  = components `icon/<name>/filled` (frame "Icons — filled
+//             (selected state), 48px"), solid shapes with the details cut out.
+// A heavier v2 set on the "KawanKecil Brand v2" page was tried and dropped as
+// too bold; it's marked SUPERSEDED there.
 //
 // Each value maps to two files: assets/icons/<name>_outline.svg and
 // <name>_filled.svg. The enum value's `.name` IS the file prefix, so a new
 // icon = new enum value + two exported SVGs with matching names.
-enum AppIcons { people, schedule, lessons, attendance, reports, profile }
+enum AppIcons {
+  people,
+  schedule,
+  lessons,
+  attendance,
+  reports,
+  profile,
+  notifications,
+  offline,
+}
 
 // Drop-in replacement for `Icon(Icons.xyz)` that draws one of [AppIcons].
 //

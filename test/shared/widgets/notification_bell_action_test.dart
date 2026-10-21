@@ -5,6 +5,7 @@ import 'package:kawankecil/core/models/app_notification.dart';
 import 'package:kawankecil/core/controllers/notification_controller.dart';
 import 'package:kawankecil/shared/screens/notifications_screen.dart';
 import 'package:kawankecil/shared/widgets/notification_bell_action.dart';
+import 'package:kawankecil/shared/widgets/app_icon.dart';
 
 AppNotification _notification(String id, {bool read = false}) => AppNotification(
       id: id,
@@ -48,7 +49,7 @@ void main() {
 
   testWidgets('tapping the bell opens NotificationsScreen', (tester) async {
     await _pump(tester, []);
-    await tester.tap(find.byIcon(Icons.notifications_outlined));
+    await tester.tap(find.byWidgetPredicate((w) => w is AppIcon && w.icon == AppIcons.notifications));
     await tester.pumpAndSettle();
     expect(find.byType(NotificationsScreen), findsOneWidget);
   });

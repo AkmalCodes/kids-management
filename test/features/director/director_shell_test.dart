@@ -6,6 +6,7 @@ import 'package:kawankecil/core/controllers/child_controller.dart';
 import 'package:kawankecil/core/controllers/notification_controller.dart';
 import 'package:kawankecil/core/controllers/teacher_controller.dart';
 import 'package:kawankecil/features/director/director_shell.dart';
+import 'package:kawankecil/shared/widgets/app_bottom_nav.dart';
 import 'package:kawankecil/shared/widgets/app_icon.dart';
 
 class MockChildController extends Mock implements ChildController {}
@@ -41,7 +42,11 @@ void main() {
 
     // Brand icons, not Material ones: the selected tab (People) gets the
     // filled variant, the other four the outline one.
-    final icons = tester.widgetList<AppIcon>(find.byType(AppIcon)).toList();
+    // Scoped to the nav: the AppBar's bell is an AppIcon too.
+    final icons = tester
+        .widgetList<AppIcon>(find.descendant(
+            of: find.byType(AppBottomNav), matching: find.byType(AppIcon)))
+        .toList();
     expect(icons, hasLength(5));
     expect(icons.where((i) => i.filled).map((i) => i.icon), [AppIcons.people]);
   });

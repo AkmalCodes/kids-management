@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/controllers/notification_controller.dart';
 import '../screens/notifications_screen.dart';
+import 'app_icon.dart';
 
 // Bell + unread-count badge, dropped into a shell's AppBar actions.
 // `isDirector` is hardcoded by the caller (TeacherShell: false,
@@ -26,7 +27,8 @@ class NotificationBellAction extends ConsumerWidget {
       icon: Badge(
         label: Text('$unreadCount'),
         isLabelVisible: unreadCount > 0,
-        child: const Icon(Icons.notifications_outlined),
+        // Brand bell from the v1 icon set (see AppIcon).
+        child: const AppIcon(AppIcons.notifications),
       ),
       onPressed: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => NotificationsScreen(isDirector: isDirector)),
