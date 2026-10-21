@@ -144,7 +144,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(DayTimetable), findsOneWidget);
-    expect(find.text('Friday, Jul 17'), findsOneWidget);
+    expect(find.text('Friday, 17 Jul'), findsOneWidget);
   });
 
   testWidgets('tapping an event opens its day', (tester) async {
@@ -153,7 +153,7 @@ void main() {
     await tester.tap(find.text('Outdoor play'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Friday, Jul 17'), findsOneWidget);
+    expect(find.text('Friday, 17 Jul'), findsOneWidget);
   });
 
   testWidgets('a once entry shows only on its anchor date', (tester) async {
@@ -218,7 +218,7 @@ void main() {
     await tester.tap(find.byTooltip('Add event'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Friday, Jul 17'), findsOneWidget);
+    expect(find.text('Friday, 17 Jul'), findsOneWidget);
     expect(find.text('Create Event'), findsOneWidget);
   });
 

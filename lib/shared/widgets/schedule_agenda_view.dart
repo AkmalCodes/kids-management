@@ -5,6 +5,8 @@ import '../../core/controllers/lesson_plan_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../screens/day_schedule_screen.dart';
 import '../util/schedule_recurrence.dart';
+import '../util/schedule_time.dart';
+import 'week_strip.dart';
 
 // The Schedule tab's main view, screen design SA1 "Week strip + agenda"
 // (Figma page "Screen designs"), modelled on phone calendar apps:
@@ -17,8 +19,8 @@ import '../util/schedule_recurrence.dart';
 //   ...
 //
 // Tapping a day in the strip swaps the agenda below it. "Timeline" (or
-// tapping an event) pushes DayScheduleScreen, the hour-by-hour view where
-// events are created/edited. On today's agenda, finished events fade, the
+// tapping an event) pushes DayScheduleScreen, the hour-by-hour view (SA2)
+// where events are opened (SA3 sheet), created and edited. On today's agenda, finished events fade, the
 // running one gets a "Now" chip and a pink line marks the current time.
 //
 // Which entries fall on a date is decided by scheduleEntryOccursOn:
@@ -105,17 +107,12 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   static const _weekdayNames = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
   ];
-  static const _weekdayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   static const _monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
-  // Mon..Sun of the selected day's week. DateTime.weekday: Monday = 1.
-  List<DateTime> get _week {
-    final monday = _selected.subtract(Duration(days: _selected.weekday - 1));
-    return [for (var i = 0; i < 7; i++) DateTime(monday.year, monday.month, monday.day + i)];
-  }
+  List<DateTime> get _week => WeekStrip.weekOf(_selected);
 
   // Swipe: move a whole week, keeping the same weekday selected. Built with
   // the DateTime constructor (not Duration) so DST shifts can't skew it.
@@ -149,7 +146,10 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
       MaterialPageRoute(
         builder: (_) => DayScheduleScreen(
           date: date,
-          entries: _entriesFor(date),
+          // The full list: the day view filters per day itself, so it can
+          // switch days from its own week strip.
+          entries: widget.entries,
+          now: widget.anchorDate,
           type: widget.type,
           refId: widget.refId,
           centerId: widget.centerId,
@@ -185,11 +185,10 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
         onPickDate: _pickDate,
       ),
       const SizedBox(height: 12),
-      _WeekStrip(
+      WeekStrip(
         days: _week,
         selected: _selected,
         today: _today,
-        letters: _weekdayLetters,
         dotColorsFor: (d) => _entriesFor(d).map((e) => e.displayColor).toSet().take(3).toList(),
         onSelect: (d) => setState(() {
           _selected = d;
@@ -344,139 +343,6 @@ class _MonthHeader extends StatelessWidget {
   }
 }
 
-// Seven equal cells, Mon..Sun. The selected day is a filled dark-rose tile;
-// today (when not selected) gets its number in pink. A horizontal swipe
-// anywhere on the strip moves a week.
-class _WeekStrip extends StatelessWidget {
-  const _WeekStrip({
-    required this.days,
-    required this.selected,
-    required this.today,
-    required this.letters,
-    required this.dotColorsFor,
-    required this.onSelect,
-    required this.onSwipe,
-  });
-
-  final List<DateTime> days;
-  final DateTime selected;
-  final DateTime today;
-  final List<String> letters;
-  final List<Color> Function(DateTime day) dotColorsFor;
-  final ValueChanged<DateTime> onSelect;
-  final ValueChanged<int> onSwipe;
-
-  static String _key(DateTime d) =>
-      'week-day-${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('week-strip'),
-      // Fling left = later week, right = earlier. Velocity, not distance, so
-      // a short quick swipe works and a slow drag doesn't trigger by accident.
-      onHorizontalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v < -200) onSwipe(1);
-        if (v > 200) onSwipe(-1);
-      },
-      child: Row(
-        children: [
-          for (final d in days)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: _DayCell(
-                  key: Key(_key(d)),
-                  letter: letters[d.weekday - 1],
-                  day: d.day,
-                  selected: d.year == selected.year &&
-                      d.month == selected.month &&
-                      d.day == selected.day,
-                  isToday: d.year == today.year && d.month == today.month && d.day == today.day,
-                  dots: dotColorsFor(d),
-                  onTap: () => onSelect(d),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DayCell extends StatelessWidget {
-  const _DayCell({
-    super.key,
-    required this.letter,
-    required this.day,
-    required this.selected,
-    required this.isToday,
-    required this.dots,
-    required this.onTap,
-  });
-
-  final String letter;
-  final int day;
-  final bool selected;
-  final bool isToday;
-  final List<Color> dots;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = selected ? Colors.white : AppTheme.onAccent;
-    return Material(
-      color: selected ? AppTheme.onAccent : Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            children: [
-              Text(letter,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : AppTheme.mutedText,
-                  )),
-              const SizedBox(height: 2),
-              Text('$day',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: (isToday && !selected) ? AppTheme.accentPink : fg,
-                  )),
-              const SizedBox(height: 4),
-              // Fixed height so days with and without dots line up.
-              SizedBox(
-                height: 5,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (final c in dots)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                        decoration: BoxDecoration(
-                          color: selected ? Colors.white : c,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // One agenda line: start/end times on the left, then a white card with the
 // event's colour as a bar down its left edge.
 class _AgendaRow extends StatelessWidget {
@@ -494,22 +360,12 @@ class _AgendaRow extends StatelessWidget {
   final bool running; // happening now: pink outline + "Now" chip
   final VoidCallback onTap;
 
-  // "30 min", "1 hr", "1 hr 15 min" from the HH:mm strings.
-  static String _duration(String start, String end) {
-    int m(String s) => int.parse(s.substring(0, 2)) * 60 + int.parse(s.substring(3, 5));
-    final total = m(end) - m(start);
-    if (total <= 0) return '';
-    final h = total ~/ 60, rest = total % 60;
-    if (h == 0) return '$rest min';
-    return rest == 0 ? '$h hr' : '$h hr $rest min';
-  }
-
   @override
   Widget build(BuildContext context) {
     final color = entry.displayColor;
     // A darker shade of the event colour, readable on its own pale tint.
     final deep = Color.lerp(color, Colors.black, 0.3)!;
-    final duration = _duration(entry.startTime, entry.endTime);
+    final duration = scheduleDurationLabel(entry.startTime, entry.endTime);
 
     return Opacity(
       key: Key('agenda-row-${entry.id}'),

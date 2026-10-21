@@ -76,6 +76,7 @@ void main() {
     required String viewerId,
     bool editable = false,
     String? centerId = 'center-1',
+    DateTime? date,
   }) =>
       tester.pumpWidget(
         ProviderScope(
@@ -85,7 +86,7 @@ void main() {
           ],
           child: MaterialApp(
             home: DayScheduleScreen(
-              date: _monday,
+              date: date ?? _monday,
               entries: entries,
               type: 'teacher',
               refId: 'teacher-1',
@@ -98,7 +99,7 @@ void main() {
 
   testWidgets('read-only + no entries shows the empty message, no grid', (tester) async {
     await pumpScreen(tester, entries: const [], viewerId: 'teacher-1');
-    expect(find.text('No events on this day.'), findsOneWidget);
+    expect(find.text('No activities on this day.'), findsOneWidget);
     expect(find.byType(DayTimetable), findsNothing);
   });
 
@@ -196,8 +197,14 @@ void main() {
 
     // The event shows the attached plan's subject.
     expect(find.text('Art'), findsOneWidget);
-    // Tapping the event (read-only viewer) opens the plan read-only.
+    // Tapping the event (read-only viewer) opens the details sheet, with the
+    // attached plan but no Edit/Delete...
     await tester.tap(find.byKey(const Key('entry-block-ev-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Watercolours'), findsOneWidget);
+    expect(find.text('Edit'), findsNothing);
+    // ...and the plan card opens the plan read-only.
+    await tester.tap(find.byKey(const Key('event-sheet-plan')));
     await tester.pumpAndSettle();
     expect(find.byType(LessonPlanViewScreen), findsOneWidget);
     expect(find.text('Paint a rainbow'), findsOneWidget);
@@ -317,6 +324,8 @@ void main() {
     final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
     await tester.tapAt(gridTopLeft + const Offset(10, 70)); // inside the 08:00-09:00 block
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit')); // in the event sheet
+    await tester.pumpAndSettle();
 
     expect(find.text('Edit Event'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), 'Art (updated)');
@@ -353,7 +362,9 @@ void main() {
     await tester.tapAt(gridTopLeft + const Offset(10, 70));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.text('Delete')); // in the event sheet
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete')); // confirm
     await tester.pumpAndSettle();
 
     verify(() => mockService.deleteEntry('entry-1')).called(1);
@@ -469,7 +480,7 @@ void main() {
 
   testWidgets('editing a once entry preserves its original anchorDate, not the viewed date',
       (tester) async {
-    // Real path: anchor is the 31st Jan, viewed date is the 13th Jul (different day-of-month).
+    // The anchor (31 Jan) must survive the edit untouched.
     final anchorDate = DateTime(2026, 1, 31);
     final entry = _entry(
       id: 'entry-1',
@@ -491,10 +502,14 @@ void main() {
       (_) async => _entry(id: 'entry-1', createdBy: 'teacher-1', recurrence: 'once', anchorDate: anchorDate),
     );
 
-    await pumpScreen(tester, entries: [entry], viewerId: 'teacher-1', editable: true);
+    // Viewed on its anchor date: a once entry only occurs there.
+    await pumpScreen(tester,
+        entries: [entry], viewerId: 'teacher-1', editable: true, date: anchorDate);
 
     final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
     await tester.tapAt(gridTopLeft + const Offset(10, 70)); // inside the 08:00-09:00 block
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit')); // in the event sheet
     await tester.pumpAndSettle();
 
     expect(find.text('Edit Event'), findsOneWidget);
@@ -513,5 +528,137 @@ void main() {
           anchorDate: DateTime(2026, 1, 31),
           actorUid: 'teacher-1',
         )).called(1);
+  });
+
+  testWidgets('title shows the day; the week strip switches day in place', (tester) async {
+    final entries = [
+      _entry(id: 'mon', createdBy: 'teacher-1', label: 'Art'),
+      ScheduleEntry(
+        id: 'wed',
+        type: 'teacher',
+        refId: 'teacher-1',
+        centerId: 'center-1',
+        day: 'Wednesday',
+        startTime: '10:00',
+        endTime: '11:00',
+        label: 'Music',
+        color: '5C6BC0',
+        recurrence: 'weekly',
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+        createdBy: 'teacher-1',
+        updatedBy: 'teacher-1',
+      ),
+    ];
+    await pumpScreen(tester, entries: entries, viewerId: 'teacher-1', editable: true);
+
+    expect(find.text('Monday, 13 Jul'), findsOneWidget);
+    expect(find.text('Art'), findsOneWidget);
+    expect(find.text('Music'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('week-day-2026-07-15')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Wednesday, 15 Jul'), findsOneWidget);
+    expect(find.text('Music'), findsOneWidget);
+    expect(find.text('Art'), findsNothing);
+  });
+
+  testWidgets('the event sheet shows time, length and how it repeats', (tester) async {
+    await pumpScreen(tester,
+        entries: [_entry(id: 'entry-1', createdBy: 'teacher-1')],
+        viewerId: 'teacher-1',
+        editable: true);
+
+    final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    await tester.tapAt(gridTopLeft + const Offset(10, 70));
+    await tester.pumpAndSettle();
+
+    expect(find.text('08:00 – 09:00'), findsWidgets); // sheet (and the block)
+    expect(find.text('Monday, 13 Jul · 1 hr'), findsOneWidget);
+    expect(find.text('Every Monday'), findsOneWidget);
+    expect(find.text('Added by you'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+  });
+
+  testWidgets('cancelling the delete confirmation keeps the event', (tester) async {
+    await pumpScreen(tester,
+        entries: [_entry(id: 'entry-1', createdBy: 'teacher-1')],
+        viewerId: 'teacher-1',
+        editable: true);
+
+    final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    await tester.tapAt(gridTopLeft + const Offset(10, 70));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => mockService.deleteEntry(any()));
+    expect(find.text('Art'), findsOneWidget);
+  });
+
+  testWidgets('addOnOpen opens the create dialog straight away', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => Stream.value(_teacher('teacher-1'))),
+          scheduleControllerProvider.overrideWithValue(mockService),
+        ],
+        child: MaterialApp(
+          home: DayScheduleScreen(
+            date: _monday,
+            entries: const [],
+            type: 'teacher',
+            refId: 'teacher-1',
+            centerId: 'center-1',
+            editable: true,
+            addOnOpen: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Create Event'), findsOneWidget);
+  });
+
+  testWidgets('viewing today draws the now line', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => Stream.value(_teacher('teacher-1'))),
+          scheduleControllerProvider.overrideWithValue(mockService),
+        ],
+        child: MaterialApp(
+          home: DayScheduleScreen(
+            date: _monday,
+            entries: [_entry(id: 'entry-1', createdBy: 'teacher-1')],
+            now: DateTime(2026, 7, 13, 10, 12),
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(const Key('timetable-now-line')), findsOneWidget);
+  });
+
+  testWidgets('day view and event sheet fit a 360px-wide phone', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpScreen(tester,
+        entries: [
+          _entry(id: 'entry-1', createdBy: 'teacher-1', label: 'A very long activity name indeed'),
+        ],
+        viewerId: 'teacher-1',
+        editable: true);
+    expect(tester.takeException(), isNull);
+
+    final gridTopLeft = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    await tester.tapAt(gridTopLeft + const Offset(10, 70));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Edit'), findsOneWidget);
   });
 }

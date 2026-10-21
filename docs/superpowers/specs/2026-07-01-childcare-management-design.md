@@ -731,7 +731,7 @@ lib/
     util/
       date_display.dart             -- weekdayName + isoWithWeekday: prefix an ISO date with its weekday (attendance/report displays; not birthdates)
     screens/
-      day_schedule_screen.dart      -- hourly view for one day; owns create/edit/delete; addOnOpen opens straight into the create dialog
+      day_schedule_screen.dart      -- SA2 day timeline: week strip switches day in place, now line; tap event -> SA3 sheet (edit/delete/open plan); addOnOpen opens the create dialog
     widgets/
       logout_button.dart
       app_bottom_nav.dart           -- floating (inset + rounded) bottom bar used by every shell. Unselected tabs are icon-only; the selected tab grows to [icon][label], its label sliding out from behind the icon as the pink pill slides + stretches over (2026-10-21)
@@ -750,7 +750,9 @@ lib/
       editable_field.dart           -- read-only row / fading text input toggle + tap-to-copy (§6.6c)
       avatar_preview.dart           -- tappable avatar -> full-screen zoomable photo (§6.6c)
       schedule_agenda_view.dart     -- SA1 design: week strip (swipe = week, dots = events), selected day's agenda, now line, Today + date picker, + opens day view with create dialog
-      day_timetable.dart            -- hour grid, tap-to-add/edit, fade-in on new entries
+      day_timetable.dart            -- hour grid (SA2 look: pale blocks + colour bar, nowTime fades past events + now line), tap-to-add/edit, fade-in on new entries
+      week_strip.dart               -- Mon-Sun day picker with event dots, swipe = week (agenda + day view)
+      schedule_event_sheet.dart     -- SA3 event details bottom sheet; returns edit/delete/openPlan
       schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
 supabase/
   functions/
