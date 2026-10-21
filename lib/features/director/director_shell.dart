@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/lazy_indexed_stack.dart';
 import '../../shared/widgets/notification_bell_action.dart';
 import '../profile/profile_screen.dart';
@@ -40,28 +41,28 @@ class _DirectorShellState extends State<DirectorShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
+            icon: AppIcon(AppIcons.people),
+            selectedIcon: AppIcon(AppIcons.people, filled: true),
             label: 'People',
           ),
           NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
+            icon: AppIcon(AppIcons.schedule),
+            selectedIcon: AppIcon(AppIcons.schedule, filled: true),
             label: 'Schedule',
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
+            icon: AppIcon(AppIcons.lessons),
+            selectedIcon: AppIcon(AppIcons.lessons, filled: true),
             label: 'Lessons',
           ),
           NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
+            icon: AppIcon(AppIcons.attendance),
+            selectedIcon: AppIcon(AppIcons.attendance, filled: true),
             label: 'Attendance',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: AppIcon(AppIcons.profile),
+            selectedIcon: AppIcon(AppIcons.profile, filled: true),
             label: 'Profile',
           ),
         ],

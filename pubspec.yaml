@@ -60,6 +60,8 @@ flutter:
   # only inputs for the flutter_launcher_icons generator, not used at runtime.
   assets:
     - assets/logo/
+    # Custom nav icons (outline + filled), drawn in Figma. See AppIcon.
+    - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -6,6 +6,7 @@ import 'package:kawankecil/core/controllers/child_controller.dart';
 import 'package:kawankecil/core/controllers/notification_controller.dart';
 import 'package:kawankecil/core/controllers/teacher_controller.dart';
 import 'package:kawankecil/features/director/director_shell.dart';
+import 'package:kawankecil/shared/widgets/app_icon.dart';
 
 class MockChildController extends Mock implements ChildController {}
 
@@ -37,5 +38,11 @@ void main() {
     expect(find.text('Lessons'), findsOneWidget);
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
+
+    // Brand icons, not Material ones: the selected tab (People) gets the
+    // filled variant, the other four the outline one.
+    final icons = tester.widgetList<AppIcon>(find.byType(AppIcon)).toList();
+    expect(icons, hasLength(5));
+    expect(icons.where((i) => i.filled).map((i) => i.icon), [AppIcons.people]);
   });
 }

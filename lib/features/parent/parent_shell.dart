@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../shared/widgets/app_bottom_nav.dart';
+import '../../shared/widgets/app_icon.dart';
 import '../../shared/widgets/lazy_indexed_stack.dart';
 import '../profile/profile_screen.dart';
 import 'screens/child_attendance_screen.dart';
@@ -41,23 +42,23 @@ class _ParentShellState extends State<ParentShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today),
+            icon: AppIcon(AppIcons.schedule),
+            selectedIcon: AppIcon(AppIcons.schedule, filled: true),
             label: 'Schedule',
           ),
           NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
+            icon: AppIcon(AppIcons.attendance),
+            selectedIcon: AppIcon(AppIcons.attendance, filled: true),
             label: 'Attendance',
           ),
           NavigationDestination(
-            icon: Icon(Icons.article_outlined),
-            selectedIcon: Icon(Icons.article),
+            icon: AppIcon(AppIcons.reports),
+            selectedIcon: AppIcon(AppIcons.reports, filled: true),
             label: 'Reports',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: AppIcon(AppIcons.profile),
+            selectedIcon: AppIcon(AppIcons.profile, filled: true),
             label: 'Profile',
           ),
         ],
