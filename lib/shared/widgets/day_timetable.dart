@@ -170,7 +170,9 @@ class _EntryBlock extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (height >= 40)
+                // Room for the second (time) line: title ~20 + time ~16 plus
+                // 8px padding. At 40 a 45-min block (42px) overflowed by 2px.
+                if (height >= 48)
                   Text(
                     '${entry.startTime} – ${entry.endTime}',
                     style: const TextStyle(fontSize: 11, color: Colors.white70),

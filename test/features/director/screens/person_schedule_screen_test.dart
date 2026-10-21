@@ -26,6 +26,6 @@ void main() {
 
     expect(find.text('Ms. Smith'), findsOneWidget);
     // Proves ScheduleAgendaView actually rendered (its month/week toggle).
-    expect(find.byTooltip('Month view'), findsOneWidget);
+    expect(find.byTooltip('Pick a date'), findsOneWidget);
   });
 }

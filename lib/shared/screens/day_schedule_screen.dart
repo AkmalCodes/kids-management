@@ -22,6 +22,7 @@ class DayScheduleScreen extends ConsumerStatefulWidget {
     this.refId,
     this.centerId,
     this.editable = false,
+    this.addOnOpen = false,
   });
 
   final DateTime date;
@@ -33,6 +34,11 @@ class DayScheduleScreen extends ConsumerStatefulWidget {
   final String? refId;
   final String? centerId;
   final bool editable;
+
+  // Open straight into the "Create Event" dialog: the agenda's + button
+  // lands here, since creating an event (dialog, save, refresh) lives in
+  // this screen.
+  final bool addOnOpen;
 
   static const _weekdayNames = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -62,6 +68,12 @@ class _DayScheduleScreenState extends ConsumerState<DayScheduleScreen> {
     _entries = widget.entries;
     if (widget.type == 'class' && widget.refId != null) {
       _loadPlans(widget.refId!);
+    }
+    if (widget.addOnOpen && widget.editable) {
+      // After the first frame: a dialog needs this route to be on screen.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _addEntry(DayTimetable.startHour);
+      });
     }
   }
 

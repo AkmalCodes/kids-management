@@ -94,7 +94,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Alice'), findsOneWidget);
-    expect(find.byTooltip('Month view'), findsOneWidget);
-    expect(find.text('No events'), findsWidgets);
+    expect(find.byTooltip('Pick a date'), findsOneWidget);
+    expect(find.text('No activities on this day.'), findsWidgets);
   });
 }

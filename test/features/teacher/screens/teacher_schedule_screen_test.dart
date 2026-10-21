@@ -74,8 +74,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Month view'), findsOneWidget);
-    expect(find.text('No events'), findsWidgets);
+    expect(find.byTooltip('Pick a date'), findsOneWidget);
+    expect(find.text('No activities on this day.'), findsWidgets);
   });
 
   testWidgets("shows the class's schedule entries when present", (tester) async {
@@ -86,7 +86,10 @@ void main() {
         type: 'class',
         refId: 'class-1',
         centerId: 'center-1',
-        day: 'Monday',
+        // Today's weekday: the agenda opens on today, so a weekly entry for
+        // today is what shows without tapping anything.
+        day: const ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            [DateTime.now().weekday - 1],
         startTime: '08:00',
         endTime: '09:00',
         label: 'Art',
@@ -108,7 +111,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Mon'), findsOneWidget);
     expect(find.text('Art'), findsOneWidget);
   });
 }
