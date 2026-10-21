@@ -1,12 +1,13 @@
 # App launcher icon config, read by `dart run flutter_launcher_icons`.
 #
-# Source art lives in Figma ("KawanKecil — Brand & Icons", logo D1,
-# frames `export/app-icon` and `export/adaptive-foreground`). If the logo
+# Source art lives in Figma ("KawanKecil — Brand & Icons", page
+# "KawanKecil Brand v2", app icon I1 on a white background; frames
+# `export/app-icon v2 (I1, white)` and `export/adaptive-foreground v2`). If the logo
 # changes: re-export both 1024px PNGs into assets/icon/, then re-run the
 # command above. It overwrites the generated icons in android/, ios/ and web/.
 # Never edit those generated files by hand.
 flutter_launcher_icons:
-  # Full square icon: wash background, no rounded corners. iOS and older
+  # Full square icon: white background, no rounded corners. iOS and older
   # Android launchers apply their own corner mask, so the PNG must be
   # full-bleed or you'd get a rounded square inside a rounded square.
   image_path: "assets/icon/app_icon.png"
@@ -18,9 +19,9 @@ flutter_launcher_icons:
 
   # Android 8+ "adaptive" icon = two layers. Each phone maker masks it to its
   # own shape (circle, squircle, teardrop) and animates the layers apart.
-  # The foreground keeps the blocks inside the centre ~61% "safe zone" so no
-  # mask shape clips them; the background is a flat fill.
-  adaptive_icon_background: "#FFF2F5" # Brand/Wash (AppTheme.barTint)
+  # The foreground keeps the mark inside the centre ~61% "safe zone" so no
+  # mask shape clips it; the background is a flat fill.
+  adaptive_icon_background: "#FFFFFF" # white, matching the I1 tile
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
   # The generator wraps the foreground in a 16% inset by default. The PNG is
   # already padded into the safe zone in Figma, so a second inset would shrink

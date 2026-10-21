@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_controller.dart';
+import '../../core/theme/app_theme.dart';
 import 'forgot_password_screen.dart';
 import '../../shared/widgets/app_loader.dart';
 import '../../shared/widgets/app_logo.dart';
+import '../../shared/widgets/app_wordmark.dart';
 
 // ConsumerStatefulWidget instead of plain StatefulWidget: this screen needs
 // both local UI state (text controllers, loading/error flags via setState)
@@ -85,11 +87,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const AppLogo(size: 96),
-                const SizedBox(height: 16),
+                // Brand lockup P1 (mark + wordmark + tagline), stacked
+                // vertically: the board's side-by-side version is too wide
+                // for a phone, its tagline would shrink to ~6px.
+                const AppLogo(size: 120),
+                const SizedBox(height: 12),
+                const AppWordmark(width: 220),
+                const SizedBox(height: 6),
                 const Text(
-                  'KawanKecil',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  'Teman Tumbesaran Si Kecil.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    // Dark rose, as on the brand board.
+                    color: AppTheme.onAccent,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 TextFormField(

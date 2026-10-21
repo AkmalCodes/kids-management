@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kawankecil/features/auth/forgot_password_screen.dart';
 import 'package:kawankecil/features/auth/login_screen.dart';
 import 'package:kawankecil/shared/widgets/app_logo.dart';
+import 'package:kawankecil/shared/widgets/app_wordmark.dart';
 
 void main() {
   testWidgets('LoginScreen shows two fields and a Sign In button', (tester) async {
@@ -20,6 +21,17 @@ void main() {
     );
     expect(find.byType(AppLogo), findsOneWidget);
     expect(find.byIcon(Icons.child_care), findsNothing);
+  });
+
+  testWidgets('LoginScreen shows the brand wordmark and tagline (P1 lockup)',
+      (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+    );
+    // The name is drawn by the SVG wordmark now, not a plain Text widget.
+    expect(find.byType(AppWordmark), findsOneWidget);
+    expect(find.text('KawanKecil'), findsNothing);
+    expect(find.text('Teman Tumbesaran Si Kecil.'), findsOneWidget);
   });
 
   testWidgets('tapping Forgot password? opens the ForgotPasswordScreen', (tester) async {
