@@ -708,7 +708,7 @@ lib/
         mark_attendance_screen.dart
         teacher_reports_screen.dart -- class list -> report editor (§6.4)
         daily_report_edit_screen.dart -- write/edit one child's daily report (§6.4)
-        teacher_lesson_plans_screen.dart -- teacher's own lesson plans list + create (§6.5)
+        teacher_lesson_plans_screen.dart -- teacher's own lesson plans list + create (§6.5). Screen design A1 (Figma page "Screen designs"): greeting, summary cards (total / need attention = draft+rejected / approved), cards with SubjectTile + "subject · class" + status + reviewer feedback strip, pinned "Create lesson plan" button. No dates: lesson plans have no date column (2026-10-21)
     director/
       director_shell.dart
       screens/
@@ -725,7 +725,7 @@ lib/
         director_lessons_screen.dart    -- browse/filter all lesson plans, approve/reject (§6.5)
         manage_subjects_screen.dart     -- director-managed subjects list (§6.5)
     shared_lessons/
-      lesson_plan_edit_screen.dart      -- shared teacher/director lesson-plan editor + submit/review/delete (§6.5)
+      lesson_plan_edit_screen.dart      -- shared teacher/director lesson-plan editor + submit/review/delete (§6.5). Screen design A2: status chip + Delete in the app bar, reviewer feedback banner, BASICS/CONTENT sections with labels above white thin-bordered fields (AppTheme.lightForm, scoped to this screen), Subject|Class side by side, actions pinned in a bottom bar (2026-10-21)
       lesson_plan_view_screen.dart      -- read-only plan (subject/title/content), opened from a schedule event (§6.5)
   shared/
     util/
@@ -740,7 +740,8 @@ lib/
       refreshable_message.dart      -- centred empty-state text that can still be pulled to refresh. Kept-alive tab pages that load once in initState (DirectorAttendance, DirectorLessons, MarkAttendance, TeacherLessonPlans, TeacherReports) all have pull-to-refresh, since revisiting a tab no longer refetches
       row_actions_sheet.dart        -- long-press Edit/Delete bottom sheet + confirmDelete (§6.6)
       attendance_status_chip.dart
-      lesson_plan_status_chip.dart  -- draft/submitted/approved/rejected chip (§6.5)
+      lesson_plan_status_chip.dart  -- dot-pill status chip with semantic colours (grey/amber/green/red); `rejected` is labelled "Needs changes"; colorsFor()/labelFor() shared with feedback strips (§6.5)
+      subject_tile.dart             -- subject initials on a pastel picked by a stable hash of the name (subjects are free text, so no per-subject art); book icon when none
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
       signed_avatar.dart            -- round avatar from any bucket's signed-URL provider, with placeholder (§6.6/§6.7)
       avatar_source_sheet.dart      -- shared take-photo/gallery bottom sheet for avatar edits

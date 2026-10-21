@@ -231,7 +231,7 @@ class _FilterBar extends StatelessWidget {
                     DropdownMenuItem(
                         value: LessonPlanStatus.submitted, child: Text('Awaiting approval')),
                     DropdownMenuItem(value: LessonPlanStatus.approved, child: Text('Approved')),
-                    DropdownMenuItem(value: LessonPlanStatus.rejected, child: Text('Rejected')),
+                    DropdownMenuItem(value: LessonPlanStatus.rejected, child: Text('Needs changes')),
                     DropdownMenuItem(value: LessonPlanStatus.draft, child: Text('Draft')),
                   ],
                   onChanged: onStatus,

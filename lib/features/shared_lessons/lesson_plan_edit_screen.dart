@@ -7,7 +7,7 @@ import '../../core/models/subject.dart';
 import '../../core/controllers/class_controller.dart';
 import '../../core/controllers/lesson_plan_controller.dart';
 import '../../core/controllers/subject_controller.dart';
-import '../../shared/widgets/editable_field.dart';
+import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/lesson_plan_status_chip.dart';
 import '../../shared/widgets/app_dropdown_field.dart';
 import '../../shared/widgets/app_loader.dart';
@@ -199,186 +199,332 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
     await _run(() => ref.read(lessonPlanControllerProvider).deletePlan(widget.plan!.id));
   }
 
-  Widget _readOnlyRow(String label, String value) {
-    final theme = Theme.of(context);
-    final hasValue = value.isNotEmpty;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: theme.hintColor)),
-          const SizedBox(height: 2),
-          Text(
-            hasValue ? value : 'Not set',
-            style: hasValue
-                ? theme.textTheme.bodyLarge
-                : theme.textTheme.bodyLarge?.copyWith(color: theme.disabledColor),
+  // Resolves an id to its display name once the list has loaded.
+  static String _nameFor<T>(List<T> items, String? id, String Function(T) idOf,
+      String Function(T) nameOf) {
+    if (id == null) return 'None';
+    for (final item in items) {
+      if (idOf(item) == id) return nameOf(item);
+    }
+    return '…'; // still loading, or the row was deleted
+  }
+
+  Widget _subjectField(bool editable) {
+    return FutureBuilder<List<Subject>>(
+      future: _subjectsFuture,
+      builder: (context, snapshot) {
+        final subjects = snapshot.data ?? [];
+        if (!editable) {
+          return _Labeled(
+            label: 'Subject',
+            child: _ReadOnlyValue(_nameFor(subjects, _subjectId, (s) => s.id, (s) => s.name)),
+          );
+        }
+        final ids = subjects.map((s) => s.id).toSet();
+        return _Labeled(
+          label: 'Subject',
+          child: AppDropdownField<String?>(
+            value: (_subjectId != null && ids.contains(_subjectId)) ? _subjectId : null,
+            decoration: const InputDecoration(),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('None')),
+              for (final s in subjects) DropdownMenuItem(value: s.id, child: Text(s.name)),
+            ],
+            onChanged: (v) => setState(() => _subjectId = v),
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _classField(bool editable) {
+    return FutureBuilder<List<ClassGroup>>(
+      future: _classesFuture,
+      builder: (context, snapshot) {
+        final classes = snapshot.data ?? [];
+        if (!editable) {
+          return _Labeled(
+            label: 'Class',
+            child: _ReadOnlyValue(_nameFor(classes, _classId, (c) => c.id, (c) => c.name)),
+          );
+        }
+        final ids = classes.map((c) => c.id).toSet();
+        return _Labeled(
+          label: 'Class',
+          child: AppDropdownField<String?>(
+            value: (_classId != null && ids.contains(_classId)) ? _classId : null,
+            decoration: const InputDecoration(),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('None')),
+              for (final c in classes) DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ],
+            onChanged: (v) => setState(() => _classId = v),
+          ),
+        );
+      },
+    );
+  }
+
+  // Layout follows screen design A2 "Calm workspace" (Figma page "Screen
+  // designs"): status + delete in the app bar, the reviewer's feedback as a
+  // banner, BASICS and CONTENT sections with labels above light fields, and
+  // the actions pinned in a bottom bar so they're always in reach.
+  @override
+  Widget build(BuildContext context) {
+    final editable = _canEdit;
+    final note = widget.plan?.reviewNote?.trim() ?? '';
+    // lightForm: white, thin-bordered fields and dark-rose buttons, for this
+    // screen only (see AppTheme.lightForm).
+    return Theme(
+      data: AppTheme.lightForm(Theme.of(context)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isNew ? 'New lesson plan' : 'Lesson plan'),
+          actions: [
+            Center(child: LessonPlanStatusChip(status: _status)),
+            // Delete: teacher on own, director on any (an existing plan).
+            // Disabled while a save/review is in flight.
+            if (!_isNew)
+              IconButton(
+                tooltip: 'Delete',
+                color: Theme.of(context).colorScheme.error,
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _saving ? null : _delete,
+              )
+            else
+              const SizedBox(width: 12),
+          ],
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              // A director's note (usually the reason a plan needs changes),
+              // first thing on the page so the teacher sees why.
+              if (note.isNotEmpty) ...[
+                _FeedbackBanner(note: note, status: _status),
+                const SizedBox(height: 18),
+              ],
+              const _SectionLabel('BASICS'),
+              const SizedBox(height: 10),
+              _Labeled(
+                label: 'Lesson title',
+                child: editable
+                    ? TextFormField(
+                        key: const Key('lesson-title'),
+                        controller: _titleController,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration:
+                            const InputDecoration(hintText: 'e.g. Learning about colours'),
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Please enter a title' : null,
+                      )
+                    : _ReadOnlyValue(_titleController.text.trim()),
+              ),
+              const SizedBox(height: 14),
+              // Subject and Class side by side: short values, related, and it
+              // saves a whole row of height.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _subjectField(editable)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _classField(editable)),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const _SectionLabel('CONTENT'),
+              const SizedBox(height: 10),
+              _Labeled(
+                label: 'Objectives & activities',
+                child: editable
+                    ? TextFormField(
+                        key: const Key('lesson-content'),
+                        controller: _contentController,
+                        keyboardType: TextInputType.multiline,
+                        textCapitalization: TextCapitalization.sentences,
+                        minLines: 8,
+                        maxLines: null, // grows with the text
+                        decoration: const InputDecoration(
+                          hintText: 'What will the children learn, and how?',
+                        ),
+                      )
+                    : _ReadOnlyValue(_contentController.text.trim()),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: _actionBar(editable),
       ),
     );
   }
 
+  // The pinned bottom bar, or null when this viewer has nothing to do (a
+  // teacher looking at their submitted/approved plan).
+  Widget? _actionBar(bool editable) {
+    final teacherCanSubmit = !widget.isDirector &&
+        !_isNew &&
+        (_status == LessonPlanStatus.draft || _status == LessonPlanStatus.rejected);
+    final directorReviews = widget.isDirector && _status == LessonPlanStatus.submitted;
+    if (!editable && !directorReviews) return null;
+
+    final Widget content;
+    if (_saving) {
+      content = const SizedBox(height: 48, child: Center(child: AppLoader(delayed: false)));
+    } else if (directorReviews) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Approve/Reject don't save edits, so a director who tweaked the
+          // text saves first.
+          TextButton(onPressed: _save, child: const Text('Save changes')),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                    onPressed: () => _review(false), child: const Text('Reject')),
+              ),
+              const SizedBox(width: 10),
+              // No style override: colours come from the theme (lightForm).
+              Expanded(
+                child: FilledButton(onPressed: () => _review(true), child: const Text('Approve')),
+              ),
+            ],
+          ),
+        ],
+      );
+    } else if (teacherCanSubmit) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(child: OutlinedButton(onPressed: _save, child: const Text('Save draft'))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(onPressed: _submit, child: const Text('Submit for approval')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text("You can still edit it until it's approved.",
+              style: TextStyle(fontSize: 11, color: AppTheme.mutedText)),
+        ],
+      );
+    } else {
+      // A brand-new plan (submit needs a saved plan first), or a director
+      // editing a plan that isn't awaiting review.
+      content = SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: _save,
+          child: Text(widget.isDirector ? 'Save changes' : 'Save draft'),
+        ),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: AppTheme.hairline)),
+        ),
+        child: Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 12), child: content),
+      ),
+    );
+  }
+}
+
+// Small spaced-out caps heading that groups the form ("BASICS").
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.9,
+          color: AppTheme.mutedText,
+        ),
+      );
+}
+
+// A field label placed ABOVE its input. Material's default labelText floats
+// inside the border and shrinks on focus; a fixed label above reads calmer
+// and keeps the fields compact.
+class _Labeled extends StatelessWidget {
+  const _Labeled({required this.label, required this.child});
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.onAccent)),
+          const SizedBox(height: 6),
+          child,
+        ],
+      );
+}
+
+// Read-only version of a field (a submitted/approved plan, viewed by its
+// teacher): plain text where the input would be, "Not set" when empty.
+class _ReadOnlyValue extends StatelessWidget {
+  const _ReadOnlyValue(this.value);
+  final String value;
+
   @override
   Widget build(BuildContext context) {
-    final editable = _canEdit;
-    return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? 'New lesson plan' : 'Lesson plan')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Status chip on the left, Delete on the right of the same line --
-            // keeps the destructive action out of the main Save/Approve stack.
-            Row(
-              children: [
-                LessonPlanStatusChip(status: _status),
-                const Spacer(),
-                // Delete: teacher on own, director on any (an existing plan).
-                // Disabled while a save/review is in flight.
-                if (!_isNew)
-                  TextButton.icon(
-                    onPressed: _saving ? null : _delete,
-                    // Theme's error colour instead of hard-coded Colors.red,
-                    // so it follows the app palette.
-                    style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Delete'),
-                  ),
-              ],
-            ),
-            // A director's note on a rejected plan, so the teacher sees why.
-            if (widget.plan?.reviewNote != null && widget.plan!.reviewNote!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('Reviewer note', style: Theme.of(context).textTheme.labelSmall),
-              Text(widget.plan!.reviewNote!),
-            ],
-            const SizedBox(height: 8),
-            EditableField(
-              label: 'Title',
-              controller: _titleController,
-              editing: editable,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a title' : null,
-            ),
-            // Subject: dropdown when editable, resolved name otherwise.
-            FutureBuilder<List<Subject>>(
-              future: _subjectsFuture,
-              builder: (context, snapshot) {
-                final subjects = snapshot.data ?? [];
-                if (!editable) {
-                  var name = 'None';
-                  if (_subjectId != null) {
-                    name = '…';
-                    for (final s in subjects) {
-                      if (s.id == _subjectId) name = s.name;
-                    }
-                  }
-                  return _readOnlyRow('Subject', name);
-                }
-                final ids = subjects.map((s) => s.id).toSet();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: AppDropdownField<String?>(
-                    value:
-                        (_subjectId != null && ids.contains(_subjectId)) ? _subjectId : null,
-                    decoration: const InputDecoration(labelText: 'Subject'),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('None')),
-                      for (final s in subjects)
-                        DropdownMenuItem(value: s.id, child: Text(s.name)),
-                    ],
-                    onChanged: (v) => setState(() => _subjectId = v),
-                  ),
-                );
-              },
-            ),
-            // Class: dropdown when editable, resolved name otherwise.
-            FutureBuilder<List<ClassGroup>>(
-              future: _classesFuture,
-              builder: (context, snapshot) {
-                final classes = snapshot.data ?? [];
-                if (!editable) {
-                  var name = 'None';
-                  if (_classId != null) {
-                    name = '…';
-                    for (final c in classes) {
-                      if (c.id == _classId) name = c.name;
-                    }
-                  }
-                  return _readOnlyRow('Class', name);
-                }
-                final ids = classes.map((c) => c.id).toSet();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: AppDropdownField<String?>(
-                    value: (_classId != null && ids.contains(_classId)) ? _classId : null,
-                    decoration: const InputDecoration(labelText: 'Class'),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('None')),
-                      for (final c in classes)
-                        DropdownMenuItem(value: c.id, child: Text(c.name)),
-                    ],
-                    onChanged: (v) => setState(() => _classId = v),
-                  ),
-                );
-              },
-            ),
-            EditableField(
-              label: 'Content',
-              controller: _contentController,
-              editing: editable,
-              maxLines: 6,
-            ),
-            const SizedBox(height: 24),
-            ..._actions(editable),
-          ],
+    final empty = value.isEmpty || value == 'None';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        empty ? 'Not set' : value,
+        style: TextStyle(
+          fontSize: 15,
+          height: 1.45,
+          color: empty ? AppTheme.mutedText : AppTheme.bodyText,
         ),
       ),
     );
   }
+}
 
-  List<Widget> _actions(bool editable) {
-    if (_saving) {
-      return const [Center(child: AppLoader(delayed: false))];
-    }
-    final buttons = <Widget>[];
-    if (editable) {
-      buttons.add(FilledButton(onPressed: _save, child: const Text('Save')));
-    }
-    // Teacher can submit a draft/rejected plan that already exists.
-    if (!widget.isDirector &&
-        !_isNew &&
-        (_status == LessonPlanStatus.draft || _status == LessonPlanStatus.rejected)) {
-      buttons.add(const SizedBox(height: 8));
-      buttons.add(OutlinedButton(onPressed: _submit, child: const Text('Submit for approval')));
-    }
-    // Director reviews a submitted plan.
-    if (widget.isDirector && _status == LessonPlanStatus.submitted) {
-      buttons.add(const SizedBox(height: 8));
-      buttons.add(Row(
+// The reviewer's note, tinted by the plan's status: red when it needs
+// changes, green when approved, neutral otherwise.
+class _FeedbackBanner extends StatelessWidget {
+  const _FeedbackBanner({required this.note, required this.status});
+  final String note;
+  final LessonPlanStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = switch (status) {
+      LessonPlanStatus.rejected || LessonPlanStatus.approved =>
+        LessonPlanStatusChip.colorsFor(status),
+      _ => (AppTheme.barTint, AppTheme.onAccent),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            // No style override: takes the theme's primary colour like Save.
-            child: FilledButton(
-              onPressed: () => _review(true),
-              child: const Text('Approve'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _review(false),
-              child: const Text('Reject'),
-            ),
-          ),
+          Text('Feedback from reviewer',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: fg)),
+          const SizedBox(height: 4),
+          Text(note, style: TextStyle(fontSize: 13, height: 1.45, color: fg)),
         ],
-      ));
-    }
-    // Delete lives next to the status chip at the top (see build).
-    return buttons;
+      ),
+    );
   }
 }

@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kawankecil/core/auth/auth_controller.dart';
 import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/class_group.dart';
 import 'package:kawankecil/core/models/lesson_plan.dart';
+import 'package:kawankecil/core/models/subject.dart';
 import 'package:kawankecil/core/controllers/class_controller.dart';
 import 'package:kawankecil/core/controllers/lesson_plan_controller.dart';
 import 'package:kawankecil/core/controllers/subject_controller.dart';
@@ -85,9 +87,9 @@ void main() {
     await pump(tester,
         screen: const LessonPlanEditScreen(isDirector: false), user: _user('teacher'));
 
-    // Title + Content are both empty inputs in create mode; target by label.
-    await tester.enterText(find.widgetWithText(TextFormField, 'Title'), 'Numbers');
-    await tester.tap(find.text('Save'));
+    // Labels sit above the fields now (not inside), so target the input by key.
+    await tester.enterText(find.byKey(const Key('lesson-title')), 'Numbers');
+    await tester.tap(find.text('Save draft'));
     await tester.pumpAndSettle();
 
     verify(() => mockPlans.createPlan(
@@ -130,7 +132,7 @@ void main() {
 
     // Read-only: value shown as text, no input field, no Save/Submit.
     expect(find.byType(TextFormField), findsNothing);
-    expect(find.text('Save'), findsNothing);
+    expect(find.text('Save draft'), findsNothing);
     expect(find.text('Submit for approval'), findsNothing);
     expect(find.text('Colours'), findsWidgets);
   });
@@ -170,7 +172,7 @@ void main() {
         screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.draft), isDirector: false),
         user: _user('teacher'));
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(find.byTooltip('Delete'));
     await tester.pumpAndSettle();
     await tester.tap(find.descendant(
         of: find.byType(AlertDialog), matching: find.text('Delete')));
@@ -179,14 +181,39 @@ void main() {
     verify(() => mockPlans.deletePlan('lp-1')).called(1);
   });
 
-  testWidgets('Delete sits on the same row as the status chip', (tester) async {
+  testWidgets('status chip and Delete live in the app bar', (tester) async {
     await pump(tester,
         screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.submitted), isDirector: true),
         user: _user('director'));
 
-    // Same Row ancestor = same line, not a stray button under the actions.
-    final chipRow = find.ancestor(of: find.text('Awaiting approval'), matching: find.byType(Row));
-    expect(find.descendant(of: chipRow.first, matching: find.text('Delete')), findsOneWidget);
+    final appBar = find.byType(AppBar);
+    expect(find.descendant(of: appBar, matching: find.text('Awaiting approval')),
+        findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.byTooltip('Delete')), findsOneWidget);
+  });
+
+  testWidgets('a teacher editing a draft gets Save draft + Submit in the bottom bar',
+      (tester) async {
+    await pump(tester,
+        screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.draft), isDirector: false),
+        user: _user('teacher'));
+
+    expect(find.widgetWithText(OutlinedButton, 'Save draft'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Submit for approval'), findsOneWidget);
+  });
+
+  testWidgets("the reviewer's note shows as a feedback banner", (tester) async {
+    final plan = LessonPlan(
+      id: 'lp-1', teacherId: 'teacher-1', centerId: 'center-1', title: 'Colours',
+      content: '', status: LessonPlanStatus.rejected, reviewNote: 'Add a materials list',
+      createdAt: DateTime(2026), updatedAt: DateTime(2026),
+      createdBy: 'teacher-1', updatedBy: 'teacher-1',
+    );
+    await pump(tester,
+        screen: LessonPlanEditScreen(plan: plan, isDirector: false), user: _user('teacher'));
+
+    expect(find.text('Feedback from reviewer'), findsOneWidget);
+    expect(find.text('Add a materials list'), findsOneWidget);
   });
 
   testWidgets('Approve uses the theme primary colour, not a hard-coded green',
@@ -198,5 +225,43 @@ void main() {
     final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Approve'));
     // null style = FilledButton falls back to the app theme (primary colour).
     expect(button.style, isNull);
+  });
+
+  testWidgets('fits a 360px phone with long subject/class names (no overflow)',
+      (tester) async {
+    when(() => mockSubjects.fetchAll()).thenAnswer((_) async => [
+          Subject(id: 's1', centerId: 'center-1', name: 'Fine and gross motor skills',
+              createdAt: DateTime(2026), updatedAt: DateTime(2026),
+              createdBy: 'd', updatedBy: 'd'),
+        ]);
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => [
+          ClassGroup(id: 'c1', name: 'Kindergarten Sunflowers', teacherIds: const [],
+              centerId: 'center-1', createdAt: DateTime(2026),
+              updatedAt: DateTime(2026), createdBy: 'd', updatedBy: 'd'),
+        ]);
+    final plan = LessonPlan(
+      id: 'lp-1', teacherId: 'teacher-1', centerId: 'center-1', title: 'Colours',
+      content: '', subjectId: 's1', classId: 'c1', status: LessonPlanStatus.submitted,
+      createdAt: DateTime(2026), updatedAt: DateTime(2026),
+      createdBy: 'teacher-1', updatedBy: 'teacher-1',
+    );
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        currentUserProvider.overrideWith((ref) => Stream.value(_user('director'))),
+        lessonPlanControllerProvider.overrideWithValue(mockPlans),
+        subjectControllerProvider.overrideWithValue(mockSubjects),
+        classControllerProvider.overrideWithValue(mockClasses),
+      ],
+      child: MaterialApp(home: LessonPlanEditScreen(plan: plan, isDirector: true)),
+    ));
+    await tester.pumpAndSettle();
+
+    // A RenderFlex overflow would surface here as an exception.
+    expect(tester.takeException(), isNull);
+    expect(find.text('Approve'), findsOneWidget);
   });
 }

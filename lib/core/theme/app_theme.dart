@@ -12,6 +12,15 @@ class AppTheme {
   static const barTint = Color(0xFFFFF2F5);   // faint wash on the top/bottom bars
   static const radius = 16.0;
 
+  // Extra tones from the v2 brand board / screen design A (Figma page
+  // "Screen designs"). Pink alone is too pale for text, so these cover
+  // secondary text, captions, borders and highlights.
+  static const accentPink = Color(0xFFF2849E); // links, highlights
+  static const bodyText = Color(0xFF55454A); // secondary text
+  static const mutedText = Color(0xFF8A7378); // captions, section labels
+  static const hairline = Color(0xFFF0DDE2); // card borders, dividers
+  static const fieldBorder = Color(0xFFE6D3D8); // input borders on light forms
+
   static ThemeData get light {
     final colorScheme = ColorScheme.fromSeed(seedColor: seed).copyWith(
       surface: Colors.white,
@@ -127,6 +136,53 @@ class AppTheme {
         backgroundColor: seed.withValues(alpha: 0.15),
         side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
+      ),
+    );
+  }
+
+  // The light form look from screen design A2, applied to one screen by
+  // wrapping it in Theme(data: AppTheme.lightForm(Theme.of(context))).
+  //
+  // Differences from the app-wide style: white fields with a thin border
+  // (instead of big pink-tinted blocks), slightly tighter padding, and
+  // dark-rose primary buttons so the main action stands out from the pink.
+  // Scoped for now; if every form should look like this, move these into
+  // `light` itself.
+  static ThemeData lightForm(ThemeData base) {
+    OutlineInputBorder border(Color color, [double width = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color, width: width),
+        );
+    const buttonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(14)),
+    );
+    return base.copyWith(
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        hintStyle: const TextStyle(color: mutedText),
+        border: border(fieldBorder),
+        enabledBorder: border(fieldBorder),
+        focusedBorder: border(onAccent, 1.5),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: onAccent,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(0, 48),
+          shape: buttonShape,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: onAccent,
+          minimumSize: const Size(0, 48),
+          side: const BorderSide(color: onAccent, width: 1.5),
+          shape: buttonShape,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

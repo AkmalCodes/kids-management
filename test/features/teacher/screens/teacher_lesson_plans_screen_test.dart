@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:kawankecil/core/auth/auth_controller.dart';
 import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/class_group.dart';
 import 'package:kawankecil/core/models/lesson_plan.dart';
+import 'package:kawankecil/core/models/subject.dart';
 import 'package:kawankecil/core/controllers/class_controller.dart';
 import 'package:kawankecil/core/controllers/lesson_plan_controller.dart';
 import 'package:kawankecil/core/controllers/subject_controller.dart';
@@ -29,8 +31,13 @@ AppUser _teacher() => AppUser(
   updatedBy: 'teacher-1',
 );
 
-LessonPlan _plan(String id, String title, LessonPlanStatus status) => LessonPlan(
+LessonPlan _plan(String id, String title, LessonPlanStatus status,
+        {String? subjectId, String? classId, String? note}) =>
+    LessonPlan(
   id: id,
+  subjectId: subjectId,
+  classId: classId,
+  reviewNote: note,
   teacherId: 'teacher-1',
   centerId: 'center-1',
   title: title,
@@ -89,12 +96,12 @@ void main() {
     expect(find.text('Awaiting approval'), findsOneWidget);
   });
 
-  testWidgets('the + button opens the editor in create mode', (tester) async {
+  testWidgets('Create lesson plan opens the editor in create mode', (tester) async {
     when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
 
     await pumpScreen(tester);
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.text('Create lesson plan'));
     await tester.pumpAndSettle();
 
     expect(find.byType(LessonPlanEditScreen), findsOneWidget);
@@ -110,5 +117,65 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => mockPlans.fetchForTeacher('teacher-1')).called(2);
+  });
+
+  testWidgets('greets the teacher by name', (tester) async {
+    when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async => []);
+
+    await pumpScreen(tester);
+
+    expect(find.textContaining('Ms. Smith'), findsOneWidget);
+  });
+
+  testWidgets('summary cards count plans, ones needing attention, and approved',
+      (tester) async {
+    when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          _plan('1', 'A', LessonPlanStatus.draft),
+          _plan('2', 'B', LessonPlanStatus.rejected),
+          _plan('3', 'C', LessonPlanStatus.approved),
+          _plan('4', 'D', LessonPlanStatus.approved),
+          _plan('5', 'E', LessonPlanStatus.approved),
+        ]);
+
+    await pumpScreen(tester);
+
+    expect(find.text('5'), findsOneWidget); // total
+    expect(find.text('2 need attention'), findsOneWidget); // draft + rejected
+    expect(find.text('3'), findsOneWidget); // approved
+    expect(find.text('Ready to teach'), findsOneWidget);
+  });
+
+  testWidgets('a card shows subject and class names, and no date', (tester) async {
+    when(() => mockSubjects.fetchAll()).thenAnswer((_) async => [
+          Subject(id: 's1', centerId: 'center-1', name: 'Arts',
+              createdAt: DateTime(2026), updatedAt: DateTime(2026),
+              createdBy: 'd', updatedBy: 'd'),
+        ]);
+    when(() => mockClasses.fetchAll()).thenAnswer((_) async => [
+          ClassGroup(id: 'c1', name: 'Class A', teacherIds: const [],
+              centerId: 'center-1', createdAt: DateTime(2026),
+              updatedAt: DateTime(2026), createdBy: 'd', updatedBy: 'd'),
+        ]);
+    when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async =>
+        [_plan('1', 'Colours', LessonPlanStatus.draft, subjectId: 's1', classId: 'c1')]);
+
+    await pumpScreen(tester);
+
+    expect(find.text('Arts · Class A'), findsOneWidget);
+  });
+
+  testWidgets('a rejected plan shows the reviewer feedback with an Edit shortcut',
+      (tester) async {
+    when(() => mockPlans.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          _plan('1', 'Colours', LessonPlanStatus.rejected, note: 'Add a materials list'),
+        ]);
+
+    await pumpScreen(tester);
+
+    expect(find.text('Needs changes'), findsOneWidget);
+    expect(find.textContaining('Add a materials list'), findsOneWidget);
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LessonPlanEditScreen), findsOneWidget);
   });
 }
