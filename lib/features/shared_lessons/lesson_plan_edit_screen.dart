@@ -403,7 +403,7 @@ class _LessonPlanEditScreenState extends ConsumerState<LessonPlanEditScreen> {
               Expanded(child: OutlinedButton(onPressed: _save, child: const Text('Save draft'))),
               const SizedBox(width: 10),
               Expanded(
-                child: FilledButton(onPressed: _submit, child: const Text('Submit for approval')),
+                child: FilledButton(onPressed: _submit, child: const Text('Submit')),
               ),
             ],
           ),

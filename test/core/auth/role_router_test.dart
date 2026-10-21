@@ -11,7 +11,7 @@ import 'package:kawankecil/core/controllers/notification_controller.dart';
 import 'package:kawankecil/core/controllers/teacher_controller.dart';
 import 'package:kawankecil/features/director/screens/manage_teachers_screen.dart';
 import 'package:kawankecil/features/parent/screens/child_schedule_screen.dart';
-import 'package:kawankecil/features/teacher/screens/teacher_schedule_screen.dart';
+import 'package:kawankecil/features/teacher/teacher_shell.dart';
 
 class MockChildController extends Mock implements ChildController {}
 
@@ -54,8 +54,8 @@ void main() {
   });
 
   testWidgets('routes teacher to TeacherShell', (tester) async {
-    // TeacherShell's first tab (TeacherScheduleScreen) reads classService
-    // during build to resolve the teacher's class.
+    // TeacherShell opens on Lessons; the class lookup is stubbed so nothing
+    // reaches for the real Supabase client.
     final mockClasses = MockClassController();
     when(() => mockClasses.fetchForTeacher(any())).thenAnswer((_) async => []);
 
@@ -70,7 +70,7 @@ void main() {
       child: const MaterialApp(home: RoleRouter()),
     ));
     await tester.pump();
-    expect(find.byType(TeacherScheduleScreen), findsOneWidget);
+    expect(find.byType(TeacherShell), findsOneWidget);
   });
 
   testWidgets('routes director to DirectorShell', (tester) async {

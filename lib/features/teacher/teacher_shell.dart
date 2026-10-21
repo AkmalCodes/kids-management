@@ -17,7 +17,10 @@ class TeacherShell extends StatefulWidget {
 }
 
 class _TeacherShellState extends State<TeacherShell> {
-  int _index = 0;
+  // Opens on Lessons (index 2): it carries the "Good morning, <name>" greeting
+  // and the to-do summary, so it's the natural home screen for a teacher.
+  // Kept alive state means this only applies to a fresh login / app start.
+  int _index = 2;
 
   static const _pages = [
     TeacherScheduleScreen(),

@@ -642,7 +642,7 @@ main.dart
         ├── LoginScreen
         └── RoleRouter
               ├── ParentShell      → BottomNav: Schedule | Attendance | Reports
-              ├── TeacherShell     → BottomNav: Schedule | Attendance | Lesson Plans | Daily Reports
+              ├── TeacherShell     → BottomNav: Schedule | Attendance | Lessons | Reports | Profile (opens on Lessons)
               └── DirectorShell   → BottomNav: Teachers | Schedules | Lesson Plans | Attendance
 ```
 
@@ -805,7 +805,7 @@ Teacher marks attendance via a grid of tiles (see `docs/superpowers/specs/2026-0
 ### 6.5 Lesson Plans — built (Increment 1 of the "full vision")
 Teacher-authored plans with a **subject** categorization and a **director approval workflow**. Visible to teachers + directors only (not parents).
 - **Subjects** — a center-defined list (`subjects` table) the director manages (`ManageSubjectsScreen`, reached from the director Lessons tab). Teachers tag a plan with one. Any authenticated user can read subjects (they'll surface on the schedule in a later increment); only directors write them.
-- **Teacher** (`TeacherLessonPlansScreen`, Lessons tab): lists own plans (newest first) with a status chip; **+** writes a new one. `LessonPlanEditScreen`: title, date, subject, optional class, content. Editable while **draft/rejected**; **Submit for approval** flips it to *submitted* (then read-only to the teacher); Delete (own).
+- **Teacher** (`TeacherLessonPlansScreen`, Lessons tab): lists own plans (newest first) with a status chip; **+** writes a new one. `LessonPlanEditScreen`: title, date, subject, optional class, content. Editable while **draft/rejected**; **Submit** flips it to *submitted* (then read-only to the teacher); Delete (own).
 - **Director** (`DirectorLessonsScreen`, Lessons tab): browses **all** plans, filters by teacher + status, opens one to **Approve / Reject** (with an optional note) and can edit/delete any.
 - **Editor layout (2026-10-04):** Delete sits at the right end of the status-chip row (theme error colour), away from the main actions; Approve is a plain `FilledButton` in the theme's primary colour (was hard-coded green), Reject an `OutlinedButton` beside it.
 - **Approval states:** `draft → submitted → approved | rejected` (`LessonPlanStatus`). A rejected plan shows the reviewer's note and becomes editable again.

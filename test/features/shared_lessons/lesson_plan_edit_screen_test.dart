@@ -119,7 +119,7 @@ void main() {
         screen: LessonPlanEditScreen(plan: _plan(LessonPlanStatus.draft), isDirector: false),
         user: _user('teacher'));
 
-    await tester.tap(find.text('Submit for approval'));
+    await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
     verify(() => mockPlans.submitPlan(id: 'lp-1', actorUid: 'teacher-1')).called(1);
@@ -133,7 +133,7 @@ void main() {
     // Read-only: value shown as text, no input field, no Save/Submit.
     expect(find.byType(TextFormField), findsNothing);
     expect(find.text('Save draft'), findsNothing);
-    expect(find.text('Submit for approval'), findsNothing);
+    expect(find.text('Submit'), findsNothing);
     expect(find.text('Colours'), findsWidgets);
   });
 
@@ -199,7 +199,7 @@ void main() {
         user: _user('teacher'));
 
     expect(find.widgetWithText(OutlinedButton, 'Save draft'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Submit for approval'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Submit'), findsOneWidget);
   });
 
   testWidgets("the reviewer's note shows as a feedback banner", (tester) async {
