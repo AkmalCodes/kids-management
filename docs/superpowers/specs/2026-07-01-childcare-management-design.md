@@ -749,7 +749,7 @@ lib/
       editable_field.dart           -- read-only row / fading text input toggle + tap-to-copy (§6.6c)
       avatar_preview.dart           -- tappable avatar -> full-screen zoomable photo (§6.6c)
       schedule_agenda_view.dart     -- the whole Schedule tab: month header (Today, date picker), week strip, List|Timeline toggle (agenda cards or DayTimetable), now line; owns create/edit/delete via the event sheet
-      day_timetable.dart            -- hour grid (SA2 look: pale blocks + colour bar, nowTime fades past events + now line), tap-to-add/edit, fade-in on new entries
+      day_timetable.dart            -- hour grid 07:00–20:00 (SA2 look: pale blocks + colour bar, nowTime fades past events + now line), tap-to-add/edit, fade-in on new entries
       week_strip.dart               -- Mon-Sun day picker with event dots, swipe = week (agenda + day view)
       schedule_event_sheet.dart     -- one bottom sheet to view (summary), edit (Edit swaps in the form) and create an event: name, start/end, Once|Daily|Weekly picker, lesson plan, colour; delete confirmed
 supabase/

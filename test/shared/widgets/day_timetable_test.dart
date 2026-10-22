@@ -141,4 +141,15 @@ void main() {
 
     expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
   });
+
+  testWidgets('the grid runs from 07:00 to a last 19:00 row', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SingleChildScrollView(child: DayTimetable(entries: const []))),
+      ),
+    );
+    expect(find.text('07:00'), findsOneWidget);
+    expect(find.text('19:00'), findsOneWidget);
+    expect(find.text('20:00'), findsNothing);
+  });
 }

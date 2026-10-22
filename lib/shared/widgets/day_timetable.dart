@@ -50,7 +50,9 @@ class DayTimetable extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   static const startHour = 7;
-  static const endHour = 18;
+  // Exclusive: the last row drawn is endHour - 1 (19:00–20:00), so late
+  // pick-ups and evening events still fit on the grid.
+  static const endHour = 20;
   static const hourHeight = 56.0;
   static const _timeAxisWidth = 48.0;
 
