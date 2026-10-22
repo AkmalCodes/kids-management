@@ -3,8 +3,8 @@ import '../../core/models/schedule.dart';
 import '../../core/theme/app_theme.dart';
 
 // Single-day timetable: hours down the left, entries drawn as blocks
-// positioned by their start/end times — the detail view you land on when
-// tapping a day in ScheduleAgendaView.
+// positioned by their start/end times -- ScheduleAgendaView's "Timeline"
+// view of the selected day.
 //
 // onAddEntry/onTapEntry are both optional — leave both null for a read-only
 // view (e.g. a parent viewing their child's schedule). A single
@@ -25,6 +25,7 @@ class DayTimetable extends StatelessWidget {
     this.subjectForEntry,
     this.newEntryId,
     this.nowTime,
+    this.padding = const EdgeInsets.all(16),
   });
 
   final List<ScheduleEntry> entries;
@@ -43,6 +44,10 @@ class DayTimetable extends StatelessWidget {
   // Current time as "HH:mm" when the day shown is today, else null. Drives
   // the now line and the fading of events that have ended.
   final String? nowTime;
+
+  // Space around the grid. Taps are measured inside the grid itself, so
+  // changing this never shifts which hour/entry a tap lands on.
+  final EdgeInsetsGeometry padding;
 
   static const startHour = 7;
   static const endHour = 18;
@@ -82,7 +87,7 @@ class DayTimetable extends StatelessWidget {
     final showNowLine = nowMinutes != null && nowMinutes >= 0 && nowMinutes <= hourCount * 60;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: padding,
       child: SizedBox(
         height: gridHeight,
         child: Row(

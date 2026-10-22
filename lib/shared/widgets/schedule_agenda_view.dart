@@ -1,27 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/auth/auth_controller.dart';
+import '../../core/models/lesson_plan.dart';
 import '../../core/models/schedule.dart';
 import '../../core/controllers/lesson_plan_controller.dart';
+import '../../core/controllers/schedule_controller.dart';
 import '../../core/theme/app_theme.dart';
-import '../screens/day_schedule_screen.dart';
+import '../../features/shared_lessons/lesson_plan_view_screen.dart';
 import '../util/schedule_recurrence.dart';
 import '../util/schedule_time.dart';
+import 'day_timetable.dart';
+import 'schedule_event_sheet.dart';
 import 'week_strip.dart';
 
-// The Schedule tab's main view, screen design SA1 "Week strip + agenda"
-// (Figma page "Screen designs"), modelled on phone calendar apps:
+// The whole Schedule tab in one screen, screen design SA (Figma page
+// "Screen designs"), modelled on phone calendar apps:
 //
 //   October 2026            [Today] [calendar]
 //   M  T  W  T  F  S  S      <- week strip; swipe for prev/next week,
 //   19 20 21 22 23 24 25        dots = that day's event colours
-//   Wednesday · 6 activities     Timeline
-//   08:00 | Morning circle            <- the selected day's agenda
-//   ...
+//   Wednesday · 6 activities    [list|timeline]
+//   08:00 | Morning circle            <- the selected day's agenda (SA1)
+//   ...                                  or its hour grid (SA2)
 //
-// Tapping a day in the strip swaps the agenda below it. "Timeline" (or
-// tapping an event) pushes DayScheduleScreen, the hour-by-hour view (SA2)
-// where events are opened (SA3 sheet), created and edited. On today's agenda, finished events fade, the
-// running one gets a "Now" chip and a pink line marks the current time.
+// Tapping a day in the strip swaps what's below it. Tapping an event opens
+// the event sheet (SA3: details, then Edit turns it into the form); + (or an
+// empty hour in the timeline) opens the same sheet as a blank form. There is
+// no separate day screen any more: it repeated this one in another layout.
+// On today, finished events fade, the running one gets a "Now" chip and a
+// pink line marks the current time.
 //
 // Which entries fall on a date is decided by scheduleEntryOccursOn:
 // - once: only on its anchor date
@@ -51,8 +58,8 @@ class ScheduleAgendaView extends ConsumerStatefulWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
-  // Forwarded into DayScheduleScreen so it can create/edit/delete entries.
-  // Only required when editable is true.
+  // Whose schedule this is, so created/changed entries are saved against
+  // the right row. Only required when editable is true.
   final String? type;
   final String? refId;
   final String? centerId;
@@ -63,12 +70,24 @@ class ScheduleAgendaView extends ConsumerStatefulWidget {
 }
 
 class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
-  // The day whose agenda is shown. The strip always shows its Mon–Sun week.
+  // The day shown. The strip always shows its Mon–Sun week.
   late DateTime _selected;
-  // For a class schedule: plan id -> subject label, so the attached lesson's
-  // subject shows on each event card. Loaded via the connected-role RPC so
-  // it resolves for parents too.
+  // false = agenda list (SA1), true = hour grid (SA2).
+  bool _timeline = false;
+  // Our own copy of the entries, so a create/edit/delete shows at once
+  // instead of after the provider's re-fetch (which we also trigger, so other
+  // screens catch up). Replaced whenever the parent passes a new list.
+  late List<ScheduleEntry> _entries;
+  String? _newEntryId; // fades in once on the timeline
+
+  // For a class schedule (§6.5): the class's approved lesson plans, used to
+  // (a) show the attached plan's subject on events, (b) offer plans in the
+  // event form's picker, (c) open the plan from the event sheet. Subjects
+  // and titles come via the connected-role RPC, so they resolve for parents.
   final Map<String, String?> _subjectByPlanId = {};
+  final Map<String, String> _titleByPlanId = {};
+  final Map<String, LessonPlan> _planById = {};
+  List<LessonPlanOption> _planOptions = [];
 
   DateTime get _now => widget.anchorDate ?? DateTime.now();
   DateTime get _today => _dateOnly(_now);
@@ -81,24 +100,56 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   void initState() {
     super.initState();
     _selected = _today;
+    _entries = widget.entries;
     if (widget.type == 'class' && widget.refId != null) {
-      _loadSubjects(widget.refId!);
+      _loadPlans(widget.refId!);
     }
   }
 
-  Future<void> _loadSubjects(String classId) async {
+  @override
+  void didUpdateWidget(covariant ScheduleAgendaView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.entries, widget.entries)) _entries = widget.entries;
+  }
+
+  Future<void> _loadPlans(String classId) async {
+    // ref.read inside the try: building the controller can itself fail
+    // (e.g. no backend in widget tests), and plans are optional extras.
+    final LessonPlanController service;
     try {
-      final planSubjects =
-          await ref.read(lessonPlanControllerProvider).fetchClassPlanSubjects(classId);
+      service = ref.read(lessonPlanControllerProvider);
+    } catch (_) {
+      return;
+    }
+    try {
+      final planSubjects = await service.fetchClassPlanSubjects(classId);
       if (!mounted) return;
       setState(() {
         _subjectByPlanId
           ..clear()
           ..addEntries(planSubjects.map((p) => MapEntry(p.id, p.subject)));
+        _titleByPlanId
+          ..clear()
+          ..addEntries(planSubjects.map((p) => MapEntry(p.id, p.title)));
+        _planOptions = [
+          for (final p in planSubjects)
+            (id: p.id, label: p.subject == null ? p.title : '${p.title} · ${p.subject}'),
+        ];
       });
     } catch (_) {
-      // Non-fatal: cards just won't show a subject.
+      // Non-fatal: events just show no subject and the picker is hidden.
     }
+    // Full plan rows (to open an attached plan's content) -- readable by the
+    // teacher/director and, via widened RLS, connected parents. Non-fatal.
+    try {
+      final plans = await service.fetchApprovedForClass(classId);
+      if (!mounted) return;
+      setState(() {
+        _planById
+          ..clear()
+          ..addEntries(plans.map((p) => MapEntry(p.id, p)));
+      });
+    } catch (_) {}
   }
 
   String? _subjectFor(ScheduleEntry entry) =>
@@ -111,8 +162,6 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
-
-  List<DateTime> get _week => WeekStrip.weekOf(_selected);
 
   // Swipe: move a whole week, keeping the same weekday selected. Built with
   // the DateTime constructor (not Duration) so DST shifts can't skew it.
@@ -137,32 +186,159 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
   }
 
   List<ScheduleEntry> _entriesFor(DateTime date) {
-    return widget.entries.where((e) => scheduleEntryOccursOn(e, date)).toList()
+    return _entries.where((e) => scheduleEntryOccursOn(e, date)).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
-  }
-
-  void _openDay(DateTime date, {bool addOnOpen = false}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DayScheduleScreen(
-          date: date,
-          // The full list: the day view filters per day itself, so it can
-          // switch days from its own week strip.
-          entries: widget.entries,
-          now: widget.anchorDate,
-          type: widget.type,
-          refId: widget.refId,
-          centerId: widget.centerId,
-          editable: widget.editable,
-          addOnOpen: addOnOpen,
-        ),
-      ),
-    );
   }
 
   // "HH:mm" for now, comparable with the entries' start/end strings.
   String get _nowHhmm =>
       '${_now.hour.toString().padLeft(2, '0')}:${_now.minute.toString().padLeft(2, '0')}';
+
+  // Marks the provider's cached list stale so it re-fetches in the
+  // background; our local copy already shows the change.
+  void _invalidateCache() {
+    final type = widget.type;
+    final refId = widget.refId;
+    if (type == null || refId == null) return;
+    ref.invalidate(scheduleEntriesProvider((type: type, refId: refId)));
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // Create from + (hour = null: the next hour on today, else 08:00) or from
+  // an empty hour tapped on the timeline.
+  Future<void> _create({int? hour}) async {
+    final user = await ref.read(currentUserProvider.future);
+    final type = widget.type;
+    final refId = widget.refId;
+    final centerId = widget.centerId;
+    if (!mounted) return;
+    if (user == null || type == null || refId == null || centerId == null) {
+      _showError("Can't add an event: your account has no center assigned. Contact your director.");
+      return;
+    }
+    final startHour = hour ??
+        (_sameDay(_selected, _today)
+            ? (_now.hour + 1).clamp(DayTimetable.startHour, DayTimetable.endHour - 1)
+            : 8);
+    String hh(int h) => '${h.toString().padLeft(2, '0')}:00';
+
+    final result = await showScheduleEventSheet(
+      context,
+      date: _selected,
+      canEdit: true,
+      lessonPlans: _planOptions,
+      initialStartTime: hh(startHour),
+      initialEndTime: hh(startHour + 1),
+    );
+    if (result is! ScheduleEntrySaved || !mounted) return;
+
+    try {
+      final created = await ref.read(scheduleControllerProvider).createEntry(
+            type: type,
+            refId: refId,
+            centerId: centerId,
+            day: _weekdayNames[_selected.weekday - 1],
+            startTime: result.startTime,
+            endTime: result.endTime,
+            label: result.label,
+            color: result.color,
+            recurrence: result.recurrence,
+            anchorDate: result.anchorDate,
+            lessonPlanId: result.lessonPlanId,
+            actorUid: user.id,
+          );
+      if (!mounted) return;
+      setState(() {
+        _entries = [..._entries, created];
+        _newEntryId = created.id;
+      });
+      _invalidateCache();
+    } catch (e) {
+      if (mounted) _showError('Could not add the event: $e');
+    }
+  }
+
+  // Tap on an event: the sheet's summary; Edit / Delete inside it for the
+  // creator or a director; the plan card for everyone.
+  Future<void> _openEntry(ScheduleEntry entry) async {
+    final user = await ref.read(currentUserProvider.future);
+    if (user == null || !mounted) return;
+    final canEdit = widget.editable && entry.canBeEditedBy(uid: user.id, role: user.role);
+    final planId = entry.lessonPlanId;
+
+    final result = await showScheduleEventSheet(
+      context,
+      entry: entry,
+      date: _selected,
+      subject: _subjectFor(entry),
+      planTitle: planId == null ? null : (_planById[planId]?.title ?? _titleByPlanId[planId]),
+      canEdit: canEdit,
+      addedByYou: entry.createdBy == user.id,
+      // Explain the missing buttons to someone who can edit this schedule in
+      // general but not this particular event.
+      readOnlyHint:
+          widget.editable && !canEdit ? 'Only the creator or a director can edit this event.' : null,
+      lessonPlans: _planOptions,
+    );
+    if (result == null || !mounted) return;
+
+    if (result is ScheduleOpenPlan) {
+      await _openPlan(entry);
+      return;
+    }
+    // Only read the schedule controller for an actual write: read-only
+    // viewers who just open a plan never need it.
+    final service = ref.read(scheduleControllerProvider);
+    try {
+      switch (result) {
+        case ScheduleOpenPlan():
+          return; // handled above
+        case ScheduleEntryDeleted():
+          await service.deleteEntry(entry.id);
+          if (!mounted) return;
+          setState(() {
+            _entries = _entries.where((e) => e.id != entry.id).toList();
+          });
+        case ScheduleEntrySaved():
+          final updated = await service.updateEntry(
+            id: entry.id,
+            day: entry.day,
+            startTime: result.startTime,
+            endTime: result.endTime,
+            label: result.label,
+            color: result.color,
+            recurrence: result.recurrence,
+            anchorDate: result.anchorDate,
+            lessonPlanId: result.lessonPlanId,
+            actorUid: user.id,
+          );
+          if (!mounted) return;
+          setState(() {
+            _entries = [for (final e in _entries) if (e.id == updated.id) updated else e];
+          });
+      }
+      _invalidateCache();
+    } catch (e) {
+      if (mounted) _showError('Could not save the change: $e');
+    }
+  }
+
+  // Opens the lesson plan attached to an event (read-only).
+  Future<void> _openPlan(ScheduleEntry entry) async {
+    final id = entry.lessonPlanId;
+    if (id == null) return;
+    // Prefer the already-loaded plan; fall back to a fetch.
+    final plan = _planById[id] ?? await ref.read(lessonPlanControllerProvider).getPlan(id);
+    if (plan == null || !mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LessonPlanViewScreen(plan: plan, subjectName: _subjectByPlanId[id]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,12 +362,13 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
       ),
       const SizedBox(height: 12),
       WeekStrip(
-        days: _week,
+        days: WeekStrip.weekOf(_selected),
         selected: _selected,
         today: _today,
         dotColorsFor: (d) => _entriesFor(d).map((e) => e.displayColor).toSet().take(3).toList(),
         onSelect: (d) => setState(() {
           _selected = d;
+          _newEntryId = null; // don't replay a fade-in on another day
         }),
         onSwipe: _shiftWeek,
       ),
@@ -207,51 +384,61 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
                   fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.onAccent),
             ),
           ),
-          TextButton(
-            onPressed: () => _openDay(_selected),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.accentPink,
-              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-              visualDensity: VisualDensity.compact,
-            ),
-            child: const Text('Timeline'),
+          _ViewToggle(
+            timeline: _timeline,
+            onChanged: (v) => setState(() {
+              _timeline = v;
+            }),
           ),
         ],
       ),
-      const SizedBox(height: 4),
+      const SizedBox(height: 8),
     ];
 
-    // Agenda rows, with the now line slotted in on today's agenda between
-    // the last event that has started and the first that hasn't (only once
-    // at least one event is behind us -- a line above everything says
-    // nothing).
-    final rows = <Widget>[];
-    if (dayEntries.isEmpty) {
-      rows.add(const Padding(
+    final body = <Widget>[];
+    // Read-only + empty: nothing to draw either way. (Editable keeps the
+    // grid when empty, so an hour can be tapped to add the first event.)
+    if (dayEntries.isEmpty && !(_timeline && widget.editable)) {
+      body.add(const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(
           child: Text('No activities on this day.',
               style: TextStyle(color: AppTheme.mutedText)),
         ),
       ));
-    }
-    final firstUpcoming = dayEntries.indexWhere((e) => e.startTime.compareTo(now) > 0);
-    final nowLineAt = firstUpcoming == -1 ? dayEntries.length : firstUpcoming;
-    for (var i = 0; i < dayEntries.length; i++) {
-      if (isToday && i == nowLineAt && i > 0) rows.add(_NowLine(time: now));
-      final e = dayEntries[i];
-      final done = isPast || (isToday && e.endTime.compareTo(now) <= 0);
-      final running = isToday && !done && e.startTime.compareTo(now) <= 0;
-      rows.add(_AgendaRow(
-        entry: e,
-        subject: _subjectFor(e),
-        done: done,
-        running: running,
-        onTap: () => _openDay(_selected),
+    } else if (_timeline) {
+      body.add(DayTimetable(
+        entries: dayEntries,
+        padding: const EdgeInsets.only(top: 8),
+        onAddEntry: widget.editable ? (h) => _create(hour: h) : null,
+        onTapEntry: _openEntry,
+        subjectForEntry: _subjectFor,
+        newEntryId: _newEntryId,
+        nowTime: isToday ? now : null,
       ));
-    }
-    if (isToday && nowLineAt == dayEntries.length && dayEntries.isNotEmpty) {
-      rows.add(_NowLine(time: now));
+    } else {
+      // Agenda rows, with the now line slotted in on today between the last
+      // event that has started and the first that hasn't (only once at
+      // least one event is behind us -- a line above everything says
+      // nothing).
+      final firstUpcoming = dayEntries.indexWhere((e) => e.startTime.compareTo(now) > 0);
+      final nowLineAt = firstUpcoming == -1 ? dayEntries.length : firstUpcoming;
+      for (var i = 0; i < dayEntries.length; i++) {
+        if (isToday && i == nowLineAt && i > 0) body.add(_NowLine(time: now));
+        final e = dayEntries[i];
+        final done = isPast || (isToday && e.endTime.compareTo(now) <= 0);
+        final running = isToday && !done && e.startTime.compareTo(now) <= 0;
+        body.add(_AgendaRow(
+          entry: e,
+          subject: _subjectFor(e),
+          done: done,
+          running: running,
+          onTap: () => _openEntry(e),
+        ));
+      }
+      if (isToday && nowLineAt == dayEntries.length && dayEntries.isNotEmpty) {
+        body.add(_NowLine(time: now));
+      }
     }
 
     final showFab = widget.editable && !widget.shrinkWrap;
@@ -264,7 +451,7 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [...header, ...rows],
+          children: [...header, ...body],
         ),
       );
     }
@@ -272,7 +459,7 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
     final list = ListView(
       padding: padding,
       physics: widget.physics,
-      children: [...header, ...rows],
+      children: [...header, ...body],
     );
     if (!showFab) return list;
     return Stack(
@@ -286,13 +473,59 @@ class _ScheduleAgendaViewState extends ConsumerState<ScheduleAgendaView> {
             backgroundColor: AppTheme.onAccent,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            // Creating lives in the day view (dialog + save + refresh), so
-            // open the selected day there with the create dialog up.
-            onPressed: () => _openDay(_selected, addOnOpen: true),
+            onPressed: () => _create(),
             child: const Icon(Icons.add),
           ),
         ),
       ],
+    );
+  }
+}
+
+// List | Timeline switch: two icon segments in a pale track. Kept small
+// because it's a preference, not something used every visit.
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.timeline, required this.onChanged});
+
+  final bool timeline;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget segment(bool isTimeline, IconData icon, String tooltip) {
+      final on = timeline == isTimeline;
+      return Tooltip(
+        message: tooltip,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(9),
+          onTap: () => onChanged(isTimeline),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: on ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, size: 18, color: on ? AppTheme.onAccent : AppTheme.mutedText),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppTheme.barTint,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.hairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          segment(false, Icons.view_agenda_outlined, 'List view'),
+          segment(true, Icons.view_timeline_outlined, 'Timeline view'),
+        ],
+      ),
     );
   }
 }

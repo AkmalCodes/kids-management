@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:kawankecil/core/auth/auth_controller.dart';
 import 'package:kawankecil/core/models/app_user.dart';
+import 'package:kawankecil/core/models/lesson_plan.dart';
 import 'package:kawankecil/core/models/schedule.dart';
+import 'package:kawankecil/core/controllers/lesson_plan_controller.dart';
+import 'package:kawankecil/core/controllers/schedule_controller.dart';
+import 'package:kawankecil/core/controllers/subject_controller.dart';
+import 'package:kawankecil/core/models/subject.dart';
+import 'package:kawankecil/shared/widgets/schedule_event_sheet.dart';
+import 'package:kawankecil/features/shared_lessons/lesson_plan_view_screen.dart';
 import 'package:kawankecil/shared/widgets/day_timetable.dart';
 import 'package:kawankecil/shared/widgets/schedule_agenda_view.dart';
 
@@ -50,6 +58,51 @@ final _entries = [
 
 Widget _wrap(Widget child) =>
     ProviderScope(child: MaterialApp(home: Scaffold(body: child)));
+
+class MockScheduleController extends Mock implements ScheduleController {}
+
+class MockLessonPlanController extends Mock implements LessonPlanController {}
+
+class MockSubjectController extends Mock implements SubjectController {}
+
+AppUser _user(String id, {String role = 'teacher'}) => AppUser(
+      id: id,
+      role: role,
+      name: 'Teacher',
+      phone: '',
+      centerId: 'center-1',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'director-1',
+      updatedBy: 'director-1',
+    );
+
+// An editable agenda (a teacher's own schedule) with the controllers mocked.
+Future<void> _pumpEditable(
+  WidgetTester tester, {
+  required MockScheduleController service,
+  List<ScheduleEntry>? entries,
+  String viewerId = 'teacher-1',
+  String? centerId = 'center-1',
+}) =>
+    tester.pumpWidget(ProviderScope(
+      overrides: [
+        currentUserProvider.overrideWith((ref) => Stream.value(_user(viewerId))),
+        scheduleControllerProvider.overrideWithValue(service),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: ScheduleAgendaView(
+            entries: entries ?? _entries,
+            anchorDate: _anchor,
+            type: 'teacher',
+            refId: 'teacher-1',
+            centerId: centerId,
+            editable: true,
+          ),
+        ),
+      ),
+    ));
 
 void main() {
   testWidgets('header shows the month and a week strip with the selected day',
@@ -137,23 +190,37 @@ void main() {
     expect((bar.decoration as BoxDecoration).color, const Color(0xFFD81B60));
   });
 
-  testWidgets('Timeline opens the day timetable for the selected day', (tester) async {
+  testWidgets('the toggle swaps the agenda for the hour grid and back', (tester) async {
     await tester.pumpWidget(_wrap(ScheduleAgendaView(entries: _entries, anchorDate: _anchor)));
+    expect(find.byType(DayTimetable), findsNothing);
 
-    await tester.tap(find.text('Timeline'));
+    await tester.tap(find.byTooltip('Timeline view'));
     await tester.pumpAndSettle();
-
     expect(find.byType(DayTimetable), findsOneWidget);
-    expect(find.text('Friday, 17 Jul'), findsOneWidget);
+    expect(find.byKey(const Key('timetable-now-line')), findsOneWidget); // today
+    // Same screen: the strip and heading are still there.
+    expect(find.text('Friday · 3 activities'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('List view'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DayTimetable), findsNothing);
+    expect(find.text('Morning circle'), findsOneWidget);
   });
 
-  testWidgets('tapping an event opens its day', (tester) async {
-    await tester.pumpWidget(_wrap(ScheduleAgendaView(entries: _entries, anchorDate: _anchor)));
+  testWidgets('read-only: tapping an event opens its summary without actions', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [currentUserProvider.overrideWith((ref) => Stream.value(_user('parent-1')))],
+      child: MaterialApp(
+        home: Scaffold(body: ScheduleAgendaView(entries: _entries, anchorDate: _anchor)),
+      ),
+    ));
 
     await tester.tap(find.text('Outdoor play'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Friday, 17 Jul'), findsOneWidget);
+    expect(find.text('15:00 – 15:45'), findsOneWidget);
+    expect(find.text('Every Friday'), findsOneWidget);
+    expect(find.text('Edit'), findsNothing);
   });
 
   testWidgets('a once entry shows only on its anchor date', (tester) async {
@@ -186,40 +253,228 @@ void main() {
     expect(find.byTooltip('Add event'), findsNothing);
   });
 
-  testWidgets('editable: Add opens the selected day with the create dialog', (tester) async {
+  testWidgets('+ opens the create form; saving creates the event and lists it', (tester) async {
+    final service = MockScheduleController();
+    when(() => service.createEntry(
+          type: any(named: 'type'),
+          refId: any(named: 'refId'),
+          centerId: any(named: 'centerId'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
+          lessonPlanId: any(named: 'lessonPlanId'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _entry('new-1', 'Friday', '11:00', '12:00', 'Music'));
+
+    await _pumpEditable(tester, service: service);
+    await tester.tap(find.byTooltip('Add event'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New event'), findsOneWidget);
+    // Today at 10:12: the form starts at the next hour.
+    expect(find.text('11:00'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('event-name')), 'Music');
+    await tester.tap(find.text('Add event'));
+    await tester.pumpAndSettle();
+
+    verify(() => service.createEntry(
+          type: 'teacher',
+          refId: 'teacher-1',
+          centerId: 'center-1',
+          day: 'Friday',
+          startTime: '11:00',
+          endTime: '12:00',
+          label: 'Music',
+          color: any(named: 'color'),
+          recurrence: 'weekly',
+          anchorDate: DateTime(2026, 7, 17),
+          lessonPlanId: null,
+          actorUid: 'teacher-1',
+        )).called(1);
+    expect(find.text('Music'), findsOneWidget); // shown without a re-fetch
+    expect(find.text('Friday · 4 activities'), findsOneWidget);
+  });
+
+  testWidgets('tapping an empty hour on the timeline opens the form at that hour',
+      (tester) async {
+    await _pumpEditable(tester, service: MockScheduleController(), entries: const []);
+    await tester.tap(find.byTooltip('Timeline view'));
+    await tester.pumpAndSettle();
+
+    final grid = tester.getTopLeft(find.byKey(const Key('day-timetable-grid')));
+    // Rows are 56px from 07:00: y=6.5 rows down is inside the 13:00 hour.
+    await tester.tapAt(grid + const Offset(10, 56 * 6.5));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New event'), findsOneWidget);
+    // Scoped to the sheet: the grid behind it has "13:00" hour labels too.
+    final inSheet = find.byType(ScheduleEventSheet);
+    expect(find.descendant(of: inSheet, matching: find.text('13:00')), findsOneWidget);
+    expect(find.descendant(of: inSheet, matching: find.text('14:00')), findsOneWidget);
+  });
+
+  testWidgets('Edit in the sheet saves through updateEntry and updates the list',
+      (tester) async {
+    final service = MockScheduleController();
+    when(() => service.updateEntry(
+          id: any(named: 'id'),
+          day: any(named: 'day'),
+          startTime: any(named: 'startTime'),
+          endTime: any(named: 'endTime'),
+          label: any(named: 'label'),
+          color: any(named: 'color'),
+          recurrence: any(named: 'recurrence'),
+          anchorDate: any(named: 'anchorDate'),
+          lessonPlanId: any(named: 'lessonPlanId'),
+          actorUid: any(named: 'actorUid'),
+        )).thenAnswer((_) async => _entry('entry-5', 'Friday', '15:00', '15:45', 'Garden time'));
+
+    await _pumpEditable(tester, service: service);
+    await tester.tap(find.text('Outdoor play'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('event-name')), 'Garden time');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    verify(() => service.updateEntry(
+          id: 'entry-5',
+          day: 'Friday',
+          startTime: '15:00',
+          endTime: '15:45',
+          label: 'Garden time',
+          color: any(named: 'color'),
+          recurrence: 'weekly',
+          anchorDate: any(named: 'anchorDate'),
+          lessonPlanId: null,
+          actorUid: 'teacher-1',
+        )).called(1);
+    expect(find.text('Garden time'), findsOneWidget);
+    expect(find.text('Outdoor play'), findsNothing);
+  });
+
+  testWidgets('Delete (confirmed) removes the event', (tester) async {
+    final service = MockScheduleController();
+    when(() => service.deleteEntry('entry-5')).thenAnswer((_) async {});
+
+    await _pumpEditable(tester, service: service);
+    await tester.tap(find.text('Outdoor play'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    verify(() => service.deleteEntry('entry-5')).called(1);
+    expect(find.text('Outdoor play'), findsNothing);
+    expect(find.text('Friday · 2 activities'), findsOneWidget);
+  });
+
+  testWidgets("someone else's event: no actions, the sheet says why", (tester) async {
+    await _pumpEditable(tester, service: MockScheduleController(), viewerId: 'teacher-2');
+    await tester.tap(find.text('Outdoor play'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit'), findsNothing);
+    expect(find.text('Only the creator or a director can edit this event.'), findsOneWidget);
+  });
+
+  testWidgets('missing centerId: + explains instead of opening the form', (tester) async {
+    await _pumpEditable(tester, service: MockScheduleController(), centerId: null);
+    await tester.tap(find.byTooltip('Add event'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New event'), findsNothing);
+    expect(
+      find.text("Can't add an event: your account has no center assigned. Contact your director."),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('class schedule: subject shows on the card; the sheet opens the plan',
+      (tester) async {
+    final plans = MockLessonPlanController();
+    final plan = LessonPlan(
+      id: 'lp-1',
+      teacherId: 'teacher-1',
+      centerId: 'center-1',
+      title: 'Watercolours',
+      content: 'Paint a rainbow',
+      subjectId: 'sub-1',
+      classId: 'class-1',
+      status: LessonPlanStatus.approved,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+    when(() => plans.fetchClassPlanSubjects(any())).thenAnswer(
+      (_) async => [const PlanSubject(id: 'lp-1', title: 'Watercolours', subject: 'Arts')],
+    );
+    when(() => plans.fetchApprovedForClass(any())).thenAnswer((_) async => [plan]);
+    // LessonPlanViewScreen looks the subject up itself.
+    final subjects = MockSubjectController();
+    when(() => subjects.fetchAll()).thenAnswer((_) async => [
+          Subject(
+            id: 'sub-1',
+            centerId: 'center-1',
+            name: 'Arts',
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+            createdBy: 'director-1',
+            updatedBy: 'director-1',
+          ),
+        ]);
+    final entry = ScheduleEntry(
+      id: 'ev-1',
+      type: 'class',
+      refId: 'class-1',
+      centerId: 'center-1',
+      day: 'Friday',
+      startTime: '09:00',
+      endTime: '10:00',
+      label: 'Story time',
+      color: '26A69A',
+      recurrence: 'weekly',
+      lessonPlanId: 'lp-1',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
+
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        currentUserProvider.overrideWith((ref) => Stream.value(AppUser(
-              id: 'teacher-1',
-              role: 'teacher',
-              name: 'Teacher',
-              phone: '',
-              centerId: 'center-1',
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-              createdBy: 'director-1',
-              updatedBy: 'director-1',
-            ))),
+        currentUserProvider.overrideWith((ref) => Stream.value(_user('parent-1', role: 'parent'))),
+        lessonPlanControllerProvider.overrideWithValue(plans),
+        subjectControllerProvider.overrideWithValue(subjects),
       ],
       child: MaterialApp(
         home: Scaffold(
           body: ScheduleAgendaView(
-            entries: _entries,
+            entries: [entry],
             anchorDate: _anchor,
-            type: 'teacher',
-            refId: 'teacher-1',
-            centerId: 'center-1',
-            editable: true,
+            type: 'class',
+            refId: 'class-1',
           ),
         ),
       ),
     ));
-
-    await tester.tap(find.byTooltip('Add event'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Friday, 17 Jul'), findsOneWidget);
-    expect(find.text('Create Event'), findsOneWidget);
+    expect(find.text('Arts'), findsOneWidget); // subject chip on the card
+    await tester.tap(find.text('Story time'));
+    await tester.pumpAndSettle();
+    expect(find.text('Watercolours'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('event-sheet-plan')));
+    await tester.pumpAndSettle();
+    expect(find.byType(LessonPlanViewScreen), findsOneWidget);
+    expect(find.text('Paint a rainbow'), findsOneWidget);
   });
 
   testWidgets('fits a 360px-wide phone without overflow', (tester) async {

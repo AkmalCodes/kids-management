@@ -731,7 +731,6 @@ lib/
     util/
       date_display.dart             -- weekdayName + isoWithWeekday: prefix an ISO date with its weekday (attendance/report displays; not birthdates)
     screens/
-      day_schedule_screen.dart      -- SA2 day timeline: week strip switches day in place, now line; tap event -> SA3 sheet (edit/delete/open plan); addOnOpen opens the create dialog
     widgets/
       logout_button.dart
       app_bottom_nav.dart           -- floating (inset + rounded) bottom bar used by every shell. Unselected tabs are icon-only; the selected tab grows to [icon][label], its label sliding out from behind the icon as the pink pill slides + stretches over (2026-10-21)
@@ -749,11 +748,10 @@ lib/
       class_form_dialog.dart        -- shared create/edit-a-class dialog (name + teacher dropdown) (§6.8)
       editable_field.dart           -- read-only row / fading text input toggle + tap-to-copy (§6.6c)
       avatar_preview.dart           -- tappable avatar -> full-screen zoomable photo (§6.6c)
-      schedule_agenda_view.dart     -- SA1 design: week strip (swipe = week, dots = events), selected day's agenda, now line, Today + date picker, + opens day view with create dialog
+      schedule_agenda_view.dart     -- the whole Schedule tab: month header (Today, date picker), week strip, List|Timeline toggle (agenda cards or DayTimetable), now line; owns create/edit/delete via the event sheet
       day_timetable.dart            -- hour grid (SA2 look: pale blocks + colour bar, nowTime fades past events + now line), tap-to-add/edit, fade-in on new entries
       week_strip.dart               -- Mon-Sun day picker with event dots, swipe = week (agenda + day view)
-      schedule_event_sheet.dart     -- SA3 event details bottom sheet; returns edit/delete/openPlan
-      schedule_entry_form_dialog.dart -- shared create/edit dialog with color picker
+      schedule_event_sheet.dart     -- one bottom sheet to view (summary), edit (Edit swaps in the form) and create an event: name, start/end, Once|Daily|Weekly picker, lesson plan, colour; delete confirmed
 supabase/
   functions/
     create-user/index.ts            -- director-only account provisioning (§6.6a)
@@ -812,7 +810,7 @@ Teacher-authored plans with a **subject** categorization and a **director approv
 - **Editor layout (2026-10-04):** Delete sits at the right end of the status-chip row (theme error colour), away from the main actions; Approve is a plain `FilledButton` in the theme's primary colour (was hard-coded green), Reject an `OutlinedButton` beside it.
 - **Approval states:** `draft → submitted → approved | rejected` (`LessonPlanStatus`). A rejected plan shows the reviewer's note and becomes editable again.
 - **Security (enforced at the DB, not just UI):** two UPDATE policies — a teacher may only set `draft`/`submitted` on their **own** plan (so a teacher **cannot self-approve**); a director may set any status on any plan. See §4 RLS.
-- ✅ **Increment 2 — attach a lesson plan to a schedule event (reshaped):** lesson plans are **reusable** — the `date` column was dropped; a plan is now subject + title + content + class + status, made once and attached to schedule events. When creating/editing a **class** event (`ScheduleEntryFormDialog`), a **Lesson plan** picker lists that class's **approved** plans (`schedule_entries.lesson_plan_id`). The event then shows the attached plan's **subject** on the timetable; **tapping the event opens the plan read-only** (`LessonPlanViewScreen`, incl. content). This replaced the earlier day-view "Planned lessons" section + the `class_day_lessons` function (both removed).
+- ✅ **Increment 2 — attach a lesson plan to a schedule event (reshaped):** lesson plans are **reusable** — the `date` column was dropped; a plan is now subject + title + content + class + status, made once and attached to schedule events. When creating/editing a **class** event (the event sheet, `schedule_event_sheet.dart`; was `ScheduleEntryFormDialog`), a **Lesson plan** picker lists that class's **approved** plans (`schedule_entries.lesson_plan_id`). The event then shows the attached plan's **subject** on the timetable; **tapping the event, then its plan card, opens the plan read-only** (`LessonPlanViewScreen`, incl. content). This replaced the earlier day-view "Planned lessons" section + the `class_day_lessons` function (both removed).
   - **Visibility:** `lesson_plans_select` was widened so a **connected role** (the class's teacher, or a parent of a child in the class) can read **approved** plans — so tapping a scheduled subject opens the full plan for parents too, while drafts/unapproved stay teacher/director-only. See §4 RLS.
   - **Subject on events (every role):** the subject **label** shown on schedule event cards — on both the weekly/monthly **agenda** and the **day view** — is resolved via the **`class_plan_subjects(class_id)` SECURITY DEFINER function** (§4), which returns just each approved plan's id+title+subject to a connected viewer. This is what makes the subject appear for **parents** (who can't read `lesson_plans` rows), independent of the widened SELECT above (that one only governs opening the full plan's content).
   - 🔭 Content is plain text fields for now; a richer format (e.g. PDF attachments) is a possible later upgrade.
