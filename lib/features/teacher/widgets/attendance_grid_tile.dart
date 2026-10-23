@@ -24,6 +24,7 @@ class AttendanceGridTile extends ConsumerWidget {
     required this.attendance,
     required this.onTap,
     this.onLongPress,
+    this.readOnly = false,
   });
 
   final Child child;
@@ -34,6 +35,9 @@ class AttendanceGridTile extends ConsumerWidget {
 
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  // Viewer can't mark (the director): a waiting child reads "Not in yet"
+  // instead of the teacher's "Check in" prompt.
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -102,6 +106,12 @@ class AttendanceGridTile extends ConsumerWidget {
   }
 
   Widget _caption(Attendance? record) {
+    if (record == null && readOnly) {
+      return const Text('Not in yet',
+          key: Key('status-waiting'),
+          maxLines: 1,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.mutedText));
+    }
     if (record == null) {
       // FittedBox: on a narrow tile (or with large accessibility text) the
       // label shrinks rather than overflowing the tile.

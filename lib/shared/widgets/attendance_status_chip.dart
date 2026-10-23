@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/models/attendance.dart';
+import '../../core/theme/app_theme.dart';
 
 // One look per attendance status, shared by every role's screens so
 // "present" always reads the same way (screen design AA, Figma "Screen
@@ -92,6 +93,82 @@ class AttendanceStatusBadge extends StatelessWidget {
         border: Border.all(color: Colors.white, width: 2),
       ),
       child: Icon(style.icon, size: size * 0.6, color: Colors.white),
+    );
+  }
+}
+
+// Present / Late / Absent / Excused as one segmented row: every choice
+// visible, one tap. Each segment carries its status colour as a dot.
+class AttendanceStatusPicker extends StatelessWidget {
+  const AttendanceStatusPicker({super.key, required this.value, required this.onChanged});
+
+  final AttendanceStatus value;
+  final ValueChanged<AttendanceStatus> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.barTint,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.hairline),
+      ),
+      child: Row(
+        children: [
+          for (final s in AttendanceStatus.values)
+            Expanded(
+              child: GestureDetector(
+                key: Key('status-${s.name}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(s),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: s == value ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: s == value
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.onAccent.withValues(alpha: 0.10),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: AttendanceStatusStyle.of(s).foreground,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          AttendanceStatusStyle.of(s).label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: s == value ? FontWeight.w800 : FontWeight.w600,
+                            color: s == value ? AppTheme.onAccent : AppTheme.mutedText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

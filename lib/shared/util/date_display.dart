@@ -33,3 +33,9 @@ String hourMinute(DateTime d) {
   final m = d.minute.toString().padLeft(2, '0');
   return '$h:$m';
 }
+
+const _longWeekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const _shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// "Thursday, 23 Oct" -- the day heading used on the attendance screens.
+String longDayLabel(DateTime d) => '${_longWeekdays[d.weekday - 1]}, ${d.day} ${_shortMonths[d.month - 1]}';

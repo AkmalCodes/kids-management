@@ -81,7 +81,7 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | (from a class) | **PersonScheduleScreen** | `features/director/screens/person_schedule_screen.dart` | Reusable editable agenda view (type='class'/'teacher'/'child'). |
 | Lessons | **DirectorLessonsScreen** | `features/director/screens/director_lessons_screen.dart` | Browse **all** lesson plans; filter by teacher + status; tap → LessonPlanEditScreen (approve/reject/edit). A **Subjects** button → ManageSubjectsScreen. |
 | (from Subjects) | **ManageSubjectsScreen** | `features/director/screens/manage_subjects_screen.dart` | Center-defined lesson subjects: list, **+** create, tap to rename/delete. |
-| Attendance | **DirectorAttendanceScreen** | `features/director/screens/director_attendance_screen.dart` | All children for a chosen date as **collapsible cards** (same style as the teacher screen, read-only); expand to see the day's photos. Date picker + a **class filter** dropdown in the header. |
+| Attendance | **DirectorAttendanceScreen** | `features/director/screens/director_attendance_screen.dart` | Screen design AA4: everyone for a chosen date, **Children | Teachers** switch. Children: counts, a red banner naming teachers who haven't clocked in (→ Teachers), class chips, one section per class ("BUNGA · 8 OF 14 HERE") of read-only tiles; tap → day sheet (status, photos, note — `AttendanceDayDetails`). Teachers: clock times + status per teacher; tap → **StaffAttendanceFixSheet** (status + note; record a *missing* clock-in/out at a picked time after a confirm; recorded times are locked). |
 | Profile | **ProfileScreen** | see *Profile* below | |
 
 ---

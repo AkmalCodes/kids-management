@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,6 +9,7 @@ import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/signed_avatar.dart';
+import '../../../shared/widgets/attendance_photos.dart';
 import '../../../shared/widgets/attendance_status_chip.dart';
 
 // The one place a teacher checks a child in or changes their day (screen
@@ -295,7 +294,7 @@ class _AttendanceCheckInSheetState extends ConsumerState<AttendanceCheckInSheet>
               const SizedBox(height: 14),
               const _Label('STATUS'),
               const SizedBox(height: 8),
-              _StatusPicker(value: _status, onChanged: (s) => setState(() => _status = s)),
+              AttendanceStatusPicker(value: _status, onChanged: (s) => setState(() => _status = s)),
               const SizedBox(height: 14),
               Row(
                 children: [
@@ -376,82 +375,6 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) => Text(text,
       style: const TextStyle(
           fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.9, color: AppTheme.mutedText));
-}
-
-// Present / Late / Absent / Excused as one segmented row: every choice
-// visible, one tap. Each segment carries its status colour as a dot.
-class _StatusPicker extends StatelessWidget {
-  const _StatusPicker({required this.value, required this.onChanged});
-
-  final AttendanceStatus value;
-  final ValueChanged<AttendanceStatus> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.barTint,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.hairline),
-      ),
-      child: Row(
-        children: [
-          for (final s in AttendanceStatus.values)
-            Expanded(
-              child: GestureDetector(
-                key: Key('status-${s.name}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(s),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: s == value ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: s == value
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.onAccent.withValues(alpha: 0.10),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: AttendanceStatusStyle.of(s).foreground,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          AttendanceStatusStyle.of(s).label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: s == value ? FontWeight.w800 : FontWeight.w600,
-                            color: s == value ? AppTheme.onAccent : AppTheme.mutedText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 // The big check-in photo area: the new (local) photo, else the saved one,
@@ -678,80 +601,6 @@ class _DashedChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-// A photo just taken, shown before it's uploaded. Read as bytes (works on
-// every platform, including web, unlike Image.file). Until the bytes arrive
-// -- or if they can't be read -- a plain tint stands in; no spinner, so a
-// slow read never looks like the app hanging.
-class LocalPhoto extends StatefulWidget {
-  const LocalPhoto(this.file, {super.key});
-  final XFile file;
-
-  @override
-  State<LocalPhoto> createState() => _LocalPhotoState();
-}
-
-class _LocalPhotoState extends State<LocalPhoto> {
-  late Future<Uint8List> _bytes = widget.file.readAsBytes();
-
-  @override
-  void didUpdateWidget(covariant LocalPhoto oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.file.path != widget.file.path) _bytes = widget.file.readAsBytes();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Uint8List>(
-      future: _bytes,
-      builder: (context, snap) => snap.hasData
-          ? Image.memory(snap.data!, fit: BoxFit.cover)
-          : const ColoredBox(
-              color: AppTheme.barTint,
-              child: Center(child: Icon(Icons.photo_outlined, color: AppTheme.mutedText)),
-            ),
-    );
-  }
-}
-
-// A saved photo from the private attendance-photos bucket, via a signed URL
-// (the bucket is private, so the stored path isn't directly viewable).
-class SignedAttendancePhoto extends ConsumerStatefulWidget {
-  const SignedAttendancePhoto(this.path, {super.key});
-  final String path;
-
-  @override
-  ConsumerState<SignedAttendancePhoto> createState() => _SignedAttendancePhotoState();
-}
-
-class _SignedAttendancePhotoState extends ConsumerState<SignedAttendancePhoto> {
-  late Future<String> _url = ref.read(attendanceControllerProvider).getSignedPhotoUrl(widget.path);
-
-  @override
-  void didUpdateWidget(covariant SignedAttendancePhoto oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.path != widget.path) {
-      _url = ref.read(attendanceControllerProvider).getSignedPhotoUrl(widget.path);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: _url,
-      builder: (context, snap) => snap.hasData
-          ? Image.network(
-              snap.data!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const ColoredBox(
-                color: AppTheme.barTint,
-                child: Center(child: Icon(Icons.broken_image_outlined, color: AppTheme.mutedText)),
-              ),
-            )
-          : const ColoredBox(color: AppTheme.barTint),
     );
   }
 }

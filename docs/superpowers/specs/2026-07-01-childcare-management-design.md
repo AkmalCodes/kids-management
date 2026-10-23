@@ -712,7 +712,7 @@ lib/
     director/
       director_shell.dart
       screens/
-        director_attendance_screen.dart
+        director_attendance_screen.dart -- AA4: Children | Teachers for a date; child day sheet; teacher fix sheet (widgets/staff_attendance_fix_sheet.dart)
         director_schedules_screen.dart  -- searchable class list -> PersonScheduleScreen (type='class') (§6.8)
         person_schedule_screen.dart     -- reusable editable agenda view for any teacher/child/class
         people_screen.dart              -- Teachers | Children | Classes sub-tabs (§6.6)
