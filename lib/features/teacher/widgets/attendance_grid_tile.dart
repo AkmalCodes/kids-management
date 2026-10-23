@@ -3,12 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/attendance.dart';
 import '../../../core/models/child.dart';
 import '../../../core/controllers/child_controller.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/attendance_status_chip.dart';
 import '../../../shared/widgets/app_loader.dart';
 import 'grid_person_tile.dart';
 
-// One child in the attendance grid: avatar, name, and a badge showing today's
-// status. Purely presentational -- it takes the record it should render and
-// two callbacks, and performs no writes. That keeps the marking logic in one
+// One child in the attendance grid: avatar, name, a status badge and a
+// caption line. Purely presentational -- it takes the record it should render
+// and callbacks, and performs no writes.
+//
+// Screen design AA1 ("arrival board"): a child with no record yet is
+// WAITING -- faded avatar, no badge, a pink "Check in" caption -- so the ones
+// still to arrive stand out; a marked child gets a corner badge in its
+// status colour and its arrival time (or "Absent"/"Excused") underneath. That keeps the marking logic in one
 // place (MarkAttendanceScreen) and makes this widget testable on its own.
 class AttendanceGridTile extends ConsumerWidget {
   const AttendanceGridTile({
@@ -16,7 +23,7 @@ class AttendanceGridTile extends ConsumerWidget {
     required this.child,
     required this.attendance,
     required this.onTap,
-    required this.onLongPress,
+    this.onLongPress,
   });
 
   final Child child;
@@ -26,16 +33,18 @@ class AttendanceGridTile extends ConsumerWidget {
   final Attendance? attendance;
 
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final record = attendance;
     return GridPersonTile(
       name: child.name,
       onTap: onTap,
       onLongPress: onLongPress,
-      badge: _badge(colors),
+      badge: record == null ? null : AttendanceStatusBadge(status: record.status),
+      caption: _caption(record),
       // The child avatar: a rounded square with a translucent border, the
       // photo clipped inside. Deliberately NOT a CircleAvatar (that bug is
       // what the border+ClipRRect here fixed) -- the circular variant is the
@@ -52,7 +61,12 @@ class AttendanceGridTile extends ConsumerWidget {
           // 14 not 16: sits inside the 2px border so the photo does not bleed
           // over the rounded corner.
           borderRadius: BorderRadius.circular(14),
-          child: _photo(colors, ref),
+          // Waiting children are faded so the arrived ones read as "done".
+          child: Opacity(
+            key: const Key('tile-avatar-opacity'),
+            opacity: record == null ? 0.5 : 1,
+            child: _photo(colors, ref),
+          ),
         ),
       ),
     );
@@ -87,28 +101,30 @@ class AttendanceGridTile extends ConsumerWidget {
     );
   }
 
-  // present/absent are the only statuses this UI can set. Anything else --
-  // including late and excused, which exist in the enum but have never been
-  // offered -- renders as unmarked rather than inventing an icon for a state
-  // a teacher cannot produce.
-  Widget _badge(ColorScheme colors) {
-    final (key, icon, color) = switch (attendance?.status) {
-      AttendanceStatus.present =>
-        (const Key('status-badge-present'), Icons.check_circle, Colors.green.shade600),
-      AttendanceStatus.absent =>
-        (const Key('status-badge-absent'), Icons.cancel, Colors.red.shade600),
-      _ => (
-          const Key('status-badge-unmarked'),
-          Icons.help,
-          Colors.amber.shade700,
+  Widget _caption(Attendance? record) {
+    if (record == null) {
+      // FittedBox: on a narrow tile (or with large accessibility text) the
+      // label shrinks rather than overflowing the tile.
+      return const FittedBox(
+        key: Key('status-waiting'),
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_camera_outlined, size: 11, color: AppTheme.accentPink),
+            SizedBox(width: 3),
+            Text('Check in',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.accentPink)),
+          ],
         ),
+      );
+    }
+    final text = switch (record.status) {
+      AttendanceStatus.present || AttendanceStatus.late => formatClock(record.createdAt),
+      _ => AttendanceStatusStyle.of(record.status).label,
     };
-
-    return Container(
-      key: key,
-      decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle),
-      padding: const EdgeInsets.all(1),
-      child: Icon(icon, size: 20, color: color),
-    );
+    return Text(text,
+        maxLines: 1,
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.mutedText));
   }
 }

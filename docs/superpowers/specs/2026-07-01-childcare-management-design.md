@@ -705,7 +705,7 @@ lib/
       teacher_shell.dart
       screens/
         teacher_schedule_screen.dart
-        mark_attendance_screen.dart
+        mark_attendance_screen.dart   -- AA1 arrival board: waiting / here / absent, camera-first check-in, "Mark the rest"
         teacher_reports_screen.dart -- class list -> report editor (§6.4)
         daily_report_edit_screen.dart -- write/edit one child's daily report (§6.4)
         teacher_lesson_plans_screen.dart -- teacher's own lesson plans list + create (§6.5). Screen design A1 (Figma page "Screen designs"): greeting, summary cards (total / need attention = draft+rejected / approved), cards with SubjectTile + "subject · class" + status + reviewer feedback strip, pinned "Create lesson plan" button. No dates: lesson plans have no date column (2026-10-21)
@@ -738,7 +738,7 @@ lib/
       lazy_indexed_stack.dart       -- shell tab bodies: a page is built on its first visit, then kept alive (hidden). Replaced `body: _pages[_index]`, which rebuilt the page + re-ran its initState fetch on every tap and stalled the nav animation (2026-10-21)
       refreshable_message.dart      -- centred empty-state text that can still be pulled to refresh. Kept-alive tab pages that load once in initState (DirectorAttendance, DirectorLessons, MarkAttendance, TeacherLessonPlans, TeacherReports) all have pull-to-refresh, since revisiting a tab no longer refetches
       row_actions_sheet.dart        -- long-press Edit/Delete bottom sheet + confirmDelete (§6.6)
-      attendance_status_chip.dart
+      attendance_status_chip.dart   -- status dot pill + shared AttendanceStatusStyle / Badge / formatClock
       lesson_plan_status_chip.dart  -- dot-pill status chip with semantic colours (grey/amber/green/red); `rejected` is labelled "Needs changes"; colorsFor()/labelFor() shared with feedback strips (§6.5)
       subject_tile.dart             -- subject initials on a pastel picked by a stable hash of the name (subjects are free text, so no per-subject art); book icon when none
       signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states

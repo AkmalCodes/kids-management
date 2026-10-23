@@ -54,7 +54,8 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | Tab | Name | File | What's on it |
 |---|---|---|---|
 | Schedule | **TeacherScheduleScreen** | `features/teacher/screens/teacher_schedule_screen.dart` | Editable agenda of the class the teacher is assigned to. Drills into the day view. |
-| Attendance | **MarkAttendanceScreen** | `features/teacher/screens/mark_attendance_screen.dart` | Today's class as a searchable list of **collapsible cards** (avatar, name, status chip, chevron). Expand to mark Present/Absent and optionally attach a check-in and/or belongings photo (take/gallery/delete). Shows today's date in the header. |
+| Attendance | **MarkAttendanceScreen** | `features/teacher/screens/mark_attendance_screen.dart` | Screen design AA1 "arrival board": date + class title, search; counts (here / waiting / absent); a Teachers row (own tile → clock in/out, co-teachers → profile); then WAITING (faded tiles, "Check in"), HERE (badge + arrival time) and ABSENT grids. Tapping a waiting child opens the camera, then the **check-in sheet**; tapping a marked child opens the sheet pre-filled. "Mark the rest…" marks every waiting child absent after a confirm. |
+| (from a child) | **AttendanceCheckInSheet** | `features/teacher/widgets/attendance_check_in_sheet.dart` | Bottom sheet (AA2), replaced ChildAttendanceDetailScreen: name, class, allergies warning; check-in photo (retake / gallery / remove); Present·Late·Absent·Excused; belongings photo; note. Save = mark row, then upload/attach photos; each saved step is reported to the grid, a failure keeps the sheet open and a retry updates the same row. |
 | Lessons | **TeacherLessonPlansScreen** | `features/teacher/screens/teacher_lesson_plans_screen.dart` | The teacher's own lesson plans (date · subject · status chip); **+** → LessonPlanEditScreen; tap → edit/submit/delete. |
 | (from a plan / +) | **LessonPlanEditScreen** | `features/shared_lessons/lesson_plan_edit_screen.dart` | Title, subject, class, content (reusable — no date). Teacher: edit while draft/rejected, **Submit**, delete. Director: edit + **Approve/Reject** any. |
 | (from a schedule event) | **LessonPlanViewScreen** | `features/shared_lessons/lesson_plan_view_screen.dart` | Read-only plan (subject/title/content) opened by tapping a schedule event that has an approved plan attached. |
@@ -111,7 +112,7 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 | **SignedPhotoThumbnail** | `shared/widgets/signed_photo_thumbnail.dart` | Attendance screens | Round thumbnail from a private Storage path (attendance-photos), via signed URL. |
 | **SignedAvatar** | `shared/widgets/signed_avatar.dart` | Profile / detail screens | Round avatar from any bucket's signed-URL provider, with a placeholder. |
 | **AvatarSourceSheet** | `shared/widgets/avatar_source_sheet.dart` | Avatar edits | The take-photo / choose-from-gallery bottom sheet. |
-| **AttendanceStatusChip** | `shared/widgets/attendance_status_chip.dart` | Attendance screens | Colored Present/Absent/Late/Excused chip. |
+| **AttendanceStatusChip** | `shared/widgets/attendance_status_chip.dart` | Attendance screens | Dot pill per status, plus `AttendanceStatusStyle` (shared colours/labels/icons), `AttendanceStatusBadge` (round tile badge) and `formatClock` (local HH:mm). |
 | **LessonPlanStatusChip** | `shared/widgets/lesson_plan_status_chip.dart` | Lesson plan screens | Colored Draft/Awaiting approval/Approved/Rejected chip. |
 | **LogoutButton** | `shared/widgets/logout_button.dart` | *(currently unused — sign-out lives in the Profile tab)* | Confirm-then-sign-out icon button. |
 

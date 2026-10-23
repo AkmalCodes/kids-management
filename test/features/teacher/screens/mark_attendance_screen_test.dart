@@ -14,7 +14,9 @@ import 'package:kawankecil/core/controllers/staff_attendance_controller.dart';
 import 'package:kawankecil/features/teacher/screens/mark_attendance_screen.dart';
 import 'package:kawankecil/features/teacher/widgets/attendance_grid_tile.dart';
 import 'package:kawankecil/features/teacher/widgets/staff_grid_tile.dart';
-import 'package:kawankecil/features/teacher/screens/child_attendance_detail_screen.dart';
+import 'package:kawankecil/features/teacher/widgets/attendance_check_in_sheet.dart';
+import 'package:kawankecil/core/controllers/photo_capture_controller.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kawankecil/features/profile/staff_attendance_screen.dart';
 import 'package:kawankecil/features/profile/person_detail_screen.dart';
 
@@ -25,6 +27,24 @@ class MockAttendanceController extends Mock implements AttendanceController {}
 class MockTeacherController extends Mock implements TeacherController {}
 
 class MockStaffAttendanceController extends Mock implements StaffAttendanceController {}
+
+class MockPhotoCaptureController extends Mock implements PhotoCaptureController {}
+
+Attendance _att(String childId, AttendanceStatus status, {String id = 'att-1', String notes = '', DateTime? at}) =>
+    Attendance(
+      id: id,
+      childId: childId,
+      centerId: 'center-1',
+      date: '2026-09-01',
+      status: status,
+      notes: notes,
+      photoPath: null,
+      belongingsPhotoPath: null,
+      createdAt: at ?? DateTime(2026, 9, 1, 8, 5),
+      updatedAt: DateTime(2026),
+      createdBy: 'teacher-1',
+      updatedBy: 'teacher-1',
+    );
 
 AppUser _teacher() => AppUser(
   id: 'teacher-1',
@@ -88,18 +108,23 @@ StaffAttendance _staffRow({DateTime? clockInAt, DateTime? clockOutAt}) => StaffA
 void main() {
   setUpAll(() {
     registerFallbackValue(AttendanceStatus.present);
+    registerFallbackValue(XFile(''));
   });
 
   late MockChildController mockChildren;
   late MockAttendanceController mockAttendance;
   late MockTeacherController mockTeacherCtl;
   late MockStaffAttendanceController mockStaffAtt;
+  late MockPhotoCaptureController mockPhoto;
 
   setUp(() {
     mockChildren = MockChildController();
     mockAttendance = MockAttendanceController();
     mockTeacherCtl = MockTeacherController();
     mockStaffAtt = MockStaffAttendanceController();
+    mockPhoto = MockPhotoCaptureController();
+    // The camera opens when a waiting child is tapped; null = cancelled.
+    when(() => mockPhoto.captureFromCamera()).thenAnswer((_) async => null);
     // Defaults so tests that only care about one grid don't have to stub the
     // other three _load() calls. `_load` awaits all of childController,
     // attendanceController, teacherController and staffAttendanceController;
@@ -119,6 +144,7 @@ void main() {
             attendanceControllerProvider.overrideWithValue(mockAttendance),
             teacherControllerProvider.overrideWithValue(mockTeacherCtl),
             staffAttendanceControllerProvider.overrideWithValue(mockStaffAtt),
+            photoCaptureControllerProvider.overrideWithValue(mockPhoto),
           ],
           child: const MaterialApp(home: Scaffold(body: MarkAttendanceScreen())),
         ),
@@ -149,23 +175,7 @@ void main() {
     expect(find.text('Bob'), findsOneWidget);
   });
 
-  testWidgets('a child with no record today shows the unmarked badge',
-      (tester) async {
-    when(() => mockChildren.fetchForTeacher('teacher-1'))
-        .thenAnswer((_) async => [_child()]);
-    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
-
-    await pumpScreen(tester);
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('status-badge-unmarked')), findsOneWidget);
-  });
-
-  testWidgets('long-press then Mark present saves and updates the badge',
-      (tester) async {
-    when(() => mockChildren.fetchForTeacher('teacher-1'))
-        .thenAnswer((_) async => [_child()]);
-    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+  void stubMark(Attendance Function(Invocation) answer) {
     when(() => mockAttendance.markAttendance(
           childId: any(named: 'childId'),
           centerId: any(named: 'centerId'),
@@ -174,30 +184,79 @@ void main() {
           actorUid: any(named: 'actorUid'),
           existingId: any(named: 'existingId'),
           notes: any(named: 'notes'),
-        )).thenAnswer(
-      (_) async => Attendance(
-        id: 'att-1',
-        childId: 'child-1',
-        centerId: 'center-1',
-        date: '2026-09-01',
-        status: AttendanceStatus.present,
-        notes: '',
-        photoPath: null,
-        belongingsPhotoPath: null,
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-        createdBy: 'teacher-1',
-        updatedBy: 'teacher-1',
-      ),
-    );
+        )).thenAnswer((inv) async => answer(inv));
+  }
+
+  testWidgets('a child with no record today is waiting: faded, "Check in", no badge',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    await tester.longPress(find.byType(AttendanceGridTile));
+    expect(find.text('WAITING · 1'), findsOneWidget);
+    expect(find.byKey(const Key('status-waiting')), findsOneWidget);
+    expect(find.byKey(const Key('status-badge-present')), findsNothing);
+  });
+
+  testWidgets('children are grouped into waiting / here / absent with counts',
+      (tester) async {
+    // Tall enough that every section is built (slivers build lazily).
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          _child(id: 'c1', name: 'Alice'),
+          _child(id: 'c2', name: 'Bob'),
+          _child(id: 'c3', name: 'Cara'),
+          _child(id: 'c4', name: 'Dan'),
+        ]);
+    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [
+          _att('c2', AttendanceStatus.present, id: 'a2'),
+          _att('c3', AttendanceStatus.late, id: 'a3'),
+          _att('c4', AttendanceStatus.excused, id: 'a4'),
+        ]);
+
+    await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Mark present'));
+    expect(find.text('WAITING · 1'), findsOneWidget);
+    expect(find.text('HERE · 2'), findsOneWidget); // present + late
+    expect(find.text('ABSENT · 1'), findsOneWidget); // excused counts as away
+    expect(find.descendant(of: find.byKey(const Key('count-here')), matching: find.text('2')),
+        findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('count-waiting')), matching: find.text('1')),
+        findsOneWidget);
+    // Arrival time under a child who's here (local 08:05).
+    expect(find.text('08:05'), findsNWidgets(2));
+  });
+
+  testWidgets('tapping a waiting child opens the camera, then the check-in sheet',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AttendanceGridTile));
+    await tester.pumpAndSettle();
+
+    verify(() => mockPhoto.captureFromCamera()).called(1);
+    expect(find.byType(AttendanceCheckInSheet), findsOneWidget);
+    expect(find.text('Check in Alice'), findsOneWidget);
+  });
+
+  testWidgets('checking in from the sheet saves and moves the child to HERE, no re-fetch',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
+    stubMark((_) => _att('child-1', AttendanceStatus.present));
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AttendanceGridTile));
+    await tester.pumpAndSettle();
+    // The sheet scrolls; bring its button into the (small) test window.
+    await tester.ensureVisible(find.text('Check in Alice'));
+    await tester.tap(find.text('Check in Alice'));
     await tester.pumpAndSettle();
 
     verify(() => mockAttendance.markAttendance(
@@ -209,48 +268,71 @@ void main() {
           existingId: null,
           notes: '',
         )).called(1);
-
-    // The write's returned row is applied locally rather than re-fetched, so
-    // the badge must change without fetchForDate being called again.
+    expect(find.byType(AttendanceCheckInSheet), findsNothing);
+    expect(find.text('HERE · 1'), findsOneWidget);
     expect(find.byKey(const Key('status-badge-present')), findsOneWidget);
     verify(() => mockAttendance.fetchForDate(any())).called(1);
   });
 
-  testWidgets('tapping a tile opens the detail screen', (tester) async {
-    when(() => mockChildren.fetchForTeacher('teacher-1'))
-        .thenAnswer((_) async => [_child()]);
-    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+  testWidgets('tapping a child who is already here opens the sheet pre-filled, no camera',
+      (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
+    when(() => mockAttendance.fetchForDate(any()))
+        .thenAnswer((_) async => [_att('child-1', AttendanceStatus.present, notes: 'Ate well')]);
 
     await pumpScreen(tester);
     await tester.pumpAndSettle();
-
     await tester.tap(find.byType(AttendanceGridTile));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ChildAttendanceDetailScreen), findsOneWidget);
+    verifyNever(() => mockPhoto.captureFromCamera());
+    expect(find.text('Save'), findsOneWidget);
+    expect(find.text('Ate well'), findsOneWidget); // note shown, editable
   });
 
-  testWidgets(
-      'long-press then Mark absent preserves the existing notes instead of blanking them',
-      (tester) async {
-    final existing = Attendance(
-      id: 'att-1',
-      childId: 'child-1',
-      centerId: 'center-1',
-      date: '2026-09-01',
-      status: AttendanceStatus.present,
-      notes: 'Ate well today',
-      photoPath: null,
-      belongingsPhotoPath: null,
-      createdAt: DateTime(2026),
-      updatedAt: DateTime(2026),
-      createdBy: 'teacher-1',
-      updatedBy: 'teacher-1',
-    );
-    when(() => mockChildren.fetchForTeacher('teacher-1'))
-        .thenAnswer((_) async => [_child()]);
-    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => [existing]);
-    when(() => mockAttendance.markAttendance(
+  testWidgets('"Mark the rest" asks, then marks every waiting child absent', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          _child(id: 'c1', name: 'Alice'),
+          _child(id: 'c2', name: 'Bob'),
+        ]);
+    stubMark((inv) => _att(inv.namedArguments[#childId] as String, AttendanceStatus.absent,
+        id: 'a-${inv.namedArguments[#childId]}'));
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark the rest…'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mark 2 absent?'), findsOneWidget);
+
+    await tester.tap(find.text('Mark absent'));
+    await tester.pumpAndSettle();
+
+    for (final id in ['c1', 'c2']) {
+      verify(() => mockAttendance.markAttendance(
+            childId: id,
+            centerId: 'center-1',
+            date: any(named: 'date'),
+            status: AttendanceStatus.absent,
+            actorUid: 'teacher-1',
+            existingId: any(named: 'existingId'),
+            notes: any(named: 'notes'),
+          )).called(1);
+    }
+    expect(find.text('ABSENT · 2'), findsOneWidget);
+    expect(find.text('Mark the rest…'), findsNothing); // nobody waiting now
+  });
+
+  testWidgets('cancelling "Mark the rest" writes nothing', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark the rest…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    verifyNever(() => mockAttendance.markAttendance(
           childId: any(named: 'childId'),
           centerId: any(named: 'centerId'),
           date: any(named: 'date'),
@@ -258,41 +340,7 @@ void main() {
           actorUid: any(named: 'actorUid'),
           existingId: any(named: 'existingId'),
           notes: any(named: 'notes'),
-        )).thenAnswer(
-      (_) async => Attendance(
-        id: 'att-1',
-        childId: 'child-1',
-        centerId: 'center-1',
-        date: '2026-09-01',
-        status: AttendanceStatus.absent,
-        notes: 'Ate well today',
-        photoPath: null,
-        belongingsPhotoPath: null,
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-        createdBy: 'teacher-1',
-        updatedBy: 'teacher-1',
-      ),
-    );
-
-    await pumpScreen(tester);
-    await tester.pumpAndSettle();
-
-    await tester.longPress(find.byType(AttendanceGridTile));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Mark absent'));
-    await tester.pumpAndSettle();
-
-    verify(() => mockAttendance.markAttendance(
-          childId: 'child-1',
-          centerId: 'center-1',
-          date: any(named: 'date'),
-          status: AttendanceStatus.absent,
-          actorUid: 'teacher-1',
-          existingId: 'att-1',
-          notes: 'Ate well today',
-        )).called(1);
+        ));
   });
 
   testWidgets('typing in the search bar narrows the grid to matching children',
@@ -318,13 +366,40 @@ void main() {
     expect(find.text('Bob'), findsNothing);
   });
 
-  testWidgets('renders both section dividers', (tester) async {
-    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [_child()]);
-    when(() => mockAttendance.fetchForDate(any())).thenAnswer((_) async => []);
+  testWidgets('shows the teachers row and the class name as the title', (tester) async {
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          Child(
+            id: 'child-1',
+            name: 'Alice',
+            dob: DateTime(2022, 1, 1),
+            centerId: 'center-1',
+            className: 'Bunga',
+            teacherId: 'teacher-1',
+            allergies: '',
+            notes: '',
+            enrolledAt: DateTime(2026),
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+            createdBy: 'director-1',
+            updatedBy: 'director-1',
+          ),
+        ]);
     await pumpScreen(tester);
     await tester.pumpAndSettle();
     expect(find.text('TEACHERS'), findsOneWidget);
-    expect(find.text('CHILDREN'), findsOneWidget);
+    expect(find.text('Bunga'), findsOneWidget);
+  });
+
+  testWidgets('fits a 360px-wide phone without overflow', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    when(() => mockChildren.fetchForTeacher('teacher-1')).thenAnswer((_) async => [
+          for (var i = 0; i < 6; i++) _child(id: 'c$i', name: 'Child with a long name $i'),
+        ]);
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets("the signed-in teacher's own tile is first and shows the clock badge",

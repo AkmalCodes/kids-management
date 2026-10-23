@@ -55,11 +55,12 @@ Future<void> _pump(
             body: Center(
               // The tile is built for a GridView cell, which bounds its width.
               // Reproduce that here: unbounded width makes AspectRatio(1) fill
-              // the viewport and overflow. ~84x108 matches a real cell on a
-              // 400pt-wide phone at crossAxisCount 4, childAspectRatio 0.78.
+              // the viewport and overflow. 84x131 matches a real cell on a
+              // 400pt-wide phone at crossAxisCount 4, childAspectRatio 0.64
+              // (avatar + name + caption line).
               child: SizedBox(
                 width: 84,
-                height: 117,
+                height: 131,
                 child: AttendanceGridTile(
                   child: child ?? _child(),
                   attendance: attendance,
@@ -104,32 +105,37 @@ void main() {
     expect(longNameAvatar, shortNameAvatar);
   });
 
-  testWidgets('a present record shows the present badge', (tester) async {
+  testWidgets('a present record shows the present badge and its arrival time', (tester) async {
     await _pump(tester, attendance: _attendance(AttendanceStatus.present));
     expect(find.byKey(const Key('status-badge-present')), findsOneWidget);
-    expect(find.byKey(const Key('status-badge-absent')), findsNothing);
-    expect(find.byKey(const Key('status-badge-unmarked')), findsNothing);
+    expect(find.byKey(const Key('status-waiting')), findsNothing);
+    // Caption = the row's created_at in local time.
+    final created = _attendance(AttendanceStatus.present).createdAt.toLocal();
+    final hhmm = '${created.hour.toString().padLeft(2, '0')}:${created.minute.toString().padLeft(2, '0')}';
+    expect(find.text(hhmm), findsOneWidget);
   });
 
-  testWidgets('an absent record shows the absent badge', (tester) async {
+  testWidgets('every status has its own badge', (tester) async {
+    for (final s in AttendanceStatus.values) {
+      await _pump(tester, attendance: _attendance(s));
+      expect(find.byKey(Key('status-badge-${s.name}')), findsOneWidget, reason: s.name);
+    }
+  });
+
+  testWidgets('absent and excused show their label instead of a time', (tester) async {
     await _pump(tester, attendance: _attendance(AttendanceStatus.absent));
-    expect(find.byKey(const Key('status-badge-absent')), findsOneWidget);
-  });
-
-  testWidgets('no record shows the unmarked badge', (tester) async {
-    await _pump(tester, attendance: null);
-    expect(find.byKey(const Key('status-badge-unmarked')), findsOneWidget);
-  });
-
-  testWidgets('late and excused fall back to the unmarked badge', (tester) async {
-    // The UI can only ever set present or absent, so these are unreachable
-    // from here. They render as unmarked rather than inventing an icon for a
-    // state a teacher cannot produce.
-    await _pump(tester, attendance: _attendance(AttendanceStatus.late));
-    expect(find.byKey(const Key('status-badge-unmarked')), findsOneWidget);
-
+    expect(find.text('Absent'), findsOneWidget);
     await _pump(tester, attendance: _attendance(AttendanceStatus.excused));
-    expect(find.byKey(const Key('status-badge-unmarked')), findsOneWidget);
+    expect(find.text('Excused'), findsOneWidget);
+  });
+
+  testWidgets('no record = waiting: faded avatar, "Check in", no badge', (tester) async {
+    await _pump(tester, attendance: null);
+    expect(find.byKey(const Key('status-waiting')), findsOneWidget);
+    expect(find.text('Check in'), findsOneWidget);
+    expect(find.byKey(const Key('status-badge-present')), findsNothing);
+    final fade = tester.widget<Opacity>(find.byKey(const Key('tile-avatar-opacity')));
+    expect(fade.opacity, lessThan(1));
   });
 
   testWidgets('tap and long-press fire their callbacks', (tester) async {

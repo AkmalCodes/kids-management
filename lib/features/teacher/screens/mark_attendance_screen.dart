@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/models/app_user.dart';
@@ -8,15 +9,28 @@ import '../../../core/models/child.dart';
 import '../../../core/models/staff_attendance.dart';
 import '../../../core/controllers/attendance_controller.dart';
 import '../../../core/controllers/child_controller.dart';
+import '../../../core/controllers/photo_capture_controller.dart';
 import '../../../core/controllers/staff_attendance_controller.dart';
 import '../../../core/controllers/teacher_controller.dart';
 import '../../../shared/widgets/app_loader.dart';
+import '../widgets/attendance_check_in_sheet.dart';
 import '../widgets/attendance_grid_tile.dart';
 import '../widgets/staff_grid_tile.dart';
 import '../../profile/staff_attendance_screen.dart';
 import '../../profile/person_detail_screen.dart';
-import 'child_attendance_detail_screen.dart';
 
+// The teacher's Attendance tab, screen design AA1 "Arrival board" (Figma
+// "Screen designs", spec 2026-10-23-attendance-redesign-design.md).
+//
+// Children trickle in over the morning and nearly every one gets a check-in
+// photo, so the screen is built around "who is still to come":
+//
+//   Thursday, 23 Oct / Class Bunga        [search]
+//   [8 here] [6 waiting] [0 absent]
+//   TEACHERS  (own tile -> clock in/out, co-teachers -> profile)
+//   WAITING · 6               Mark the rest…   <- tap: camera, then sheet
+//   HERE · 8                                  <- tap: same sheet, pre-filled
+//   ABSENT · 0  (only when someone is)
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
   const MarkAttendanceScreen({super.key});
 
@@ -93,9 +107,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         myClockState: StaffClockState.notClockedIn,
       );
     }
-    // All four fetches only need user.id, so run them concurrently rather than
-    // awaiting one after another (the design doc's Data-flow section: "in
-    // parallel"). Record-of-futures `.wait` keeps each result's own type.
+    // All four fetches only need user.id, so run them concurrently. A record
+    // of futures `.wait` keeps each result's own type.
     final (children, records, coTeachers, staffRows) = await (
       ref.read(childControllerProvider).fetchForTeacher(user.id),
       ref.read(attendanceControllerProvider).fetchForDate(_today),
@@ -125,9 +138,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }
 
   // Applies a write's returned row straight to the already-loaded roster
-  // instead of re-fetching everything from the network -- that round trip
-  // was why status changes visibly lagged before this (same fix already
-  // applied to schedule entries; see ScheduleController).
+  // instead of re-fetching everything from the network.
   Future<void> _applyUpdate(String childId, Attendance updated) async {
     final data = await _future;
     if (!mounted) return;
@@ -143,38 +154,78 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     });
   }
 
-  Future<void> _setStatus(Child child, AttendanceStatus status, Attendance? existing) async {
-    final user = ref.read(currentUserProvider).value;
-    if (user == null) return;
-    final updated = await ref.read(attendanceControllerProvider).markAttendance(
-          childId: child.id,
-          centerId: child.centerId,
-          date: _today,
-          status: status,
-          actorUid: user.id,
-          existingId: existing?.id,
-          // markAttendance writes the notes column unconditionally on every
-          // call (default ''), so an update that omits this would silently
-          // blank out any note the teacher already saved on this record.
-          notes: existing?.notes ?? '',
-        );
-    await _applyUpdate(child.id, updated);
+  // Tap on a child. Waiting (no record yet): the camera opens first, because
+  // the check-in photo is part of arriving; cancelling the camera still opens
+  // the sheet so a child can be checked in without one. Already marked: the
+  // sheet opens pre-filled.
+  Future<void> _openChild(Child child, Attendance? existing) async {
+    XFile? photo;
+    if (existing == null) {
+      try {
+        photo = await ref.read(photoCaptureControllerProvider).captureFromCamera();
+      } catch (_) {
+        photo = null; // no camera (or permission refused): carry on without
+      }
+      if (!mounted) return;
+    }
+    await showAttendanceCheckInSheet(
+      context,
+      child: child,
+      date: _today,
+      existing: existing,
+      newPhoto: photo,
+      // Every saved step lands on the grid immediately, even if a later
+      // step (a photo upload) fails and the sheet stays open.
+      onSaved: (updated) => _applyUpdate(child.id, updated),
+    );
   }
 
-  Future<void> _openDetail(Child child, Attendance? existing) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChildAttendanceDetailScreen(
-          child: child,
-          date: _today,
-          initialAttendance: existing,
-          // The detail screen reports every save back, so the grid behind it
-          // is already correct when the user returns -- no re-fetch, no flash
-          // of stale badges.
-          onChanged: (updated) => _applyUpdate(child.id, updated),
-        ),
+  // "Mark the rest…": once arrivals are over, everyone still waiting is
+  // marked absent in one go, after a confirm that names them.
+  Future<void> _markRestAbsent(List<Child> waiting) async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null || waiting.isEmpty) return;
+    final names = waiting.map((c) => c.name).join(', ');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Mark ${waiting.length} absent?'),
+        content: Text("$names haven't been checked in. They'll be marked absent for today."),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Mark absent'),
+          ),
+        ],
       ),
     );
+    if (ok != true || !mounted) return;
+
+    final service = ref.read(attendanceControllerProvider);
+    try {
+      // These children have no row yet (that's what "waiting" means), so
+      // every call is an insert.
+      final saved = await Future.wait([
+        for (final c in waiting)
+          service.markAttendance(
+            childId: c.id,
+            centerId: c.centerId,
+            date: _today,
+            status: AttendanceStatus.absent,
+            actorUid: user.id,
+          ),
+      ]);
+      for (final r in saved) {
+        await _applyUpdate(r.childId, r);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not mark them absent: $e')));
+      // Some may have saved before the failure: show the real state.
+      await _pullRefresh();
+    }
   }
 
   Future<void> _openTeacher(AppUser me, AppUser teacher) async {
@@ -198,229 +249,286 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
     }
   }
 
-  // Long-press is the shortcut for the common case. Everything reachable here
-  // is also reachable by tapping through to the detail screen, so the gesture
-  // being undiscoverable costs nothing.
-  Future<void> _showActions(Child child, Attendance? existing) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: const Text('Open details'),
-              onTap: () => Navigator.of(sheetContext).pop('details'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.check_circle_outline),
-              title: const Text('Mark present'),
-              onTap: () => Navigator.of(sheetContext).pop('present'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.cancel_outlined),
-              title: const Text('Mark absent'),
-              onTap: () => Navigator.of(sheetContext).pop('absent'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || action == null) return;
+  static const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    switch (action) {
-      case 'details':
-        await _openDetail(child, existing);
-      case 'present':
-        await _setStatus(child, AttendanceStatus.present, existing);
-      case 'absent':
-        await _setStatus(child, AttendanceStatus.absent, existing);
-    }
-  }
+  String get _dateLabel =>
+      '${_weekdays[_todayDate.weekday - 1]}, ${_todayDate.day} ${_months[_todayDate.month - 1]}';
 
-  static const _weekdayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  String _formatHeaderDate(DateTime date) {
-    final dd = date.day.toString().padLeft(2, '0');
-    final mm = date.month.toString().padLeft(2, '0');
-    final yy = (date.year % 100).toString().padLeft(2, '0');
-    return '$dd/$mm/$yy ${_weekdayAbbreviations[date.weekday - 1]}';
+  // "Class Bunga" when all of the teacher's children share one class,
+  // otherwise a neutral title.
+  static String _title(List<Child> children) {
+    final names = children.map((c) => c.className.trim()).where((n) => n.isNotEmpty).toSet();
+    return names.length == 1 ? names.first : 'Your children';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: _searching
-                    ? TextField(
-                        controller: _searchController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Search students…',
-                          border: InputBorder.none,
-                        ),
-                        onChanged: (value) => setState(() => _query = value),
-                      )
-                    : Row(
-                        children: [
-                          Text(
-                            'Attendance',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          // Flexible + ellipsis: on a narrow screen this
-                          // shrinks/truncates first rather than forcing
-                          // the row to overflow past the search icon.
-                          Flexible(
-                            child: Text(
-                              _formatHeaderDate(_todayDate),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-              IconButton(
-                icon: Icon(_searching ? Icons.close : Icons.search),
-                tooltip: _searching ? 'Close search' : 'Search students',
-                onPressed: _toggleSearch,
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _pullRefresh,
-            child: FutureBuilder<_RosterData>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: AppLoader());
-                }
-                final data = snapshot.data!;
-                final filteredChildren = data.children
-                    .where((c) => c.name.toLowerCase().contains(_query.toLowerCase()))
-                    .toList();
+    return RefreshIndicator(
+      onRefresh: _pullRefresh,
+      child: FutureBuilder<_RosterData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: AppLoader());
+          }
+          final data = snapshot.data!;
+          final q = _query.trim().toLowerCase();
+          final shown = data.children.where((c) => c.name.toLowerCase().contains(q)).toList();
 
-                const gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 16,
-                  // Taller than wide: the tile is a square avatar plus a name
-                  // line beneath it.
-                  childAspectRatio: 0.72,
-                );
+          // Group by today's state. Counts use the whole class, not the
+          // search results, so searching never makes the numbers jump.
+          final waiting = <Child>[], here = <Child>[], away = <Child>[];
+          for (final c in shown) {
+            switch (data.attendanceByChild[c.id]?.status) {
+              case null:
+                waiting.add(c);
+              case AttendanceStatus.present || AttendanceStatus.late:
+                here.add(c);
+              case AttendanceStatus.absent || AttendanceStatus.excused:
+                away.add(c);
+            }
+          }
+          var hereCount = 0, waitingCount = 0, awayCount = 0;
+          for (final c in data.children) {
+            switch (data.attendanceByChild[c.id]?.status) {
+              case null:
+                waitingCount++;
+              case AttendanceStatus.present || AttendanceStatus.late:
+                hereCount++;
+              default:
+                awayCount++;
+            }
+          }
+          // Arrivals in the order they came in.
+          int byArrival(Child a, Child b) => data.attendanceByChild[a.id]!.createdAt
+              .compareTo(data.attendanceByChild[b.id]!.createdAt);
+          here.sort(byArrival);
 
-                return CustomScrollView(
-                  // Scrollable even when short, so it can be pulled to refresh.
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    const SliverToBoxAdapter(child: _SectionDivider('Teachers')),
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: SliverGrid(
-                        gridDelegate: gridDelegate,
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) {
-                            // This grid only builds when data.teachers is
-                            // non-empty, and its first entry is always the
-                            // signed-in user (see _load), so `me` is safe here.
-                            final me = data.teachers.first;
+          final me = data.teachers.isEmpty ? null : data.teachers.first;
+
+          return CustomScrollView(
+            // Scrollable even when short, so it can be pulled to refresh.
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                sliver: SliverList.list(
+                  children: [
+                    _Header(
+                      date: _dateLabel,
+                      title: _title(data.children),
+                      searching: _searching,
+                      controller: _searchController,
+                      onQuery: (v) => setState(() => _query = v),
+                      onToggleSearch: _toggleSearch,
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(child: _Count(key: const Key('count-here'), n: hereCount, label: 'here', color: const Color(0xFF2E7D4F))),
+                        const SizedBox(width: 8),
+                        Expanded(child: _Count(key: const Key('count-waiting'), n: waitingCount, label: 'waiting', color: const Color(0xFF8A5300))),
+                        const SizedBox(width: 8),
+                        Expanded(child: _Count(key: const Key('count-absent'), n: awayCount, label: 'absent', color: const Color(0xFFB3261E))),
+                      ],
+                    ),
+                    if (me != null) ...[
+                      const SizedBox(height: 16),
+                      const _SectionLabel('TEACHERS'),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 92,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: data.teachers.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 12),
+                          itemBuilder: (context, i) {
                             final t = data.teachers[i];
-                            return StaffGridTile(
-                              teacher: t,
-                              clockState: t.id == me.id ? data.myClockState : null,
-                              onTap: () => _openTeacher(me, t),
+                            return SizedBox(
+                              width: 64,
+                              child: StaffGridTile(
+                                teacher: t,
+                                clockState: t.id == me.id ? data.myClockState : null,
+                                onTap: () => _openTeacher(me, t),
+                              ),
                             );
                           },
-                          childCount: data.teachers.length,
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: _SectionDivider('Children')),
-                    if (data.children.isEmpty)
-                      const SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Center(child: Text('No children assigned to you yet.')),
-                        ),
-                      )
-                    else if (filteredChildren.isEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Center(child: Text('No students match "$_query".')),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.all(16),
-                        sliver: SliverGrid(
-                          gridDelegate: gridDelegate,
-                          delegate: SliverChildBuilderDelegate(
-                            (context, i) {
-                              final child = filteredChildren[i];
-                              final existing = data.attendanceByChild[child.id];
-                              return AttendanceGridTile(
-                                child: child,
-                                attendance: existing,
-                                onTap: () => _openDetail(child, existing),
-                                onLongPress: () => _showActions(child, existing),
-                              );
-                            },
-                            childCount: filteredChildren.length,
-                          ),
-                        ),
-                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    const Divider(height: 1, color: AppTheme.hairline),
                   ],
-                );
-              },
-            ),
+                ),
+              ),
+              if (data.children.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text('No children assigned to you yet.')),
+                  ),
+                )
+              else if (shown.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(child: Text('No students match "$_query".')),
+                  ),
+                )
+              else ...[
+                if (waiting.isNotEmpty) ...[
+                  _sectionHeader(
+                    'WAITING · ${waiting.length}',
+                    action: TextButton(
+                      onPressed: () => _markRestAbsent(waiting),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.accentPink,
+                        visualDensity: VisualDensity.compact,
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
+                      child: const Text('Mark the rest…'),
+                    ),
+                  ),
+                  _grid(waiting, data),
+                ],
+                if (here.isNotEmpty) ...[_sectionHeader('HERE · ${here.length}'), _grid(here, data)],
+                if (away.isNotEmpty) ...[_sectionHeader('ABSENT · ${away.length}'), _grid(away, data)],
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String text, {Widget? action}) => SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
+        sliver: SliverToBoxAdapter(
+          child: SizedBox(
+            height: 32,
+            child: Row(children: [Expanded(child: _SectionLabel(text)), ?action]),
           ),
+        ),
+      );
+
+  Widget _grid(List<Child> children, _RosterData data) => SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 14,
+            // Avatar + name + caption line beneath it.
+            childAspectRatio: 0.64,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              final child = children[i];
+              final existing = data.attendanceByChild[child.id];
+              return AttendanceGridTile(
+                child: child,
+                attendance: existing,
+                onTap: () => _openChild(child, existing),
+              );
+            },
+            childCount: children.length,
+          ),
+        ),
+      );
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.date,
+    required this.title,
+    required this.searching,
+    required this.controller,
+    required this.onQuery,
+    required this.onToggleSearch,
+  });
+
+  final String date;
+  final String title;
+  final bool searching;
+  final TextEditingController controller;
+  final ValueChanged<String> onQuery;
+  final VoidCallback onToggleSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: searching
+              ? TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Search students…',
+                    border: InputBorder.none,
+                  ),
+                  onChanged: onQuery,
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(date,
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.mutedText)),
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.onAccent)),
+                  ],
+                ),
+        ),
+        IconButton.filledTonal(
+          tooltip: searching ? 'Close search' : 'Search students',
+          onPressed: onToggleSearch,
+          style: IconButton.styleFrom(
+            backgroundColor: AppTheme.barTint,
+            foregroundColor: AppTheme.onAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: Icon(searching ? Icons.close : Icons.search, size: 20),
         ),
       ],
     );
   }
 }
 
-// A centred, uppercase caption between two rules -- "——— TEACHERS ———". Splits
-// the scroll view into its two grids without a heavyweight header.
-class _SectionDivider extends StatelessWidget {
-  const _SectionDivider(this.label);
+class _Count extends StatelessWidget {
+  const _Count({super.key, required this.n, required this.label, required this.color});
+  final int n;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppTheme.onAccent,
-          letterSpacing: 1.5,
-          fontWeight: FontWeight.w600,
-        );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: AppTheme.barTint, borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(label.toUpperCase(), style: style),
-          ),
-          const Expanded(child: Divider()),
+          Text('$n', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+          Text(label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.mutedText)),
         ],
       ),
     );
   }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: const TextStyle(
+          fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.9, color: AppTheme.mutedText));
 }

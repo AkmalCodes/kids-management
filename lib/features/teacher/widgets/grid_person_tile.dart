@@ -17,6 +17,7 @@ class GridPersonTile extends StatelessWidget {
     required this.onTap,
     this.badge,
     this.onLongPress,
+    this.caption,
   });
 
   final Widget avatar;
@@ -24,6 +25,10 @@ class GridPersonTile extends StatelessWidget {
   final Widget? badge;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  // Optional second line under the name (e.g. an arrival time, or "Check
+  // in" on a waiting child). Callers that pass one give the grid a taller
+  // tile; the avatar still absorbs the leftover height.
+  final Widget? caption;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +68,10 @@ class GridPersonTile extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
           ),
+          if (caption != null) ...[
+            const SizedBox(height: 2),
+            caption!,
+          ],
         ],
       ),
     );
