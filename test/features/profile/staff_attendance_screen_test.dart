@@ -390,6 +390,100 @@ void main() {
     // locked (button-less) day as the foreign fully-clocked row would imply.
     expect(find.widgetWithText(FilledButton, 'Clock out'), findsOneWidget);
   });
+
+  // ---- AA3 look -------------------------------------------------------------
+
+  testWidgets('hero: "Not clocked in" before the day starts', (tester) async {
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async => []);
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Not clocked in'), findsOneWidget);
+    expect(find.text('Clocked in'), findsOneWidget); // the row label
+  });
+
+  testWidgets('hero: hours so far and a "Clocked in at" pill while working', (tester) async {
+    final inAt = DateTime.now().subtract(const Duration(hours: 1, minutes: 11));
+    when(() => mockController.fetchForDate(any()))
+        .thenAnswer((_) async => [_row(clockInAt: inAt.toUtc())]);
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('1 h 11 min'), findsOneWidget);
+    expect(find.text('Clocked in at ${_hhmm(inAt)}'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsOneWidget); // only clock-in is locked
+  });
+
+  testWidgets('hero: total hours and "Day complete" once both times are set', (tester) async {
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async => [
+          _row(clockInAt: DateTime.utc(2026, 9, 2, 0, 0), clockOutAt: DateTime.utc(2026, 9, 2, 8, 37)),
+        ]);
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('8 h 37 min'), findsOneWidget);
+    expect(find.text('Day complete'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsNWidgets(2));
+  });
+
+  testWidgets('"This week" lists earlier days with their times and totals', (tester) async {
+    if (DateTime.now().weekday == DateTime.monday) return; // no earlier days
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async => []);
+    when(() => mockController.fetchForStaffBetween(
+          staffId: any(named: 'staffId'),
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        )).thenAnswer((_) async => [
+          StaffAttendance(
+            id: 'sa-w',
+            staffId: 'teacher-1',
+            centerId: 'center-1',
+            date: '2026-10-20',
+            status: AttendanceStatus.present,
+            notes: '',
+            clockInAt: DateTime(2026, 10, 20, 7, 28),
+            clockOutAt: DateTime(2026, 10, 20, 16, 5),
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+            createdBy: 'teacher-1',
+            updatedBy: 'teacher-1',
+          ),
+        ]);
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('THIS WEEK'), findsOneWidget);
+    expect(find.text('Tue 20'), findsOneWidget);
+    expect(find.text('07:28 – 16:05'), findsOneWidget);
+    expect(find.text('8 h 37 min'), findsOneWidget);
+    // Only this teacher's rows are asked for.
+    verify(() => mockController.fetchForStaffBetween(
+          staffId: 'teacher-1',
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        )).called(1);
+  });
+
+  testWidgets('a failed week fetch just hides "This week"', (tester) async {
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async => []);
+    when(() => mockController.fetchForStaffBetween(
+          staffId: any(named: 'staffId'),
+          from: any(named: 'from'),
+          to: any(named: 'to'),
+        )).thenThrow(Exception('offline'));
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('THIS WEEK'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Clock in'), findsOneWidget);
+  });
+
+  testWidgets('fits a 360px-wide phone without overflow', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    when(() => mockController.fetchForDate(any())).thenAnswer((_) async => [
+          _row(clockInAt: DateTime.utc(2026, 9, 2, 0, 0), clockOutAt: DateTime.utc(2026, 9, 2, 8, 37)),
+        ]);
+    await pump(tester);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
 
 // Local mirror of lib/shared/util/date_display.dart's hourMinute, so the test

@@ -21,6 +21,27 @@ class StaffAttendanceController {
         .toList();
   }
 
+  // One staff member's rows between two dates (inclusive, YYYY-MM-DD), oldest
+  // first -- the clock screen's "This week" list. Read-only. RLS already
+  // limits a teacher to their own rows (staff_attendance_select), so the
+  // staff_id filter is for correctness, not the security boundary.
+  Future<List<StaffAttendance>> fetchForStaffBetween({
+    required String staffId,
+    required String from,
+    required String to,
+  }) async {
+    final rows = await _client
+        .from('staff_attendance')
+        .select()
+        .eq('staff_id', staffId)
+        .gte('date', from)
+        .lte('date', to)
+        .order('date');
+    return (rows as List)
+        .map((row) => StaffAttendance.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
   // existingId absent -> insert; existingId present -> update, preserving
   // the original created_by. Same pattern as AttendanceController.markAttendance,
   // minus photo-column preservation -- there are no photo columns here.

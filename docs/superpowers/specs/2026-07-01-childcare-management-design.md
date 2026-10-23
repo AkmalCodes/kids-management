@@ -255,7 +255,7 @@ CREATE TABLE staff_attendance (
     CHECK (clock_out_at IS NULL OR (clock_in_at IS NOT NULL AND clock_out_at > clock_in_at))
 );
 ```
-> Records a teacher's daily attendance. The `status` field mirrors the child `attendance` table; `notes` is optional context. Initially carries just status and notes (§6.6 follow-up); **`clock_in_at` and `clock_out_at`** were added by a later design (see `docs/superpowers/specs/2026-09-02-staff-clock-in-out-design.md`) as nullable TIMESTAMPTZ columns with a CHECK constraint enforcing `clock_out_at > clock_in_at`. A teacher sets both via **Profile → Attendance** (`StaffAttendanceScreen`), each behind a confirm step, and a day locks once both are set. Director RLS: reads/writes any teacher in their center; teacher RLS: reads/writes own row.
+> Records a teacher's daily attendance. The `status` field mirrors the child `attendance` table; `notes` is optional context. Initially carries just status and notes (§6.6 follow-up); **`clock_in_at` and `clock_out_at`** were added by a later design (see `docs/superpowers/specs/2026-09-02-staff-clock-in-out-design.md`) as nullable TIMESTAMPTZ columns with a CHECK constraint enforcing `clock_out_at > clock_in_at`. A teacher sets both from their own tile on the Attendance tab (`StaffAttendanceScreen`, "My work day"), each behind a confirm step, and a day locks once both are set; the screen also lists the teacher's earlier days this week. Director RLS: reads/writes any teacher in their center; teacher RLS: reads/writes own row.
 
 ### Storage: `attendance-photos` bucket
 Private bucket (not public — a stored path can't be rendered directly; the app exchanges it for a `createSignedUrl` time-limited URL whenever a photo is displayed). Paths are `<child_id>/<date>.jpg` (check-in) and `<child_id>/<date>-belongings.jpg` (belongings), so `storage.foldername(objects.name)[1]` recovers the child for RLS checks — must be qualified as `objects.name` since `children` also has its own `name` column that would otherwise shadow it inside the `EXISTS` subquery. Teachers can insert/update only for children in their own class; select is available to that same teacher, any director, or a linked parent.
@@ -694,7 +694,7 @@ lib/
       profile_screen.dart           -- shared account settings tab, all roles (§6.7)
       change_password_screen.dart   -- change password while signed in (§6.7)
       person_detail_screen.dart     -- view/edit a person's name/phone/photo; self or director-edits-other (§6.6/§6.7)
-      staff_attendance_screen.dart  -- teacher's own clock-in/clock-out for today, reached from Profile (§6.7)
+      staff_attendance_screen.dart  -- "My work day" (AA3): hours hero, locked times, Clock in/out, this week; from the own teacher tile (§6.7)
     parent/
       parent_shell.dart
       screens/
