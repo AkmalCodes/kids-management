@@ -42,8 +42,8 @@ Each shell is an AppBar + a bottom `NavigationBar`; the tabs below just swap the
 | Tab | Name | File | What's on it |
 |---|---|---|---|
 | Schedule | **ChildScheduleScreen** | `features/parent/screens/child_schedule_screen.dart` | Read-only agenda of the parent's child's **class** schedule (child → class_id). |
-| Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | The child's attendance history as tappable **cards** (date, status, photo thumbnails). |
-| (from a card) | **AttendanceDetailScreen** | `features/parent/screens/attendance_detail_screen.dart` | One day's status + notes + the check-in and belongings photos shown large. |
+| Attendance | **ChildAttendanceScreen** | `features/parent/screens/child_attendance_screen.dart` | Screen design AA5: child chips (more than one child); a **today card** (check-in photo, status + arrival time, "Aisyah is at school" / absent / not checked in yet, teacher's note); THIS WEEK Mon–Fri status dots; EARLIER day cards. Pull to refresh. |
+| (from a card) | **AttendanceDetailScreen** | `features/parent/screens/attendance_detail_screen.dart` | AA6: one day ("Wednesday, 21 Oct"), body is the shared `AttendanceDayDetails`. |
 | Reports | **ChildReportsScreen** | `features/parent/screens/child_reports_screen.dart` | Read-only feed of the child's daily reports (newest first): teacher's note + photo thumbnails. |
 | Profile | **ProfileScreen** | see *Profile* below | Shared across all roles. |
 
@@ -109,7 +109,8 @@ Not full "screens" you navigate a bottom-nav to, but reused UI pieces worth nami
 | **ClassFormDialog** | `shared/widgets/class_form_dialog.dart` | ManageClassesScreen | Create/edit-a-class dialog: name + teacher dropdown. |
 | **EditableField** | `shared/widgets/editable_field.dart` | Child/Class/Person detail | One field that cross-fades between a read-only row (optionally tap-to-copy) and a text input, driven by an `editing` flag. |
 | **AvatarWithPreview** | `shared/widgets/avatar_preview.dart` | Detail screens | Round avatar that opens a full-screen pinch-zoom photo preview when tapped. |
-| **SignedPhotoThumbnail** | `shared/widgets/signed_photo_thumbnail.dart` | Attendance screens | Round thumbnail from a private Storage path (attendance-photos), via signed URL. |
+| **AttendancePhotos** | `shared/widgets/attendance_photos.dart` | Attendance screens | `SignedAttendancePhoto` (a saved photo from the private attendance-photos bucket via signed URL) and `LocalPhoto` (a just-taken photo before upload). |
+| **AttendanceDayDetails** | `shared/widgets/attendance_day_details.dart` | Director day sheet, parent day screen | Read-only day: status + arrival time, check-in and belongings photos large, the teacher's note; plus `showAttendanceDaySheet`. |
 | **SignedAvatar** | `shared/widgets/signed_avatar.dart` | Profile / detail screens | Round avatar from any bucket's signed-URL provider, with a placeholder. |
 | **AvatarSourceSheet** | `shared/widgets/avatar_source_sheet.dart` | Avatar edits | The take-photo / choose-from-gallery bottom sheet. |
 | **AttendanceStatusChip** | `shared/widgets/attendance_status_chip.dart` | Attendance screens | Dot pill per status, plus `AttendanceStatusStyle` (shared colours/labels/icons), `AttendanceStatusBadge` (round tile badge) and `formatClock` (local HH:mm). |

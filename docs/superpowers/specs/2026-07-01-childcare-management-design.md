@@ -699,7 +699,7 @@ lib/
       parent_shell.dart
       screens/
         child_schedule_screen.dart
-        child_attendance_screen.dart
+        child_attendance_screen.dart  -- AA5: today card, this week dots, earlier days (attendance_detail_screen.dart = AA6)
         child_reports_screen.dart   -- parent's daily-report feed (§6.4)
     teacher/
       teacher_shell.dart
@@ -741,7 +741,8 @@ lib/
       attendance_status_chip.dart   -- status dot pill + shared AttendanceStatusStyle / Badge / formatClock
       lesson_plan_status_chip.dart  -- dot-pill status chip with semantic colours (grey/amber/green/red); `rejected` is labelled "Needs changes"; colorsFor()/labelFor() shared with feedback strips (§6.5)
       subject_tile.dart             -- subject initials on a pastel picked by a stable hash of the name (subjects are free text, so no per-subject art); book icon when none
-      signed_photo_thumbnail.dart   -- exchanges a private Storage path for a signed URL, with loading/error states
+      attendance_photos.dart        -- SignedAttendancePhoto (private bucket via signed URL) + LocalPhoto (before upload)
+      attendance_day_details.dart   -- read-only day (status, photos, note) + director day sheet
       signed_avatar.dart            -- round avatar from any bucket's signed-URL provider, with placeholder (§6.6/§6.7)
       avatar_source_sheet.dart      -- shared take-photo/gallery bottom sheet for avatar edits
       person_invite_dialog.dart     -- shared name/email/phone dialog for teacher & parent invites

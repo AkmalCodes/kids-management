@@ -110,7 +110,7 @@ final profileControllerProvider = Provider<ProfileController>(
 );
 
 // Cached per path for the session so the avatar doesn't re-fetch a signed
-// URL on every rebuild (same pattern as signedPhotoUrlProvider).
+// URL on every rebuild.
 final signedAvatarUrlProvider = FutureProvider.family<String, String>((ref, path) {
   return ref.watch(profileControllerProvider).getSignedAvatarUrl(path);
 });
